@@ -6741,33 +6741,25 @@ function buildDataIndexes() {
     maintainDataIndex();
     generateDesignerButtons();
 }
-// ACTUALIZAR VARIABLE GLOBAL DE DISEÑADORES (4 DISEÑADORES)
+// ACTUALIZAR VARIABLE GLOBAL DE DISEÑADORES (4 DISEÑADORES) - FORMATO ESTÁNDAR
 const designerColors = {
-    "BERMINA": "#fb8500",
-    "JORSY": "#2908f1",
-    "XAMIR": "#572364",
-    "FULAN@": "#9d0208",
-    // CORREGIDO: Agregar claves en minúsculas y formato mixto para compatibilidad
     "Bermina": "#fb8500",
     "Jorsy": "#2908f1",
     "Xamir": "#572364",
     "Fulan@": "#9d0208",
+    // MANTENER COMPATIBILIDAD CON MINÚSCULAS
     "bermina": "#fb8500",
     "jorsy": "#2908f1",
     "xamir": "#572364",
     "fulan@": "#9d0208"
 };
-// NUEVO: Emojis de diseñadores globales
+// NUEVO: Emojis de diseñadores globales - FORMATO ESTÁNDAR
 const designerIcons = {
-    "BERMINA": "👵",
-    "JORSY": "😎", 
-    "XAMIR": "🐲",
-    "FULAN@": "👋",
-    // CORREGIDO: Agregar claves en minúsculas y formato mixto para compatibilidad
     "Bermina": "👵",
     "Jorsy": "😎", 
     "Xamir": "🐲",
     "Fulan@": "👋",
+    // MANTENER COMPATIBILIDAD CON MINÚSCULAS
     "bermina": "👵",
     "jorsy": "😎", 
     "xamir": "🐲",
@@ -6816,12 +6808,12 @@ function generateDesignerButtons() {
   const grid = document.createElement('div');
   grid.className = 'admin-grid-buttons';
   
-  // ✅ SOLO LOS 4 DISEÑADORES PRINCIPALES - EVITAR DUPLICADOS
+  // ✅ SOLO LOS 4 DISEÑADORES PRINCIPALES - USAR FORMATO ESTÁNDAR (PRIMERA LETRA MAYÚSCULA)
   const designers = [
-    { name: "BERMINA", color: "#fb8500", icon: "👵" },
-    { name: "JORSY", color: "#2908f1", icon: "😎" },
-    { name: "XAMIR", color: "#572364", icon: "🐲" },
-    { name: "FULAN@", color: "#9d0208", icon: "👋" }
+    { name: "Bermina", color: "#fb8500", icon: "👵" },
+    { name: "Jorsy", color: "#2908f1", icon: "😎" },
+    { name: "Xamir", color: "#572364", icon: "🐲" },
+    { name: "Fulan@", color: "#9d0208", icon: "👋" }
   ];
   
   designers.forEach(designer => {
@@ -8920,14 +8912,52 @@ document.getElementById('adminPass').value = '';
 // ============================================================
 // SISTEMA DE TOASTS (Notificaciones no bloqueantes)
 // ============================================================
+// Sistema de gestión de toast para evitar superposición
+let toastQueue = [];
+let isToastShowing = false;
+
 /**
- * Muestra un toast notification
+ * Muestra un toast notification con gestión de cola para evitar superposición
  * @param {string} message - Mensaje a mostrar
  * @param {string} type - 'success' | 'error' | 'warning' | 'info'
  * @param {number} duration - Duración en ms (default: 3000)
  * @param {function} onClose - Callback al cerrar (opcional)
  */
 function showToast(message, type = 'info', duration = 3000, onClose = null) {
+    // Agregar a la cola
+    toastQueue.push({ message, type, duration, onClose });
+    
+    // Procesar la cola si no hay toast mostrándose actualmente
+    if (!isToastShowing) {
+        processToastQueue();
+    }
+}
+
+/**
+ * Procesa la cola de toast secuencialmente
+ */
+function processToastQueue() {
+    if (toastQueue.length === 0) {
+        isToastShowing = false;
+        return;
+    }
+    
+    isToastShowing = true;
+    const toastData = toastQueue.shift(); // Obtener el primer toast de la cola
+    
+    showSingleToast(toastData.message, toastData.type, toastData.duration, () => {
+        // Cuando se cierra el toast, procesar el siguiente
+        if (toastData.onClose && typeof toastData.onClose === 'function') {
+            toastData.onClose();
+        }
+        setTimeout(() => processToastQueue(), 300); // Pequeña pausa entre toast
+    });
+}
+
+/**
+ * Muestra un toast individual (función interna)
+ */
+function showSingleToast(message, type, duration, onClose) {
     const colors = {
         success: { bg: '#2d6a4f', icon: '✅', border: '#40916c' },
         error:   { bg: '#e63946', icon: '❌', border: '#c62828' },
@@ -8935,6 +8965,7 @@ function showToast(message, type = 'info', duration = 3000, onClose = null) {
         info:    { bg: '#219ebc', icon: 'ℹ️', border: '#023047' }
     };
     const style = colors[type] || colors.info;
+    
     // Crear elemento toast
     const toast = document.createElement('div');
     toast.className = 'toast-notification';
@@ -8943,10 +8974,15 @@ function showToast(message, type = 'info', duration = 3000, onClose = null) {
         <div class="toast-message">${message}</div>
         <button class="toast-close" onclick="this.parentElement.remove()">×</button>
     `;
-    // Aplicar estilos inline (o usar CSS classes)
+    
+    // Calcular posición vertical basada en toast existentes
+    const existingToasts = document.querySelectorAll('.toast-notification');
+    const topOffset = 20 + (existingToasts.length * 80); // 80px de separación entre toast
+    
+    // Aplicar estilos inline
     Object.assign(toast.style, {
         position: 'fixed',
-        top: '20px',
+        top: topOffset + 'px',
         right: '20px',
         background: style.bg,
         color: 'white',
@@ -8964,20 +9000,24 @@ function showToast(message, type = 'info', duration = 3000, onClose = null) {
         fontSize: '0.95rem',
         borderLeft: `4px solid ${style.border}`,
         animation: 'toastSlideIn 0.3s ease-out',
-        cursor: 'default'
+        cursor: 'default',
+        transition: 'transform 0.3s ease-out, opacity 0.3s ease-out'
     });
+    
     // Estilo del icono
     const iconEl = toast.querySelector('.toast-icon');
     Object.assign(iconEl.style, {
         fontSize: '1.4rem',
         flexShrink: '0'
     });
+    
     // Estilo del mensaje
     const msgEl = toast.querySelector('.toast-message');
     Object.assign(msgEl.style, {
         flex: '1',
         lineHeight: '1.4'
     });
+    
     // Estilo del botón cerrar
     const closeEl = toast.querySelector('.toast-close');
     Object.assign(closeEl.style, {
@@ -8995,6 +9035,7 @@ function showToast(message, type = 'info', duration = 3000, onClose = null) {
         flexShrink: '0',
         transition: 'all 0.2s'
     });
+    
     closeEl.onmouseenter = () => {
         closeEl.style.background = 'rgba(255,255,255,0.4)';
         closeEl.style.transform = 'scale(1.1)';
@@ -9003,17 +9044,21 @@ function showToast(message, type = 'info', duration = 3000, onClose = null) {
         closeEl.style.background = 'rgba(255,255,255,0.2)';
         closeEl.style.transform = 'scale(1)';
     };
+    
     // Agregar al DOM
     document.body.appendChild(toast);
+    
     // Auto-cerrar con animación
     const timeout = setTimeout(() => {
         closeToast(toast, onClose);
     }, duration);
+    
     // Permitir cerrar manualmente sin ejecutar callback
     closeEl.onclick = () => {
         clearTimeout(timeout);
         closeToast(toast, null); // No ejecutar callback al cerrar manual
     };
+    
     // Pausar al hover
     toast.onmouseenter = () => clearTimeout(timeout);
     toast.onmouseleave = () => {
@@ -9690,7 +9735,51 @@ async function uploadArte() {
             console.log('✅ Backend respondió:', uploadData);
         }
 
-        // 2. ACTUALIZAR INTERFAZ Y MOSTRAR ÉXITO (SIEMPRE)
+        // 3. ASIGNAR AUTOMÁTICAMENTE EL DISEÑADOR SI ES DISEÑADOR Y NO ES ADMIN
+        if (isDesigner && !isAdmin) {
+            console.log("🎨 Diseñador adjuntando arte - Verificando asignación automática");
+            
+            // Buscar la solicitud en localData
+            const request = localData.find(x => x.id == id);
+            if (request) {
+                const currentDesigner = request.Disenador ? request.Disenador.split("|")[0].trim() : "";
+                const designerDisplayName = userCredentials.displayName;
+                
+                console.log("  - Diseñador actual:", currentDesigner);
+                console.log("  - Diseñador que sube:", designerDisplayName);
+                // Si no hay diseñador asignado o es diferente, asignar automáticamente
+                if (!currentDesigner || currentDesigner !== designerDisplayName) {
+                    try {
+                        const assignParams = new URLSearchParams();
+                        assignParams.append("action", "assignDesigner");
+                        assignParams.append("id", id);
+                        assignParams.append("disenador", designerDisplayName);
+                        // ✅ AGREGAR CREDENCIALES PARA AUTENTICACIÓN EN EL BACKEND
+                        assignParams.append("username", userCredentials.username);
+                        assignParams.append("password", userCredentials.password);
+                        
+                        const assignRes = await fetch(SCRIPT_URL, { method: 'POST', body: assignParams });
+                        const assignData = await assignRes.json();
+                        
+                        if (assignData.success) {
+                            // ✅ Diseñador asignado automáticamente
+                            // Actualizar localData inmediatamente
+                            request.Disenador = designerDisplayName;
+                        } else {
+                            // ✅ Error al asignar diseñador automáticamente
+                        }
+                    } catch (assignError) {
+                        // ✅ Error en asignación automática (continuando)
+                    }
+                } else {
+                    // ✅ El diseñador ya está asignado a esta solicitud
+                }
+            } else {
+                // ✅ No se encontró la solicitud en localData
+            }
+        }
+
+        // 4. ACTUALIZAR INTERFAZ Y MOSTRAR ÉXITO (SIEMPRE)
         document.getElementById('progressStatus').innerText = '✅ ¡Completado!';
         document.getElementById('progressBar').style.width = '100%';
         document.getElementById('progressPercent').innerText = '100%';
@@ -12009,6 +12098,62 @@ designerPerformance: null
 let currentStatsPeriod = 'month';
 let connectionSpeedHistory = [];
 
+// ✅ FUNCIÓN UNIFICADA DE ESTANDARIZACIÓN DE NOMBRES DE DISEÑADORES
+function standardizeDesignerName(name) {
+    if (!name || typeof name !== 'string') return '';
+    
+    // Convertir diferentes formatos a formato estándar: "Bermina", "Jorsy", "Xamir", "Fulan@"
+    const standardName = name
+        .toString()
+        .trim()
+        .toLowerCase()
+        .replace(/bermina|bérmina/gi, 'Bermina')
+        .replace(/jorsy|jorsí/gi, 'Jorsy')
+        .replace(/xamir|jamir/gi, 'Xamir')
+        .replace(/fulan@|fulan/gi, 'Fulan@')
+        .replace(/maría|maria/gi, 'María F.')
+        .replace(/\b\w/g, l => l.toUpperCase()); // Primera letra mayúscula
+    
+    console.log(`🔍 Estandarizando: "${name}" → "${standardName}"`);
+    return standardName;
+}
+
+// ✅ FUNCIÓN UNIFICADA PARA PROCESAR DATOS DE DISEÑADORES
+function processDesignerData(designerData, logPrefix = '') {
+    if (!designerData || typeof designerData !== 'object') {
+        console.warn(`${logPrefix} ⚠️ Datos de diseñadores inválidos:`, designerData);
+        return [];
+    }
+    
+    // Si es un objeto con propiedades, convertir a array
+    let dataArray = [];
+    if (Array.isArray(designerData)) {
+        dataArray = designerData;
+    } else if (typeof designerData === 'object') {
+        dataArray = Object.entries(designerData).map(([name, data]) => {
+            if (typeof data === 'object') {
+                return { name, ...data };
+            } else {
+                return { name, total: data, finalizadas: 0 };
+            }
+        });
+    }
+    
+    // Estandarizar nombres y procesar datos
+    const processedData = dataArray.map(item => {
+        const standardName = standardizeDesignerName(item.name || '');
+        return {
+            name: standardName,
+            total: item.total || 0,
+            finalizadas: item.finalizadas || 0,
+            color: designerColors[standardName] || '#666'
+        };
+    });
+    
+    console.log(`${logPrefix} ✅ Datos procesados:`, processedData);
+    return processedData;
+}
+
 // ✅ Solo necesitamos esta variable para guardar lo que responda el servidor
 let globalStatsCache = {
     data: null,
@@ -12204,29 +12349,25 @@ function renderActiveStatsTab() {
 
     // Actualizar datos de diseñadores si existen
     if (statsData.porDisenador && Object.keys(statsData.porDisenador).length > 0) {
-        // CORREGIDO: Usar directamente los datos de columnas J-M del backend
-        // El backend envía: {'BERMINA': X, 'JORSY': Y, 'XAMIR': Z, 'FULAN@': W}
-        const designerArray = Object.entries(statsData.porDisenador).map(([name, count]) => {
-            return {
-                nombre: name,
-                finalizadas: count || 0, // CORREGIDO: count representa el total de finalizadas del diseñador
-                color: designerColors[name] || '#666'
-            };
-        });
+        console.log("🔍 Datos de diseñadores recibidos del backend:", statsData.porDisenador);
         
-        // Asegurar que siempre mostremos los 4 diseñadores fijos
-        const fixedDesigners = ['BERMINA', 'JORSY', 'XAMIR', 'FULAN@'];
-        const dataMap = new Map(designerArray.map(d => [d.nombre, d]));
+        // ✅ USAR FUNCIÓN UNIFICADA DE PROCESAMIENTO
+        const processedDesigners = processDesignerData(statsData.porDisenador, 'renderActiveStatsTab');
+        
+        // Asegurar que siempre mostremos los 4 diseñadores fijos - FORMATO ESTÁNDAR
+        const fixedDesigners = ['Bermina', 'Jorsy', 'Xamir', 'Fulan@'];
+        const dataMap = new Map(processedDesigners.map(d => [d.name, d]));
         
         const completeData = fixedDesigners.map(name => {
             const designerData = dataMap.get(name);
             return {
                 nombre: name,
-                finalizadas: designerData ? (designerData.finalizadas || 0) : 0,
+                finalizadas: designerData ? (designerData.finalizadas || designerData.total || 0) : 0,
                 color: designerColors[name] || '#666'
             };
         });
         
+        console.log("✅ Array completo de diseñadores procesado:", completeData);
         updateDesignerPerformanceChart(completeData);
         updateDesignerPerformanceTable(completeData);
         console.log("✅ Gráfico de diseñadores actualizado");
@@ -12239,6 +12380,7 @@ function renderActiveStatsTab() {
             finalizadas: 0,
             color: designerColors[name] || '#666'
         }));
+        updateDesignerPerformanceChart(emptyDesigners);
         updateDesignerPerformanceTable(emptyDesigners);
     }
 
@@ -12915,24 +13057,30 @@ function renderDesignersComparativeCards(prevDisenadores, currDisenadores, prevM
     const container = document.getElementById('comp-designers-cards');
     if (!container) return;
 
+    console.log("🔄 renderDesignersComparativeCards - Datos recibidos:");
+    console.log("  - Mes anterior:", prevDisenadores);
+    console.log("  - Mes actual:", currDisenadores);
+
+    // ✅ USAR FUNCIÓN UNIFICADA DE PROCESAMIENTO
+    const processedPrev = processDesignerData(prevDisenadores, 'renderDesignersComparativeCards-PREV');
+    const processedCurr = processDesignerData(currDisenadores, 'renderDesignersComparativeCards-CURR');
+
     // Configurar panel horizontal simple por diseñador
     container.style.cssText = 'display: flex; flex-direction: column; gap: 10px;';
 
-    // Definir los 5 diseñadores específicos que siempre deben mostrarse
-    // CORREGIDO: Usar mayúsculas para coincidir con los datos del backend
-    const fixedDesigners = ['BERMINA', 'JORSY', 'XAMIR', 'FULAN@'];
+    // Definir los 5 diseñadores específicos que siempre deben mostrarse - FORMATO ESTÁNDAR
+    const fixedDesigners = ['Bermina', 'Jorsy', 'Xamir', 'Fulan@'];
     
     // Mapear datos de diseñadores (usando TOTAL = asignadas, no finalizadas)
     const map = new Map();
 
     // Cargar datos del mes actual (asignadas)
-    (currDisenadores || []).forEach(d => {
-        if(d.name) map.set(d.name, { curr: d.total || 0, prev: 0 });
+    processedCurr.forEach(d => {
+        map.set(d.name, { curr: d.total || 0, prev: 0 });
     });
 
     // Mezclar datos del mes anterior
-    (prevDisenadores || []).forEach(d => {
-        if(!d.name) return;
+    processedPrev.forEach(d => {
         if(map.has(d.name)) {
             map.get(d.name).prev = d.total || 0;
         } else {
@@ -12946,21 +13094,15 @@ function renderDesignersComparativeCards(prevDisenadores, currDisenadores, prevM
         return { name, curr: data.curr, prev: data.prev };
     });
 
-    // No verificar si está vacío, siempre mostrar las 5 tarjetas
+    console.log("✅ Diseñadores procesados para comparación:", designers);
 
-    // Iconos y colores de diseñadores
+    // Iconos y colores de diseñadores - FORMATO ESTÁNDAR
     const designerIcons = {
-        'BERMINA': '👵', 'JORSY': '😎', 'XAMIR': '🐲', 'FULAN@': '👋',
-        'Bermina': '👵', 'Jorsy': '😎', 'Xamir': '🐲', 'Fulan@': '👋',
-        'bermina': '👵', 'jorsy': '😎', 'xamir': '🐲', 'fulan@': '👋'
+        'Bermina': '👵', 'Jorsy': '😎', 'Xamir': '🐲', 'Fulan@': '👋'
     };
     const designerColors = {
-        'BERMINA': '#fb8500', 'JORSY': '#2908f1', 
-        'XAMIR': '#572364', 'FULAN@': '#9d0208',
         'Bermina': '#fb8500', 'Jorsy': '#2908f1', 
-        'Xamir': '#572364', 'Fulan@': '#9d0208',
-        'bermina': '#fb8500', 'jorsy': '#2908f1', 
-        'xamir': '#572364', 'fulan@': '#9d0208'
+        'Xamir': '#572364', 'Fulan@': '#9d0208'
     };
 
     // Generar panel simple por diseñador
@@ -13355,10 +13497,10 @@ function updateDesignerPerformanceChart(data) {
     const ctx = document.getElementById('designerPerformanceChart');
     if (!ctx) return;
     
-    // ✅ Asegurar que siempre mostremos los 4 diseñadores fijos
-    const fixedDesigners = ['BERMINA', 'JORSY', 'XAMIR', 'FULAN@'];
+    // ✅ Asegurar que siempre mostremos los 4 diseñadores fijos - FORMATO ESTÁNDAR
+    const fixedDesigners = ['Bermina', 'Jorsy', 'Xamir', 'Fulan@'];
     
-    // ✅ CORRECCIÓN: Crear Map con nombres exactos (mayúsculas)
+    // ✅ CORRECCIÓN: Crear Map con nombres en formato estándar
     const dataMap = new Map();
     data.forEach(d => {
         const normalizedName = (d.nombre || '').toString().trim();
@@ -13647,36 +13789,13 @@ async function loadDesignerData(period) {
         const responseData = await response.json();
         console.log("🔍 DATOS DISEÑADORES RECIBIDOS:", responseData);
         
-        let designerArray = [];
-        
         if (responseData.success && responseData.data) {
-            // ✅ El backend puede devolver array u objeto
-            if (Array.isArray(responseData.data)) {
-                // Formato array: [{nombre, color, finalizadas, ...}, ...]
-                console.log("✅ Datos de diseñadores en formato array:", responseData.data.length);
-                designerArray = responseData.data.map(item => ({
-                    nombre: item.nombre || item.name || 'Desconocido',
-                    finalizadas: item.finalizadas || 0,
-                    total: item.total || 0,
-                    color: item.color || designerColors[item.nombre] || '#666'
-                }));
-            } else if (typeof responseData.data === 'object') {
-                // Formato objeto: {nombre: datos, ...}
-                console.log("✅ Datos de diseñadores en formato objeto:", Object.keys(responseData.data));
-                designerArray = Object.entries(responseData.data).map(([name, data]) => {
-                    const cleanName = name.split('|')[0].trim();
-                    return {
-                        nombre: cleanName,
-                        finalizadas: data.finalizadas || 0,
-                        total: data.total || 0,
-                        color: designerColors[cleanName] || '#666'
-                    };
-                });
-            }
+            // ✅ USAR FUNCIÓN UNIFICADA DE PROCESAMIENTO
+            const processedDesigners = processDesignerData(responseData.data, 'loadDesignerData');
             
-            console.log("✅ Array de diseñadores procesado:", designerArray);
-            updateDesignerPerformanceChart(designerArray);
-            updateDesignerPerformanceTable(designerArray);
+            console.log("✅ Array de diseñadores procesado:", processedDesigners);
+            updateDesignerPerformanceChart(processedDesigners);
+            updateDesignerPerformanceTable(processedDesigners);
         } else {
             console.warn("⚠️ Datos de diseñadores vacíos o formato incorrecto:", responseData);
             // Si no hay datos, crear array vacío con los 5 diseñadores fijos en 0
@@ -13691,7 +13810,7 @@ async function loadDesignerData(period) {
         }
     } catch (e) {
         console.error("❌ Error cargando datos de diseñadores:", e);
-        // En caso de error, mostrar los 5 diseñadores con 0
+        // Si hay error, mostrar array vacío con los diseñadores fijos
         const emptyDesigners = ['Bermina', 'Jorsy', 'Xamir', 'Fulan@'].map(name => ({
             nombre: name,
             finalizadas: 0,
@@ -13883,10 +14002,10 @@ function renderWeeklyChart(weekData) {
                         
                         // CORREGIDO: Agregar datos de diseñadores si existen
                         if (item.disenadores) {
-                            datosBermina[i] += item.disenadores.BERMINA || 0;
-                            datosJorsy[i] += item.disenadores.JORSY || 0;
-                            datosXamir[i] += item.disenadores.XAMIR || 0;
-                            datosFulan[i] += item.disenadores['FULAN@'] || 0;
+                            datosBermina[i] += item.disenadores.Bermina || 0;
+                            datosJorsy[i] += item.disenadores.Jorsy || 0;
+                            datosXamir[i] += item.disenadores.Xamir || 0;
+                            datosFulan[i] += item.disenadores['Fulan@'] || 0;
                         }
                         break;
                     }
@@ -13959,9 +14078,9 @@ function renderWeeklyChart(weekData) {
                     borderWidth: 1,
                     borderRadius: 4
                 },
-                // CORREGIDO: Agregar barras de diseñadores con sus colores
+                // CORREGIDO: Agregar barras de diseñadores con sus colores - FORMATO ESTÁNDAR
                 {
-                    label: 'BERMINA',
+                    label: 'Bermina',
                     data: datosBermina,
                     backgroundColor: '#fb8500',
                     borderColor: '#d87700',
@@ -13969,7 +14088,7 @@ function renderWeeklyChart(weekData) {
                     borderRadius: 4
                 },
                 {
-                    label: 'JORSY',
+                    label: 'Jorsy',
                     data: datosJorsy,
                     backgroundColor: '#2908f1',
                     borderColor: '#1e06cc',
@@ -13977,7 +14096,7 @@ function renderWeeklyChart(weekData) {
                     borderRadius: 4
                 },
                 {
-                    label: 'XAMIR',
+                    label: 'Xamir',
                     data: datosXamir,
                     backgroundColor: '#572364',
                     borderColor: '#3d1a44',
@@ -13985,7 +14104,7 @@ function renderWeeklyChart(weekData) {
                     borderRadius: 4
                 },
                 {
-                    label: 'FULAN@',
+                    label: 'Fulan@',
                     data: datosFulan,
                     backgroundColor: '#9d0208',
                     borderColor: '#7a0106',
@@ -14286,10 +14405,10 @@ updateStatsTabVisibility();  // ✅ AGREGAR
                 <div id="req-case" style="color: #ff4757;">❌ Mayúsculas y minúsculas</div>
                 <div id="req-special" style="color: #ff4757;">❌ Un carácter especial (!@#$%^&*)</div>
             </div>
-            <input type="text" id="rNombre" class="modern-input" placeholder="Nombre">
-            <input type="text" id="rApellido" class="modern-input" placeholder="Apellido">
+            <input type="text" id="rNombre" class="modern-input" placeholder="Primer Nombre">
+            <input type="text" id="rApellido" class="modern-input" placeholder="Primer Apellido">
             <input type="text" id="rCI" class="modern-input" placeholder="C.I.">
-            <input type="text" id="rTlf" class="modern-input" placeholder="Teléfono">
+            <input type="text" id="rTlf" class="modern-input" placeholder="Teléfono (04xx-1234567)">
             <input type="email" id="rMail" class="modern-input" placeholder="Correo Electrónico">
             <button class="modal-btn" onclick="ejecutarRegistroConModal()">REGISTRAR USUARIO</button>
             <button class="modal-btn modal-btn-alt" onclick="switchToLogin()">VOLVER AL LOGIN</button>
