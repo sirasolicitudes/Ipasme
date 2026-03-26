@@ -8288,13 +8288,35 @@ async function assignDesigner(designerName) {
             console.log("❌ Usuario canceló desasignación");
             return;
         }
-        document.getElementById('loadMainTxt').innerText = "Desasignando diseñador...";
+        // Mostrar progreso en el panel en lugar de loadingOverlay
+        const panelStatus = document.getElementById('selectedRequestContent');
+        if (panelStatus) {
+            const originalContent = panelStatus.innerHTML;
+            panelStatus.innerHTML = `
+                <div style="text-align: center; padding: 20px;">
+                    <div class="loading-spinner" style="margin: 0 auto 10px; width: 30px; height: 30px; border: 3px solid rgba(255,255,255,0.3); border-top: 3px solid var(--celeste); border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                    <div style="color: var(--text-primary); font-weight: 600;">
+                        ${designerNameOnly !== designerName ? "Desasignando diseñador..." : "Asignando diseñador..."}
+                    </div>
+                </div>
+            `;
+        }
     } else {
         console.log("✍️ Asignando nuevo diseñador...");
-        document.getElementById('loadMainTxt').innerText = "Asignando diseñador...";
+        // Mostrar progreso en el panel en lugar de loadingOverlay
+        const panelStatus = document.getElementById('selectedRequestContent');
+        if (panelStatus) {
+            const originalContent = panelStatus.innerHTML;
+            panelStatus.innerHTML = `
+                <div style="text-align: center; padding: 20px;">
+                    <div class="loading-spinner" style="margin: 0 auto 10px; width: 30px; height: 30px; border: 3px solid rgba(255,255,255,0.3); border-top: 3px solid var(--celeste); border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                    <div style="color: var(--text-primary); font-weight: 600;">
+                        ${designerNameOnly !== designerName ? "Desasignando diseñador..." : "Asignando diseñador..."}
+                    </div>
+                </div>
+            `;
+        }
     }
-    
-    document.getElementById('loadingOverlay').style.display = 'flex';
     
     try {
         console.log("📤 Enviando solicitud al backend...");
@@ -8389,7 +8411,11 @@ async function assignDesigner(designerName) {
         console.error("Error completo:", e);
         openModal(" Error", e.message, "");
     } finally {
-        document.getElementById('loadingOverlay').style.display = 'none';
+        // Restaurar contenido original del panel
+        const panelStatus = document.getElementById('selectedRequestContent');
+        if (panelStatus && originalContent) {
+            panelStatus.innerHTML = originalContent;
+        }
     }
 }
 function panelAdjuntarArte() {
@@ -8403,8 +8429,19 @@ function panelVerArte() {
 async function panelEnviarTelegram() {
     if (!selectedRequestId || !selectedRequestData?.ArteFinal) return;
     if(!confirm("¿Enviar el arte de " + selectedRequestId + " a Telegram?")) return;
-    document.getElementById('loadMainTxt').innerText = "Enviando a Telegram...";
-    document.getElementById('loadingOverlay').style.display = 'flex';
+    
+    // Mostrar progreso en el panel en lugar de loadingOverlay
+    const panelStatus = document.getElementById('selectedRequestContent');
+    const originalContent = panelStatus ? panelStatus.innerHTML : '';
+    if (panelStatus) {
+        panelStatus.innerHTML = `
+            <div style="text-align: center; padding: 20px;">
+                <div class="loading-spinner" style="margin: 0 auto 10px; width: 30px; height: 30px; border: 3px solid rgba(255,255,255,0.3); border-top: 3px solid var(--celeste); border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                <div style="color: var(--text-primary); font-weight: 600;">Enviando a Telegram...</div>
+            </div>
+        `;
+    }
+    
     try {
         const params = new URLSearchParams();
         params.append("action", "sendTelegramArte");
@@ -8419,7 +8456,10 @@ async function panelEnviarTelegram() {
     } catch (e) {
         openModal("❌ Error", e.message, "💥");
     } finally {
-        document.getElementById('loadingOverlay').style.display = 'none';
+        // Restaurar contenido original del panel
+        if (panelStatus && originalContent) {
+            panelStatus.innerHTML = originalContent;
+        }
     }
 }
 async function panelEnviarCorreo() {
@@ -8523,8 +8563,10 @@ if (!confirm("⚠️ ¿CONFIRMA que desea generar el reporte mensual del mes ant
 "⚠️ Esta acción es IRREVERSIBLE para las del mes anterior")) {
 return;
 }
-document.getElementById('loadMainTxt').innerText = "Generando reporte mensual...";
-document.getElementById('loadingOverlay').style.display = 'flex';
+
+// Mostrar progreso con toast en lugar de loadingOverlay
+showToast("📊 Generando reporte mensual...", "info", 1000);
+
 // Funcion auxiliar para esperar
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 // Primero generar el reporte, LUEGO eliminar las finalizadas
@@ -8541,7 +8583,7 @@ openModal("✅ Reporte Generado y Limpieza Completada",
 "Las solicitudes finalizadas del mes anterior han sido eliminadas automáticamente.",
 "📊");
 await delay(2000);
-updateTable();
+updateTable(true); // Forzar refresh para ver el archivo adjunto
 // Marcar que el reporte ya fue generado este mes
 window.reportGeneratedThisMonth = true;
 // Actualizar estado del botón para deshabilitarlo
@@ -8554,9 +8596,6 @@ throw new Error(data.error || "Error al generar el reporte");
 console.error("Error en reporte mensual:", err);
 openModal(" Error", "No se pudo generar el reporte mensual: " + err.message, "");
 })
-.finally(() => {
-document.getElementById('loadingOverlay').style.display = 'none';
-});
 }
 // FUNCIÓN PARA ACTUALIZAR EL ESTADO DEL BOTÓN DE REPORTE (PANEL)
 function updateReportButtonStatus() {
@@ -8781,7 +8820,7 @@ regionGrid.appendChild(btn);
 });
 // ✅ GENERAR BOTONES DE DISEÑADOR CON COLORES CORRECTOS
 generateDesignerButtons();
-updateTable();
+updateTable(true); // Forzar refresh para ver el archivo adjunto
 setupFieldErrorRemoval();
 // ✅ INICIALIZAR MODAL DE BIENVENIDA
 initializeWelcomeModal();
@@ -8801,7 +8840,7 @@ startRealTimeListener();
 setTimeout(() => {
     if (!DATA_CACHE.data && !DATA_CACHE.isLoading) {
         console.log("🚀 Iniciando precarga inteligente en background...");
-        updateTable();
+        updateTable(true); // Forzar refresh para ver el archivo adjunto
     }
 }, 2000);
 // ✅ INICIAR SINCRONIZACIÓN AUTOMÁTICA AL CARGAR
@@ -9092,6 +9131,8 @@ toastStyles.textContent = `
 document.head.appendChild(toastStyles);
 function openModal(t, m, icon = "⚠️") {
 clearCredentials();
+// Asegurarse que loadingOverlay esté oculto al abrir modales de alerta
+document.getElementById('loadingOverlay').style.display = 'none';
 document.getElementById('loginArea').classList.add('hidden');
 document.getElementById('uploadArea').classList.add('hidden');
 document.getElementById('closeModalBtn').classList.remove('hidden'); // SIEMPRE MOSTRAR BOTÓN X
@@ -9788,7 +9829,7 @@ async function uploadArte() {
             closeModal();
             showToast("🎨 Arte subido correctamente", "success", 2500, () => {
                 invalidatePageCache();
-                updateTable();
+                updateTable(true); // Forzar refresh para ver el archivo adjunto
             });
             document.getElementById('arteFile').value = '';
         }, 1000);
@@ -9807,7 +9848,7 @@ async function uploadArte() {
             closeModal();
             showToast("🎨 Arte subido correctamente", "success", 2500, () => {
                 invalidatePageCache();
-                updateTable();
+                updateTable(true); // Forzar refresh para ver el archivo adjunto
             });
             document.getElementById('arteFile').value = '';
         }, 1000);
@@ -9840,7 +9881,9 @@ async function toggleMaintMode() {
     if (!isAdmin) return;
     
     const nuevoEstado = !isMaintActive;
-    document.getElementById('loadingOverlay').style.display = 'flex';
+    
+    // Mostrar progreso con toast en lugar de loadingOverlay
+    showToast("🛠️ Cambiando modo de mantenimiento...", "info", 1000);
     
     try {
         const params = new URLSearchParams();
@@ -9867,8 +9910,6 @@ async function toggleMaintMode() {
         }
     } catch (e) {
         openModal("❌ Error", "Error al cambiar estado del mantenimiento: " + e.message, "💥");
-    } finally {
-        document.getElementById('loadingOverlay').style.display = 'none';
     }
 }
 // === ELIMINACIÓN CON MODALES PERSONALIZADOS ===
@@ -10772,7 +10813,7 @@ function showPage(id, btn) {
   window.scrollTo({top: 0, behavior: 'smooth'});
   if(btn) btn.classList.add('active');
   else document.getElementById('tab-' + id.split('-')[0]).classList.add('active');
-  if(id === 'list-page') updateTable();
+  if(id === 'list-page') updateTable(true); // Forzar refresh para ver el archivo adjunto
 }
 // ✅ FUNCIÓN updateTable - CORREGIDA CON CACHE DE PÁGINAS
 async function updateTable(forceRefresh = false) {
@@ -11505,8 +11546,10 @@ function continueFormSubmission(params) {
 
     // ✅ AGREGAR DISPOSITIVO
     params.append("Dispositivo", detectDevice());
-    document.getElementById('loadMainTxt').innerText = "Enviando Solicitud...";
-    document.getElementById('loadingOverlay').style.display = 'flex';
+    
+    // Mostrar progreso con toast en lugar de loadingOverlay
+    showToast("📤 Enviando solicitud...", "info", 1000);
+    
     fetch(SCRIPT_URL, {
 method: 'POST',
 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -11544,6 +11587,8 @@ throw new Error(result.error);
 }
 })
 .catch(e => {
+})
+.catch(e => {
 openModal("✅ Solicitud Procesada", "El sistema ha registrado su envío.", "📋");
 setTimeout(() => {
 closeModal();
@@ -11552,14 +11597,11 @@ invalidatePageCache();
 if (PAGINATION.currentPage === 1) {
     updateTable(true); // Forzar recarga si estamos en primera página
 } else {
-    updateTable(); // Usar caché si estamos en otra página
+    updateTable(true); // Forzar refresh para ver el archivo adjunto // Usar caché si estamos en otra página
 }
 showPage('list-page', document.getElementById('tab-list'));
 }, 2000);
 })
-.finally(() => {
-document.getElementById('loadingOverlay').style.display = 'none';
-});
 }
 // ✅ FUNCIÓN ELIMINADA - uploadChunksSequential() reemplazada por sistema de subida directa
 // ✅ FUNCIÓN ELIMINADA - uploadSingleChunk() reemplazada por sistema de subida directa
@@ -11717,7 +11759,7 @@ function showPage(pageId, tabBtn) {
             navTabs.classList.add('tab-estadisticas');
         }
     }
-    if (pageId === 'list-page') updateTable();
+    if (pageId === 'list-page') updateTable(true); // Forzar refresh para ver el archivo adjunto
     if (pageId === 'stats-page') {
         switchStatsTab(currentStatsPeriod);
         // ✅ FORZAR SINCRONIZACIÓN DE CONTADORES AL ENTRAR A ESTADÍSTICAS
