@@ -12156,7 +12156,6 @@ function standardizeDesignerName(name) {
         .replace(/maría|maria/gi, 'María F.')
         .replace(/\b\w/g, l => l.toUpperCase()); // Primera letra mayúscula
     
-    console.log(`🔍 Estandarizando: "${name}" → "${standardName}"`);
     return standardName;
 }
 
@@ -12392,9 +12391,21 @@ function renderActiveStatsTab() {
     // Actualizar datos de diseñadores si existen
     if (statsData.porDisenador && Object.keys(statsData.porDisenador).length > 0) {
         console.log("🔍 Datos de diseñadores recibidos del backend:", statsData.porDisenador);
+        console.log("🔍 Finalizadas por diseñador recibidos del backend:", statsData.finalizadasPorDisenador);
         
-        // ✅ USAR FUNCIÓN UNIFICADA DE PROCESAMIENTO
-        const processedDesigners = processDesignerData(statsData.porDisenador, 'renderActiveStatsTab');
+        // ✅ CORREGIDO: Combinar ambos conjuntos de datos (totales + finalizadas)
+        const combinedDesignerData = {};
+        const designers = ['Bermina', 'Jorsy', 'Xamir', 'Fulan@'];
+        
+        for (const designer of designers) {
+            combinedDesignerData[designer] = {
+                total: statsData.porDisenador[designer] || 0,
+                finalizadas: statsData.finalizadasPorDisenador[designer] || 0
+            };
+        }
+        
+        // ✅ USAR FUNCIÓN UNIFICADA DE PROCESAMIENTO con datos combinados
+        const processedDesigners = processDesignerData(combinedDesignerData, 'renderActiveStatsTab');
         
         // Asegurar que siempre mostremos los 4 diseñadores fijos - FORMATO ESTÁNDAR
         const fixedDesigners = ['Bermina', 'Jorsy', 'Xamir', 'Fulan@'];
@@ -12404,7 +12415,9 @@ function renderActiveStatsTab() {
             const designerData = dataMap.get(name);
             return {
                 nombre: name,
-                finalizadas: designerData ? (designerData.finalizadas || designerData.total || 0) : 0,
+                // ✅ CAMBIADO: Priorizar finalizadas sobre total
+                finalizadas: designerData ? (designerData.finalizadas || 0) : 0,
+                total: designerData ? (designerData.total || 0) : 0,
                 color: designerColors[name] || '#666'
             };
         });
@@ -12462,13 +12475,21 @@ function renderActiveStatsTab() {
             previous: globalStatsCache.data.anterior || {}
         };
         
-        // CORREGIDO: Asegurar que datosDisenadores se pasen correctamente
+        // CORREGIDO: Asegurar que datosDisenadores se pasen correctamente con finalizadas reales
         if (comparative.current && comparative.current.porDisenador) {
-            comparative.current.datosDisenadores = Object.entries(comparative.current.porDisenador).map(([name, value]) => ({name, total: value, finalizadas: 0}));
+            comparative.current.datosDisenadores = Object.entries(comparative.current.porDisenador).map(([name, value]) => ({
+                name: name, 
+                total: value || 0,  // ✅ CORREGIDO: value ya es el total directo
+                finalizadas: comparative.current.finalizadasPorDisenador?.[name] || 0  // ✅ Usar finalizadasPorDisenador
+            }));
         }
         
         if (comparative.previous && comparative.previous.porDisenador) {
-            comparative.previous.datosDisenadores = Object.entries(comparative.previous.porDisenador).map(([name, value]) => ({name, total: value, finalizadas: 0}));
+            comparative.previous.datosDisenadores = Object.entries(comparative.previous.porDisenador).map(([name, value]) => ({
+                name: name, 
+                total: value || 0,  // ✅ CORREGIDO: value ya es el total directo
+                finalizadas: comparative.previous.finalizadasPorDisenador?.[name] || 0  // ✅ Usar finalizadasPorDisenador
+            }));
         }
         
         renderComparativeStats(comparative);
