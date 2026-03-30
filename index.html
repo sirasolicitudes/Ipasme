@@ -5185,6 +5185,12 @@ async function showWelcomeModal() {
     // Store IP and device data for database (hidden from user)
     // console.log('Visit data stored:', { ip, device, timestamp: now.toISOString() }); // ELIMINADO POR SEGURIDAD - CONTIENE IP Y DATOS DEL USUARIO
     
+    // ✅ OCULTAR BARRA DE PROGRESO DEL LOGIN - el modal de bienvenida no debe mostrarla
+    const loginProgressBar = document.getElementById('loginProgressBar');
+    if (loginProgressBar) {
+        loginProgressBar.style.display = 'none';
+    }
+    
     // Show modal immediately with loading state
     const welcomeModal = document.getElementById('welcomeModal');
     welcomeModal.style.display = 'flex';
@@ -5243,6 +5249,12 @@ function closeWelcomeModalForLogin() {
 // Asegurar que el modal de bienvenida se muestre al inicio
 function ensureWelcomeModalVisible() {
     
+    // ✅ OCULTAR BARRA DE PROGRESO DEL LOGIN - al asegurar visibilidad de modales
+    const loginProgressBar = document.getElementById('loginProgressBar');
+    if (loginProgressBar) {
+        loginProgressBar.style.display = 'none';
+    }
+    
     const welcomeModal = document.getElementById('welcomeModal');
     const userLoginModal = document.getElementById('userLoginModal');
     
@@ -5269,6 +5281,12 @@ function ensureWelcomeModalVisible() {
  * Alterna entre vista de login y registro
  */
 function toggleAuth(isRegister) {
+    // ✅ OCULTAR BARRA DE PROGRESO DEL LOGIN - al alternar entre auth
+    const loginProgressBar = document.getElementById('loginProgressBar');
+    if (loginProgressBar) {
+        loginProgressBar.style.display = 'none';
+    }
+    
     document.getElementById('loginSection').classList.toggle('hidden', isRegister);
     document.getElementById('registerSection').classList.toggle('hidden', !isRegister);
     
@@ -5728,6 +5746,12 @@ function closeUserLoginModal() {
  * Muestra el modal de registro de usuario regular
  */
 function showUserRegisterModal() {
+    // ✅ OCULTAR BARRA DE PROGRESO DEL LOGIN - el modal de registro no debe mostrarla
+    const loginProgressBar = document.getElementById('loginProgressBar');
+    if (loginProgressBar) {
+        loginProgressBar.style.display = 'none';
+    }
+    
     // Asegurarse de que el modal de registro sea visible
     const registerModal = document.getElementById('userRegisterModal');
     if (registerModal) {
@@ -6990,17 +7014,29 @@ document.getElementById('idNotFoundModal').style.display = 'none';
 }
 // ✅ Cerrar modal de ID no encontrado
 function closeIdNotFoundModal() {
-document.getElementById('idNotFoundModal').style.display = 'none';
-document.getElementById('searchIdInput').focus();
+    // ✅ OCULTAR BARRA DE PROGRESO DEL LOGIN - el modal de ID no encontrado no debe mostrarla
+    const loginProgressBar = document.getElementById('loginProgressBar');
+    if (loginProgressBar) {
+        loginProgressBar.style.display = 'none';
+    }
+    
+    document.getElementById('idNotFoundModal').style.display = 'none';
+    document.getElementById('searchIdInput').focus();
 }
 // ✅ LIMPIAR BÚSQUEDA
 function clearSearch() {
-document.getElementById('searchIdInput').value = "";
-buscarPorID();
-// ✅ FOCO DE NUEVO EN EL INPUT
-setTimeout(() => {
-document.getElementById('searchIdInput').focus();
-}, 100);
+    // ✅ OCULTAR BARRA DE PROGRESO DEL LOGIN - la limpieza de búsqueda no debe mostrarla
+    const loginProgressBar = document.getElementById('loginProgressBar');
+    if (loginProgressBar) {
+        loginProgressBar.style.display = 'none';
+    }
+    
+    document.getElementById('searchIdInput').value = "";
+    buscarPorID();
+    // ✅ FOCO DE NUEVO EN EL INPUT
+    setTimeout(() => {
+        document.getElementById('searchIdInput').focus();
+    }, 100);
 }
 // ✅ MANEJADOR DE EVENTOS PARA TECLADO
 function handleSearchKeydown(e) {
@@ -8804,6 +8840,12 @@ function setupFieldErrorRemoval() {
   document.getElementById('btn-pm').addEventListener('click', () => document.getElementById('hora-box').classList.remove('field-error'));
 }
 document.addEventListener('DOMContentLoaded', () => {
+// ✅ OCULTAR BARRA DE PROGRESO DEL LOGIN AL INICIALIZAR - no debe estar visible al cargar
+const loginProgressBar = document.getElementById('loginProgressBar');
+if (loginProgressBar) {
+    loginProgressBar.style.display = 'none';
+}
+
 // ✅ VERIFICAR ESTADO DE MANTENIMIENTO AL CARGAR
 checkMaintenanceStatus();
 
@@ -9136,6 +9178,13 @@ document.getElementById('loadingOverlay').style.display = 'none';
 document.getElementById('loginArea').classList.add('hidden');
 document.getElementById('uploadArea').classList.add('hidden');
 document.getElementById('closeModalBtn').classList.remove('hidden'); // SIEMPRE MOSTRAR BOTÓN X
+
+// ✅ OCULTAR BARRA DE PROGRESO DEL LOGIN PARA EVITAR CONFLICTO EN MODALES DE ALERTA
+const loginProgressBar = document.getElementById('loginProgressBar');
+if (loginProgressBar) {
+    loginProgressBar.style.display = 'none';
+}
+
 document.getElementById('modalIcon').innerText = icon;
 document.getElementById('modalTitle').innerText = t;
 document.getElementById('modalMsg').innerText = m;
@@ -9275,6 +9324,12 @@ function showSolicitudIdModal(solicitudId) {
     document.getElementById('uploadArea').classList.add('hidden');
     document.getElementById('closeModalBtn').classList.remove('hidden');
     
+    // ✅ OCULTAR BARRA DE PROGRESO DEL LOGIN PARA EVITAR CONFLICTO
+    const loginProgressBar = document.getElementById('loginProgressBar');
+    if (loginProgressBar) {
+        loginProgressBar.style.display = 'none';
+    }
+    
     // Configurar modal para ID de solicitud
     document.getElementById('modalIcon').innerText = "📋";
     document.getElementById('modalTitle').innerText = "Solicitud Enviada Exitosamente";
@@ -9370,6 +9425,13 @@ function showLogin() {
 // Cerrar modal de bienvenida para mostrar login de admin
 closeWelcomeModalForLogin();
 clearCredentials();
+
+// ✅ OCULTAR BARRA DE PROGRESO DEL LOGIN ANTES DE MOSTRAR LOGIN
+const loginProgressBar = document.getElementById('loginProgressBar');
+if (loginProgressBar) {
+    loginProgressBar.style.display = 'none';
+}
+
 document.getElementById('modalIcon').innerText = "🔐";
 document.getElementById('modalTitle').innerText = "Bienvenido a SIRA 3.0 Reborn";
 document.getElementById('modalMsg').innerText = "Ingrese sus credenciales para acceder al sistema.";
@@ -9921,9 +9983,15 @@ function deleteReq(id) {
         return;
     }
     currentDeleteId = id;
-    showDeleteConfirm(1);
-currentDeleteId = id;
-showDeleteConfirm(1);
+    
+    // ✅ OCULTAR BARRA DE PROGRESO DEL LOGIN ANTES DE MOSTRAR CONFIRMACIÓN
+    const loginProgressBar = document.getElementById('loginProgressBar');
+    if (loginProgressBar) {
+        loginProgressBar.style.display = 'none';
+    }
+    
+    // Mostrar modal de confirmación
+    showDeleteConfirm();
 }
 function showDeleteConfirm(step) {
 const id = currentDeleteId;
@@ -9940,19 +10008,25 @@ showDeleteProgressModal(id);
 }
 }
 function openCustomModal(title, message, onConfirm, onCancel) {
-document.getElementById('modalIcon').innerText = "❓";
-document.getElementById('modalTitle').innerText = title;
-document.getElementById('modalMsg').innerHTML = message;
-const mainBtn = document.getElementById('mainModalBtn');
-const altBtn = document.getElementById('closeModalBtn');
-mainBtn.innerText = "SÍ, ACEPTAR";
-mainBtn.onclick = () => { closeModal(); if (onConfirm) onConfirm(); };
-altBtn.classList.remove('hidden'); // Asegurar que sea visible
-altBtn.innerText = "CANCELAR";
-altBtn.onclick = () => { closeModal(); if (onCancel) onCancel(); };
-document.getElementById('loginArea').classList.add('hidden');
-document.getElementById('uploadArea').classList.add('hidden');
-document.getElementById('modalAlert').style.display = 'flex';
+    // ✅ OCULTAR BARRA DE PROGRESO DEL LOGIN ANTES DE MOSTRAR MODAL PERSONALIZADO
+    const loginProgressBar = document.getElementById('loginProgressBar');
+    if (loginProgressBar) {
+        loginProgressBar.style.display = 'none';
+    }
+    
+    document.getElementById('modalIcon').innerText = "❓";
+    document.getElementById('modalTitle').innerText = title;
+    document.getElementById('modalMsg').innerHTML = message;
+    const mainBtn = document.getElementById('mainModalBtn');
+    const altBtn = document.getElementById('closeModalBtn');
+    mainBtn.innerText = "SÍ, ACEPTAR";
+    mainBtn.onclick = () => { closeModal(); if (onConfirm) onConfirm(); };
+    altBtn.classList.remove('hidden'); // Asegurar que sea visible
+    altBtn.innerText = "CANCELAR";
+    altBtn.onclick = () => { closeModal(); if (onCancel) onCancel(); };
+    document.getElementById('loginArea').classList.add('hidden');
+    document.getElementById('uploadArea').classList.add('hidden');
+    document.getElementById('modalAlert').style.display = 'flex';
 }
 // ✅ NUEVO: Modal de progreso de eliminación (similar al login)
 function showDeleteProgressModal(id) {
@@ -9977,7 +10051,7 @@ function showDeleteProgressModal(id) {
     mainBtn.style.display = 'block';
     // Configurar botón de cerrar (oculto durante eliminación)
     closeBtn.classList.add('hidden');
-    // ✅ MOSTRAR BARRA DE PROGRESO (mismo estilo que login)
+    // ✅ MOSTRAR BARRA DE PROGRESO (solo aquí es apropiado)
     const progressBar = document.getElementById('loginProgressBar');
     const progressBarInner = document.getElementById('loginProgressBarInner');
     const progressPercent = document.getElementById('loginProgressPercent');
@@ -11616,6 +11690,13 @@ function showUploadProgressModal(id, filename, fileSizeMB) {
     const closeBtn = document.getElementById('closeModalBtn');
     const mainBtn = document.getElementById('mainModalBtn');
     if (!modalIcon || !modalTitle || !modalMsg) return;
+    
+    // ✅ OCULTAR BARRA DE PROGRESO DEL LOGIN - este modal usa su propio sistema de progreso
+    const loginProgressBar = document.getElementById('loginProgressBar');
+    if (loginProgressBar) {
+        loginProgressBar.style.display = 'none';
+    }
+    
     modalIcon.innerText = "";
     modalTitle.innerText = "Subiendo Archivo";
     modalMsg.innerHTML = `
@@ -11794,11 +11875,27 @@ async function refreshAllStats() {
         disableButtonForCooldown(btn, 60);
         
     } catch (error) {
-        btn.innerHTML = '<span>❌</span> Error';
-        setTimeout(() => {
-            btn.innerHTML = originalContent;
-            btn.disabled = false;
-        }, 1500);
+        // ✅ VERIFICAR SI ES ERROR DE COOLDOWN GLOBAL
+        if (error.message && error.message.includes("Otro usuario está actualizando")) {
+            // Extraer minutos restantes del mensaje de error
+            const minutesMatch = error.message.match(/espera (\d+) minutos/);
+            const remainingMinutes = minutesMatch ? parseInt(minutesMatch[1]) : 60;
+            
+            btn.innerHTML = '<span>⏱️</span> En cooldown';
+            showToast("Otro usuario está actualizando las estadísticas. Por favor espera.", "warning");
+            
+            // Bloquear el botón con el tiempo restante del cooldown global
+            disableButtonForCooldown(btn, remainingMinutes);
+            
+        } else {
+            // Error normal
+            btn.innerHTML = '<span>❌</span> Error';
+            showToast("Error al actualizar estadísticas: " + error.message, "error");
+            setTimeout(() => {
+                btn.innerHTML = originalContent;
+                btn.disabled = false;
+            }, 1500);
+        }
     }
 }
 // Función para obtener datos del backend
