@@ -7566,8 +7566,76 @@ function createRowElement(s, idx) {
     const horaEvento = s.Hora && s.Hora.trim() !== '' ? s.Hora : 'Sin hora';
     const isRegularUser = !isAdmin && !isDesigner;
     if (isRegularUser) {
-        const fechaSolicitudFormat = extraerFecha(s.Timestamp);
-        const horaSolicitudFormat = extraerHora(s.Timestamp);
+        // El campo Timestamp ya viene formateado desde el backend
+        let fechaSolicitudFormat = "";
+        let horaSolicitudFormat = "";
+        
+        if (s.Timestamp) {
+            // Formato recibido: "d/M/yyyy H:mm AM/PM" (ej: "30/3/2026 12:52 PM")
+            const timestampParts = s.Timestamp.split(' ');
+            
+            if (timestampParts.length >= 3) {
+                // Formato: ["30/3/2026", "12:52", "PM"]
+                const fechaPart = timestampParts[0]; // "30/3/2026"
+                const horaPart = timestampParts[1]; // "12:52"
+                const ampmPart = timestampParts[2]; // "PM"
+                
+                // Procesar fecha: convertir "d/M/yyyy" a "dd/MM/yyyy"
+                const fechaComponents = fechaPart.split('/');
+                if (fechaComponents.length === 3) {
+                    const day = fechaComponents[0].padStart(2, '0');
+                    const month = fechaComponents[1].padStart(2, '0');
+                    const year = fechaComponents[2];
+                    fechaSolicitudFormat = `${day}/${month}/${year}`;
+                }
+                
+                // Procesar hora: convertir "H:mm AM/PM" a 24h
+                if (horaPart && ampmPart) {
+                    const timeComponents = horaPart.split(':');
+                    if (timeComponents.length === 2) {
+                        let hours = parseInt(timeComponents[0]);
+                        const minutes = timeComponents[1];
+                        
+                        // Convertir a 24h si es PM y no es mediodía
+                        if (ampmPart.toUpperCase() === 'PM' && hours !== 12) {
+                            hours += 12;
+                        }
+                        // Convertir a 24h si es AM y es medianoche
+                        if (ampmPart.toUpperCase() === 'AM' && hours === 12) {
+                            hours = 0;
+                        }
+                        
+                        horaSolicitudFormat = `${hours.toString().padStart(2, '0')}:${minutes}`;
+                    }
+                }
+            } else if (timestampParts.length >= 2) {
+                // Fallback para formato sin AM/PM
+                fechaSolicitudFormat = timestampParts[0]; // dd/MM/yyyy
+                horaSolicitudFormat = timestampParts[1]; // HH:mm
+            }
+        } else {
+            // ✅ SOLUCIÓN TEMPORAL: Extraer fecha del ID de la solicitud
+            // Formato del ID: REQ-1774889567419 (número es timestamp en milisegundos)
+            if (s.id && s.id.startsWith("REQ-")) {
+                const timestampFromId = s.id.replace("REQ-", "");
+                const timestampNum = parseInt(timestampFromId);
+                
+                if (!isNaN(timestampNum)) {
+                    const fechaCreacion = new Date(timestampNum);
+                    fechaSolicitudFormat = fechaCreacion.toLocaleDateString('es-VE', {
+                        day: '2-digit',
+                        month: '2-digit', 
+                        year: 'numeric'
+                    }).replace(/\//g, '/');
+                    horaSolicitudFormat = fechaCreacion.toLocaleTimeString('es-VE', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        hour12: false
+                    });
+                }
+            }
+        }
+        
         tr.innerHTML = `
             <td>
                 <span class="txt-bold">${fechaSolicitudFormat}</span><br>
@@ -7829,8 +7897,79 @@ function renderLocalTable() {
       ? `<span style="color: var(--verde); font-size: 1.2rem;">📷</span>`
       : `<span style="color: var(--rojo); font-size: 1.2rem;">❌</span>`;
 
-    const fechaSolicitudFormat = extraerFecha(s.Timestamp);
-    const horaSolicitudFormat = extraerHora(s.Timestamp);
+    // El campo Timestamp ya viene formateado desde el backend
+    let fechaSolicitudFormat = "";
+    let horaSolicitudFormat = "";
+    
+    // Si el Timestamp formateado está vacío, usar el valor crudo para procesarlo en el frontend
+    let timestampToProcess = s.Timestamp || s.TimestampRaw;
+    
+    if (timestampToProcess) {
+        // Formato recibido: "d/M/yyyy H:mm AM/PM" (ej: "30/3/2026 12:52 PM")
+        const timestampParts = timestampToProcess.split(' ');
+        
+        if (timestampParts.length >= 3) {
+            // Formato: ["30/3/2026", "12:52", "PM"]
+            const fechaPart = timestampParts[0]; // "30/3/2026"
+            const horaPart = timestampParts[1]; // "12:52"
+            const ampmPart = timestampParts[2]; // "PM"
+            
+            // Procesar fecha: convertir "d/M/yyyy" a "dd/MM/yyyy"
+            const fechaComponents = fechaPart.split('/');
+            if (fechaComponents.length === 3) {
+                const day = fechaComponents[0].padStart(2, '0');
+                const month = fechaComponents[1].padStart(2, '0');
+                const year = fechaComponents[2];
+                fechaSolicitudFormat = `${day}/${month}/${year}`;
+            }
+            
+            // Procesar hora: convertir "H:mm AM/PM" a 24h
+            if (horaPart && ampmPart) {
+                const timeComponents = horaPart.split(':');
+                if (timeComponents.length === 2) {
+                    let hours = parseInt(timeComponents[0]);
+                    const minutes = timeComponents[1];
+                    
+                    // Convertir a 24h si es PM y no es mediodía
+                    if (ampmPart.toUpperCase() === 'PM' && hours !== 12) {
+                        hours += 12;
+                    }
+                    // Convertir a 24h si es AM y es medianoche
+                    if (ampmPart.toUpperCase() === 'AM' && hours === 12) {
+                        hours = 0;
+                    }
+                    
+                    horaSolicitudFormat = `${hours.toString().padStart(2, '0')}:${minutes}`;
+                }
+            }
+        } else if (timestampParts.length >= 2) {
+            // Fallback para formato sin AM/PM
+            fechaSolicitudFormat = timestampParts[0]; // dd/MM/yyyy
+            horaSolicitudFormat = timestampParts[1]; // HH:mm
+        }
+    } else {
+        // ✅ SOLUCIÓN TEMPORAL: Extraer fecha del ID de la solicitud
+        // Formato del ID: REQ-1774889567419 (número es timestamp en milisegundos)
+        if (s.id && s.id.startsWith("REQ-")) {
+            const timestampFromId = s.id.replace("REQ-", "");
+            const timestampNum = parseInt(timestampFromId);
+            
+            if (!isNaN(timestampNum)) {
+                const fechaCreacion = new Date(timestampNum);
+                fechaSolicitudFormat = fechaCreacion.toLocaleDateString('es-VE', {
+                    day: '2-digit',
+                    month: '2-digit', 
+                    year: 'numeric'
+                }).replace(/\//g, '/');
+                horaSolicitudFormat = fechaCreacion.toLocaleTimeString('es-VE', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: false
+                });
+            }
+        }
+    }
+    
     const fechaEventoFormat = extraerFecha(s.Fecha);
     const horaEvento = s.Hora && s.Hora.trim() !== '' ? s.Hora : 'Sin hora';
 
@@ -8081,12 +8220,85 @@ function updatePanelContent() {
     const badge = (esObituario || esCopyInstagram || esCorreccionNotaPrensa)
         ? '<span class="badge-prioridad">PRIORIZAR</span>'
         : (selectedRequestData.Estatus === 'PENDIENTE' ? '<span class="badge-new">NEW</span>' : '');
+    
+    // ✅ PROCESAR FECHA DE SOLICITUD PARA EL PANEL
+    let fechaSolicitudPanel = "";
+    let horaSolicitudPanel = "";
+    
+    let timestampToProcess = selectedRequestData.Timestamp || selectedRequestData.TimestampRaw;
+    
+    if (timestampToProcess) {
+        // Formato recibido: "d/M/yyyy H:mm AM/PM" (ej: "30/3/2026 12:52 PM")
+        const timestampParts = timestampToProcess.split(' ');
+        
+        if (timestampParts.length >= 3) {
+            // Formato: ["30/3/2026", "12:52", "PM"]
+            const fechaPart = timestampParts[0]; // "30/3/2026"
+            const horaPart = timestampParts[1]; // "12:52"
+            const ampmPart = timestampParts[2]; // "PM"
+            
+            // Procesar fecha: convertir "d/M/yyyy" a "dd/MM/yyyy"
+            const fechaComponents = fechaPart.split('/');
+            if (fechaComponents.length === 3) {
+                const day = fechaComponents[0].padStart(2, '0');
+                const month = fechaComponents[1].padStart(2, '0');
+                const year = fechaComponents[2];
+                fechaSolicitudPanel = `${day}/${month}/${year}`;
+            }
+            
+            // Procesar hora: convertir "H:mm AM/PM" a 24h
+            if (horaPart && ampmPart) {
+                const timeComponents = horaPart.split(':');
+                if (timeComponents.length === 2) {
+                    let hours = parseInt(timeComponents[0]);
+                    const minutes = timeComponents[1];
+                    
+                    // Convertir a 24h si es PM y no es mediodía
+                    if (ampmPart.toUpperCase() === 'PM' && hours !== 12) {
+                        hours += 12;
+                    }
+                    // Convertir a 24h si es AM y es medianoche
+                    if (ampmPart.toUpperCase() === 'AM' && hours === 12) {
+                        hours = 0;
+                    }
+                    
+                    horaSolicitudPanel = `${hours.toString().padStart(2, '0')}:${minutes}`;
+                }
+            }
+        } else if (timestampParts.length >= 2) {
+            // Fallback para formato sin AM/PM
+            fechaSolicitudPanel = timestampParts[0]; // dd/MM/yyyy
+            horaSolicitudPanel = timestampParts[1]; // HH:mm
+        }
+    } else {
+        // ✅ SOLUCIÓN TEMPORAL: Extraer fecha del ID de la solicitud
+        if (selectedRequestData.id && selectedRequestData.id.startsWith("REQ-")) {
+            const timestampFromId = selectedRequestData.id.replace("REQ-", "");
+            const timestampNum = parseInt(timestampFromId);
+            
+            if (!isNaN(timestampNum)) {
+                const fechaCreacion = new Date(timestampNum);
+                fechaSolicitudPanel = fechaCreacion.toLocaleDateString('es-VE', {
+                    day: '2-digit',
+                    month: '2-digit', 
+                    year: 'numeric'
+                }).replace(/\//g, '/');
+                horaSolicitudPanel = fechaCreacion.toLocaleTimeString('es-VE', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: false
+                });
+            }
+        }
+    }
+    
     container.innerHTML = `
     <div class="selected-request-id">${selectedRequestId} ${badge}</div>
     <div class="selected-request-info">
         <strong>${selectedRequestData.Unidad}</strong><br>
         ${selectedRequestData.Solicitud}<br>
-        📅 ${selectedRequestData.Fecha} ${selectedRequestData.Hora ? '| ' + selectedRequestData.Hora : ''}
+        📅 <strong>Fecha Solicitud:</strong> ${fechaSolicitudPanel} ${horaSolicitudPanel ? '| ' + horaSolicitudPanel : ''}<br>
+        📅 <strong>Fecha Evento:</strong> ${selectedRequestData.Fecha} ${selectedRequestData.Hora ? '| ' + selectedRequestData.Hora : ''}
     </div>
     `;
     // Actualizar indicadores de estado (luces)
