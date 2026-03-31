@@ -5413,7 +5413,7 @@ function ejecutarLoginRegular() {
     loginBtn.textContent = '🔄 VALIDANDO...';
     loginBtn.style.opacity = '0.7';
 
-    // Login optimizado con timeout y fallback
+    // Login optimizado con timeout y respuesta del servidor
     const loginPromise = fetch(SCRIPT_URL, {
         method: 'POST',
         headers: {
@@ -5424,8 +5424,7 @@ function ejecutarLoginRegular() {
             username: user,
             password: pass,
             timestamp: Date.now() // Para evitar caché
-        }),
-        mode: 'no-cors'
+        })
     });
 
     // Timeout de 8 segundos para respuesta rápida
@@ -5434,112 +5433,84 @@ function ejecutarLoginRegular() {
     );
 
     Promise.race([loginPromise, timeoutPromise])
-        .then(response => {
-            
-            // Intentar procesar respuesta real del servidor
-            try {
-                // Como usamos no-cors, no podemos leer la respuesta directamente
-                // Pero podemos hacer una segunda llamada para verificar
-                fetch(SCRIPT_URL + '?action=contarUsuariosPorUnidad&unidad=all', {
-                    method: 'GET',
-                    mode: 'no-cors'
-                }).then(() => {
-                            }).catch(() => {
-                    // Error en verificación, continuando con modo local
-                });
-            } catch (error) {
-                // No se pudo verificar respuesta del servidor
+        .then(async response => {
+            if (!response.ok) {
+                throw new Error('HTTP ' + response.status);
             }
             
-            // Respuesta real del backend - procesar directamente
-            setTimeout(async () => {
-                // Cargar usuarios reales desde backend
-                const usuariosReales = await cargarUsuariosReales();
+            const data = await response.json();
+            
+            if (data.success && (data.data && data.data.user)) {
+                // Login exitoso - usar datos del backend
+                const userData = data.data.user;
+                closeUserLoginModal();
+                document.getElementById('welcomeModal').style.display = 'none';
                 
-                // Usuarios predefinidos (solo admin)
-                const usuariosPredefinidos = [
-                    { usuario: 'admin', password: 'admin123', nombre: 'Administrador', apellido: 'Sistema', unidad: 'SIRA Central' }
-                ];
+                // Guardar credenciales para persistencia
+                const userCredentials = {
+                    username: user,
+                    password: pass,
+                    rol: 'usuario',
+                    nombre: userData.nombre,
+                    apellido: userData.apellido,
+                    unidad: userData.unidad
+                };
                 
-                // Buscar usuario en reales y predefinidos
-                const todosLosUsuarios = [...usuariosReales, ...usuariosPredefinidos];
-                const usuarioEncontrado = todosLosUsuarios.find(u => u.usuario === user && u.password === pass);
+                saveSession(userCredentials);
                 
-                if (usuarioEncontrado) {
-                    // Login exitoso
-                    closeUserLoginModal();
-                    document.getElementById('welcomeModal').style.display = 'none';
-                    
-                    // Guardar credenciales para persistencia
-                    const userCredentials = {
-                        username: user,
-                        password: pass,
-                        rol: 'usuario',
-                        nombre: usuarioEncontrado.nombre,
-                        apellido: usuarioEncontrado.apellido,
-                        unidad: usuarioEncontrado.unidad
-                    };
-                    
-                    saveSession(userCredentials);
-                    
-                    // Actualizar UI - Mostrar sistema principal
-                                    
-                    // Ocultar completamente el modal de bienvenida
-                    const welcomeModal = document.getElementById('welcomeModal');
-                    if (welcomeModal) {
-                        welcomeModal.style.display = 'none';
-                        welcomeModal.style.visibility = 'hidden';
-                        welcomeModal.style.opacity = '0';
-                    }
-                    
-                    // Mostrar sistema principal
-                    const mainSystem = document.getElementById('mainSystem');
-                    if (mainSystem) {
-                        mainSystem.style.display = 'block';
-                        mainSystem.style.visibility = 'visible';
-                        mainSystem.style.opacity = '1';
-                    }
-                    
-                    // Actualizar mensaje de bienvenida en el sistema
-                    const welcomeMsg = document.getElementById('welcomeMessage');
-                    const userNameDisplayEl = document.getElementById('userNameDisplay');
-                    
-                    if (welcomeMsg && userNameDisplayEl) {
-                        // Actualizar solo el nombre en el span, no reemplazar todo el HTML
-                        userNameDisplayEl.innerText = `${usuarioEncontrado.nombre} ${usuarioEncontrado.apellido}`;
-                        welcomeMsg.classList.remove('hidden');
-                        welcomeMsg.classList.add('show');
-                    }
-                    
-                    // Mostrar botón de cerrar sesión para usuarios regulares
-                    const logoutBtn = document.getElementById('logoutBtn');
-                    if (logoutBtn) {
-                        logoutBtn.classList.remove('hidden');
-                    }
-                    
-                    window.usuarioRegular = userCredentials;
-                    window.userCredentials = userCredentials;
-                    
-                    showToast(`✅ ¡Bienvenido! Has iniciado sesión desde la unidad <strong>${usuarioEncontrado.unidad}</strong>`, "success", 4000);
-                    
-                    // Pre-llenar formulario si existe
-                    if (typeof prellenarFormularioConUsuario === 'function') {
-                        prellenarFormularioConUsuario(usuarioEncontrado);
-                    }
-                    
-                } else {
-                    // Login fallido
-                    showToast("❌ Usuario o contraseña incorrectos", "error", 4000);
-                    document.getElementById('userLoginPassword').value = '';
-                    document.getElementById('userLoginPassword').focus();
+                // Ocultar completamente el modal de bienvenida
+                const welcomeModal = document.getElementById('welcomeModal');
+                if (welcomeModal) {
+                    welcomeModal.style.display = 'none';
+                    welcomeModal.style.visibility = 'hidden';
+                    welcomeModal.style.opacity = '0';
                 }
                 
-                // Restaurar botón
-                loginBtn.disabled = false;
-                loginBtn.textContent = 'ENTRAR';
-                loginBtn.style.opacity = '1';
+                // Mostrar sistema principal
+                const mainSystem = document.getElementById('mainSystem');
+                if (mainSystem) {
+                    mainSystem.style.display = 'block';
+                    mainSystem.style.visibility = 'visible';
+                    mainSystem.style.opacity = '1';
+                }
                 
-            }, 1000); // Simular tiempo de procesamiento
+                // Actualizar mensaje de bienvenida en el sistema
+                const welcomeMsg = document.getElementById('welcomeMessage');
+                const userNameDisplayEl = document.getElementById('userNameDisplay');
+                
+                if (welcomeMsg && userNameDisplayEl) {
+                    userNameDisplayEl.innerText = `${userData.nombre} ${userData.apellido}`;
+                    welcomeMsg.classList.remove('hidden');
+                    welcomeMsg.classList.add('show');
+                }
+                
+                // Mostrar botón de cerrar sesión para usuarios regulares
+                const logoutBtn = document.getElementById('logoutBtn');
+                if (logoutBtn) {
+                    logoutBtn.classList.remove('hidden');
+                }
+                
+                window.usuarioRegular = userCredentials;
+                window.userCredentials = userCredentials;
+                
+                showToast(`✅ ¡Bienvenido! Has iniciado sesión desde la unidad <strong>${userData.unidad}</strong>`, "success", 4000);
+                
+                // Pre-llenar formulario si existe
+                if (typeof prellenarFormularioConUsuario === 'function') {
+                    prellenarFormularioConUsuario(userData);
+                }
+                
+            } else {
+                // Login fallido
+                showToast("❌ " + (data.data?.message || data.message || "Usuario o contraseña incorrectos"), "error", 4000);
+                document.getElementById('userLoginPassword').value = '';
+                document.getElementById('userLoginPassword').focus();
+            }
+            
+            // Restaurar botón
+            loginBtn.disabled = false;
+            loginBtn.textContent = 'ENTRAR';
+            loginBtn.style.opacity = '1';
             
         })
         .catch(error => {
