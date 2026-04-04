@@ -8930,11 +8930,6 @@ function completeSelectRequest(id) {
     selectedRequestId = id;
     selectedRequestData = localData.find(x => x.id == id);
     
-    // 🔍 DEBUG: Ver qué datos tiene la solicitud seleccionada
-    console.log("🔍 selectedRequestData:", selectedRequestData);
-    console.log("🔍 Timestamp:", selectedRequestData?.Timestamp);
-    console.log("🔍 TimestampRaw:", selectedRequestData?.TimestampRaw);
-    
     // Abrir panel automáticamente
     openSidePanel();
     // Actualizar tabla para mostrar selección visual
@@ -10437,7 +10432,7 @@ document.getElementById('uploadArea').classList.add('hidden');
 document.getElementById('closeModalBtn').classList.remove('hidden');
 const btn = document.getElementById('mainModalBtn');
 btn.innerText = "VALIDAR CREDENCIALES";
-btn.onclick = validateLogin;
+btn.onclick = loginStaffSira;
 document.getElementById('modalAlert').style.display = 'flex';
 // Agregar animación del candado
 const modalIcon = document.getElementById('modalIcon');
@@ -10446,13 +10441,262 @@ const userField = document.getElementById('adminUser');
 const passField = document.getElementById('adminPass');
 const handleEnter = (e) => {
 if (e.key === 'Enter') {
-validateLogin();
+loginStaffSira();
 }
 };
 userField.addEventListener('keydown', handleEnter);
 passField.addEventListener('keydown', handleEnter);
 }
-// LOGIN CORREGIDO (NO FALLA SI LA TABLA TARDA)
+// ✅ NUEVO: LOGIN FIREBASE PARA STAFF (ADMIN Y DISEÑADORES) - VALIDACIÓN DUAL GAS + FIREBASE
+async function loginStaffSira() {
+    if (isLoggingIn) return;
+    isLoggingIn = true;
+    
+    // 1. DICCIONARIO DE TRADUCCIÓN EXACTA (Respeta Mayúsculas)
+    const diccionarioStaff = {
+        "JR-diseño": "jorsy@sira.com",
+        "BB-diseño": "bermina@sira.com",
+        "XM-diseño": "xamir@sira.com",
+        "NI-diseño": "nuevo@sira.com",
+        "DR-comunicaciones": "dubraska@sira.com",
+        "NG-prensa": "nathalys@sira.com"
+    };
+    
+    // Quitamos espacios en blanco accidentales, pero NO pasamos a minúsculas
+    const usuarioInput = document.getElementById('adminUser').value.trim();
+    const passwordInput = document.getElementById('adminPass').value;
+    
+    // Validar campos vacíos
+    if (!usuarioInput || !passwordInput) {
+        showToast("❌ Complete ambos campos para continuar", "error", 3000);
+        if (!usuarioInput) {
+            document.getElementById('adminUser').focus();
+        } else {
+            document.getElementById('adminPass').focus();
+        }
+        isLoggingIn = false;
+        return;
+    }
+    
+    // Buscamos el correo correspondiente con coincidencia exacta
+    const emailFirebase = diccionarioStaff[usuarioInput];
+    
+    if (!emailFirebase) {
+        showToast("⚠️ Usuario no reconocido. Verifique mayúsculas/minúsculas (Ej: JR-diseño)", "error", 4000);
+        document.getElementById('adminUser').focus();
+        isLoggingIn = false;
+        return;
+    }
+    
+    // Mostrar progreso - FASE 1: Validación GAS
+    const progressBar = document.getElementById('loginProgressBar');
+    const progressBarInner = document.getElementById('loginProgressBarInner');
+    const progressPercent = document.getElementById('loginProgressPercent');
+    const progressText = document.getElementById('loginProgressText');
+    const progressStatus = document.getElementById('loginProgressStatus');
+    
+    progressBar.style.display = 'block';
+    progressBarInner.style.width = '15%';
+    progressBarInner.style.background = 'linear-gradient(90deg, #4facfe 0%, #00f2fe 100%)';
+    progressPercent.innerText = '15%';
+    progressText.innerText = 'Fase 1/2: Validando credenciales GAS...';
+    progressStatus.innerText = '🔐 Validando en servidor legacy...';
+    
+    try {
+        console.log(`🔐 Fase 1: Validando usuario en GAS: ${usuarioInput}...`);
+        
+        // PASO 1: Validar primero con GAS (Google Apps Script)
+        const gasValidation = await new Promise((resolve, reject) => {
+            const formData = new FormData();
+            formData.append("action", "loginAdmin");
+            formData.append("username", usuarioInput);
+            formData.append("password", passwordInput);
+            
+            fetch(SCRIPT_URL, {
+                method: 'POST',
+                body: formData,
+                cache: 'no-store'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    resolve(data);
+                } else {
+                    reject(new Error(data.message || "Credenciales inválidas en GAS"));
+                }
+            })
+            .catch(err => reject(new Error("Error de conexión con GAS")));
+        });
+        
+        console.log("✅ GAS validación exitosa:", gasValidation);
+        showToast(`✅ Servidor GAS: ${gasValidation.data?.displayName || usuarioInput} validado`, "success", 2000);
+        
+        // Actualizar progreso - FASE 2: Firebase
+        progressBarInner.style.width = '50%';
+        progressPercent.innerText = '50%';
+        progressText.innerText = 'Fase 2/2: Autenticando con Firebase...';
+        progressStatus.innerText = '🔐 Validando en Firebase...';
+        
+        // PASO 2: Ahora autenticar con Firebase
+        console.log(`🔐 Fase 2: Autenticando en Firebase: ${emailFirebase}...`);
+        
+        const userCredential = await window.signInWithEmailAndPassword(window.auth, emailFirebase, passwordInput);
+        const user = userCredential.user;
+        
+        progressBarInner.style.width = '75%';
+        progressPercent.innerText = '75%';
+        progressText.innerText = 'Consultando perfil Firestore...';
+        progressStatus.innerText = '👤 Obteniendo permisos...';
+        
+        // 3. Consultamos el perfil en Firestore usando el UID
+        const docRef = window.doc(window.db, "roles_sistema", user.uid);
+        const docSnap = await window.getDoc(docRef);
+        
+        if (!docSnap.exists()) {
+            throw new Error("El usuario no tiene un perfil de rol asignado en Firestore.");
+        }
+        
+        const perfil = docSnap.data();
+        
+        // 4. Configuración Global de Poderes
+        window.isAdmin = (perfil.rol === "ADMIN");
+        window.isDesigner = (perfil.esDisenador === true);
+        window.designerName = perfil.nombre || usuarioInput;
+        
+        // Actualizar userCredentials con datos de ambos sistemas
+        userCredentials = {
+            username: usuarioInput,
+            password: passwordInput,
+            displayName: perfil.nombre || gasValidation.data?.displayName || usuarioInput,
+            role: perfil.rol || gasValidation.data?.role || "staff",
+            designerName: perfil.esDisenador ? perfil.nombre : "",
+            gasValidated: true,
+            firebaseValidated: true
+        };
+        
+        isAdmin = window.isAdmin;
+        isDesigner = window.isDesigner;
+        
+        console.log(`✅ Firebase validación exitosa: ${perfil.nombre}. Rol: ${perfil.rol} | Diseñador: ${perfil.esDisenador}`);
+        showToast(`✅ Firebase: ${perfil.nombre} autenticado correctamente`, "success", 2000);
+        
+        progressBarInner.style.width = '100%';
+        progressBarInner.style.background = 'linear-gradient(90deg, #00b894 0%, #00cec9 100%)';
+        progressPercent.innerText = '100%';
+        progressText.innerText = '¡Doble validación exitosa!';
+        progressStatus.innerText = `✅ ${perfil.nombre} validado en GAS + Firebase`;
+        progressStatus.style.color = 'var(--verde)';
+        
+        // ✅ ACTUALIZAR INTERFAZ INMEDIATAMENTE CON NUEVOS PERMISOS
+        updateTableHeaders();
+        PAGE_CACHE.clear();
+        
+        // ✅ Activar funciones exclusivas de admin
+        if (isAdmin) {
+            checkFirstDayOfMonth();
+            checkMaintenanceStatus();
+            globalCountersSystem.fetchRealData();
+            const adminBannerManager = document.getElementById('admin-banner-manager');
+            if (adminBannerManager) {
+                adminBannerManager.classList.remove('hidden');
+                initAdminBannerView();
+            }
+        }
+        
+        // Esperar un momento para mostrar el 100% antes de cerrar
+        setTimeout(() => {
+            const modal = document.getElementById('modalAlert');
+            if (modal) {
+                modal.style.display = 'none';
+            }
+            
+            // Actualizar UI
+            const userNameDisplayEl = document.getElementById('userNameDisplay');
+            const welcomeMessageEl = document.getElementById('welcomeMessage');
+            
+            if (userNameDisplayEl) {
+                userNameDisplayEl.innerText = userCredentials.displayName + (isDesigner ? " (Diseñador)" : "");
+            }
+            if (welcomeMessageEl) {
+                welcomeMessageEl.classList.remove('hidden');
+                welcomeMessageEl.classList.add('show');
+            }
+            
+            const logoutBtn = document.getElementById('logoutBtn');
+            if (logoutBtn) {
+                logoutBtn.classList.remove('hidden');
+            }
+            
+            if (isAdmin || isDesigner) {
+                document.getElementById('tab-stats').classList.remove('hidden');
+            }
+            
+            if (isAdmin) {
+                document.getElementById('emailQuotaContainer').classList.remove('hidden');
+                refreshEmailQuota();
+                if (window.emailQuotaInterval) {
+                    clearInterval(window.emailQuotaInterval);
+                }
+                window.emailQuotaInterval = setInterval(refreshEmailQuota, 900000);
+            }
+            
+            clearCredentials();
+            
+            if (typeof DATA_CACHE !== 'undefined' && DATA_CACHE !== null) {
+                DATA_CACHE.data = null;
+            }
+            arrancarTablaHibrida().catch(err => {
+                console.warn("Login exitoso, pero fallo al iniciar tabla híbrida:", err);
+                showToast("⚠️ Error al conectar en tiempo real, pero puedes continuar trabajando", "warning", 5000);
+            });
+            
+            // Toast final de éxito dual
+            showToast(`🎉 ¡Bienvenido ${perfil.nombre}! Validado en GAS + Firebase`, "success", 5000);
+            
+        }, 1200);
+        
+    } catch (error) {
+        console.error("❌ Error de acceso:", error);
+        
+        progressBarInner.style.width = '100%';
+        progressBarInner.style.background = 'linear-gradient(90deg, #e63946 0%, #c62828 100%)';
+        progressText.innerText = 'Error de validación';
+        progressText.style.color = 'var(--rojo)';
+        progressPercent.innerText = '✕';
+        
+        let mensaje = error.message || "Usuario o contraseña incorrectos.";
+        
+        // Detectar en qué fase falló
+        if (mensaje.includes("GAS") || mensaje.includes("legacy")) {
+            mensaje = "❌ Fase 1 Fallida: " + mensaje;
+        } else if (error.code === 'auth/user-not-found') {
+            mensaje = "❌ Fase 2 Fallida: Usuario no existe en Firebase.";
+        } else if (error.code === 'auth/wrong-password') {
+            mensaje = "❌ Fase 2 Fallida: Contraseña incorrecta en Firebase.";
+        } else if (error.code === 'auth/invalid-email') {
+            mensaje = "❌ Fase 2 Fallida: Formato de correo inválido.";
+        } else if (error.code === 'auth/user-disabled') {
+            mensaje = "❌ Fase 2 Fallida: Usuario deshabilitado.";
+        } else if (error.code === 'auth/too-many-requests') {
+            mensaje = "❌ Fase 2 Fallida: Demasiados intentos. Intenta más tarde.";
+        }
+        
+        progressStatus.innerText = mensaje;
+        progressStatus.style.color = 'var(--rojo)';
+        
+        setTimeout(() => {
+            progressBar.style.display = 'none';
+            showToast(mensaje, "error", 5000);
+            const userField = document.getElementById('adminUser');
+            if (userField) userField.focus();
+        }, 1500);
+        
+    } finally {
+        isLoggingIn = false;
+    }
+}
+
+// LOGIN CORREGIDO (NO FALLA SI LA TABLA TARDA) - LEGACY BACKUP
 async function validateLogin() {
     if (isLoggingIn) return;
     isLoggingIn = true;
@@ -10931,15 +11175,6 @@ async function uploadArte() {
                     
                     // ✅ LÓGICA INTELIGENTE: Cambiar estatus a PROCESANDO si está PENDIENTE
                     const request = localData.find(x => x.id == id);
-                    console.log("🔍 Verificando estatus para cambio automático:");
-                    console.log("  - ID:", id);
-                    console.log("  - Request encontrado:", !!request);
-                    if (request) {
-                        console.log("  - Estatus actual:", request.Estatus);
-                        console.log("  - Tipo de dato:", typeof request.Estatus);
-                        console.log("  - Estatus normalizado:", (request.Estatus || "").toUpperCase().trim());
-                        console.log("  - Comparación con PENDIENTE:", (request.Estatus || "").toUpperCase().trim() === "PENDIENTE");
-                    }
                     
                     // ✅ COMPARACIÓN CASE-INSENSITIVE Y TRIM
                     const estatusNormalizado = (request?.Estatus || "").toUpperCase().trim();
@@ -12700,7 +12935,7 @@ function realSubmitForm() {
         const direccionExacta = document.getElementById('direccion-exacta').value.trim();
         const direccionCompleta = [institucion, direccionExacta].filter(part => part).join(", ");
         params.append("Direccion", direccionCompleta);
-        params.append("Hora", document.getElementById('hora').value + " " + selectedAMPM);
+        params.append("Hora", document.getElementById('hora').value);
         params.append("Observaciones", document.getElementById('observaciones').value);
         params.append("Fecha", document.getElementById('fecha').value);
     }
@@ -12758,7 +12993,7 @@ async function crearEnRTDB(docId, datos) {
             Unidad: datos.unidad,
             Solicitud: datos.tipoJornada,
             Fecha: datos.fechaEvento,
-            Hora: datos.horaEvento + " " + datos.ampm,
+            Hora: datos.horaEvento,
             Correo: datos.email,
             Soportes: datos.linkSoportes || "",
             Estatus: "Pendiente",
@@ -12909,7 +13144,6 @@ async function bridgeToAppsScript(formData) {
             tipoJornada: formData.get("Solicitud"),
             fechaEvento: formData.get("Fecha"),
             horaEvento: formData.get("Hora"),
-            ampm: selectedAMPM,
             email: formData.get("Correo"),
             linkSoportes: formData.has("foto1") ? "SÍ" : "NO"
         });
@@ -12929,22 +13163,23 @@ async function bridgeToAppsScript(formData) {
             });
         }
 
-        // PASO B: Envío asíncrono al backend (no bloquea la UI)
-        // ✅ NUEVO: Enviar en background sin esperar respuesta
+        // PASO B: Envío asíncrono al backend
+        // 🔥 FIX CRÍTICO: Para usuarios regulares, esperar confirmación del backend
+        // antes de mostrar éxito, para asegurar que la solicitud esté disponible al recargar
         formData.append("idSolicitud", idSolicitud);
         formData.append("UsuarioID", uidUsuario);
 
         // ✅ LOGGING REDUCIDO para mayor velocidad y seguridad
-        console.log("📤 [ASYNC] Enviando a backend en background");
+        console.log("📤 [ASYNC] Enviando a backend");
         
-        // ✅ ENVIAR SIN ESPERAR - Fire and forget para máxima velocidad
-        fetch(SCRIPT_URL, {
+        // ✅ Enviar al backend
+        const backendPromise = fetch(SCRIPT_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
             body: formData.toString()
         }).catch(error => {
-            // ✅ Solo loggear error, no mostrar al usuario
             console.warn("⚠️ Error en envío background:", error.message);
+            return null;
         });
 
         // ✅ MOSTRAR NOTIFICACIÓN DE PROCESAMIENTO EN BACKGROUND
@@ -13692,14 +13927,30 @@ function showPage(pageId, tabBtn) {
     document.querySelectorAll('.page').forEach(page => {
         page.classList.remove('active');
     });
-    // Mostrar la página seleccionada
-    document.getElementById(pageId).classList.add('active');
-    // Quitar clase active de todos los tabs
+    
+    // Desactivar todos los botones
     document.querySelectorAll('.tab-btn').forEach(btn => {
         btn.classList.remove('active');
     });
-    // Agregar clase active al tab seleccionado
-    tabBtn.classList.add('active');
+    
+    // Mostrar página seleccionada
+    document.getElementById(pageId).classList.add('active');
+    
+    // Activar botón correspondiente
+    if(tabBtn) {
+        tabBtn.classList.add('active');
+    } else {
+        // Buscar el botón correspondiente
+        const btnId = 'tab-' + pageId.split('-')[0];
+        const btn = document.getElementById(btnId);
+        if(btn) btn.classList.add('active');
+    }
+    
+    // 🔥 FIX CRÍTICO: Si es usuario regular y cambia a list-page, recargar tabla desde GAS
+    if (pageId === 'list-page' && window.usuarioRegular && window.usuarioRegular.rol === 'Usuario Básico') {
+        console.log("🔄 Usuario regular cambió a pestaña solicitudes - Recargando tabla desde GAS");
+        cargarDatosUsuarioRegular(1);
+    }
     // ✅ ACTUALIZAR INDICADOR DESLIZANTE
     const navTabs = document.querySelector('.nav-tabs');
     if (navTabs) {
