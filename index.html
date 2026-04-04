@@ -6848,17 +6848,12 @@ async function initRealTimeTable() {
             }
 
             // 🔥 FIX CRÍTICO: Desviar COMPLETAMENTE a los usuarios regulares hacia GAS INMEDIATAMENTE
-            // Esto debe ser lo PRIMERO que se verifique, antes de cualquier operación
             if (window.usuarioRegular && window.usuarioRegular.rol === 'Usuario Básico') {
                 console.log(`🔧 Usuario regular detectado - Cargando datos de la unidad: ${window.usuarioRegular.unidad}`);
                 await cargarDatosUsuarioRegular(1); // Cargar página 1
                 resolve();
                 return; // ⛔ DETENEMOS AQUÍ: Los usuarios regulares NO ejecutan NADA de Firebase
             }
-
-            // =========================================================
-            // LÓGICA PARA ADMINS / DISEÑADORES (Se mantiene intacta)
-            // =========================================================
             
             // 1. CARGAR HISTORIAL DE FINALIZADAS DESDE GOOGLE APPS SCRIPT
             try {
@@ -6891,15 +6886,35 @@ async function initRealTimeTable() {
                 solicitudesRef, 
                 window.where("Estatus", "!=", "FINALIZADA")
             );
-            console.log("🔧 Admin/Diseñador - mostrando todas las solicitudes activas");
             
             // Cargar datos iniciales una sola vez
-            const initialSnapshot = await window.getDocs(q);
+            let initialSnapshot;
+            try {
+                initialSnapshot = await window.getDocs(q);
+            } catch (queryError) {
+                console.error("❌ Error en Firestore query:", queryError);
+                
+                // Si falla por falta de índice, mostrar mensaje específico
+                if (queryError.message && queryError.message.includes('index')) {
+                    showToast("⚠️ Falta índice en Firestore. Contacte al administrador.", "error", 5000);
+                } else if (queryError.message && queryError.message.includes('permission')) {
+                    showToast("❌ Error de permisos en Firestore. Verifique autenticación.", "error", 5000);
+                }
+                
+                // Intentar fallback con consulta más simple
+                try {
+                    const simpleQuery = window.query(solicitudesRef, window.limit(50));
+                    initialSnapshot = await window.getDocs(simpleQuery);
+                } catch (fallbackError) {
+                    console.error("❌ Fallback también falló:", fallbackError);
+                    throw queryError; // Relanzar error original
+                }
+            }
+            
             firebaseActiveData = [];
             initialSnapshot.forEach((doc) => {
                 firebaseActiveData.push({ id: doc.id, ...doc.data() });
             });
-            console.log(`📊 Carga inicial: ${firebaseActiveData.length} solicitudes activas`);
             mergeAndRenderData();
 
             // 3. CONECTAR LISTENER PARA CAMBIOS POSTERIORES (sin carga inicial)
@@ -10559,9 +10574,15 @@ async function loginStaffSira() {
         const perfil = docSnap.data();
         
         // 4. Configuración Global de Poderes
+        const esDisenadorValor = perfil.esDisenador;
+        const esDisenadorBoolean = (esDisenadorValor === true || esDisenadorValor === "true" || esDisenadorValor === 1 || esDisenadorValor === "1");
+        
         window.isAdmin = (perfil.rol === "ADMIN");
-        window.isDesigner = (perfil.esDisenador === true);
+        window.isDesigner = esDisenadorBoolean;
         window.designerName = perfil.nombre || usuarioInput;
+        
+        isAdmin = window.isAdmin;
+        isDesigner = window.isDesigner;
         
         // Actualizar userCredentials con datos de ambos sistemas
         userCredentials = {
@@ -10574,11 +10595,8 @@ async function loginStaffSira() {
             firebaseValidated: true
         };
         
-        isAdmin = window.isAdmin;
-        isDesigner = window.isDesigner;
-        
         console.log(`✅ Firebase validación exitosa: ${perfil.nombre}. Rol: ${perfil.rol} | Diseñador: ${perfil.esDisenador}`);
-        showToast(`✅ Firebase: ${perfil.nombre} autenticado correctamente`, "success", 2000);
+        showToast(` Firebase: ${perfil.nombre} autenticado correctamente`, "success", 2000);
         
         progressBarInner.style.width = '100%';
         progressBarInner.style.background = 'linear-gradient(90deg, #00b894 0%, #00cec9 100%)';
@@ -10628,7 +10646,18 @@ async function loginStaffSira() {
             }
             
             if (isAdmin || isDesigner) {
-                document.getElementById('tab-stats').classList.remove('hidden');
+                const statsTab = document.getElementById('tab-stats');
+                if (statsTab) {
+                    statsTab.classList.remove('hidden');
+                }
+            }
+            
+            // ✅ CRÍTICO: Llamar explícitamente a las funciones de visibilidad
+            if (typeof updateStatsTabVisibility === 'function') {
+                updateStatsTabVisibility();
+            }
+            if (typeof updateSearchVisibility === 'function') {
+                updateSearchVisibility();
             }
             
             if (isAdmin) {
@@ -10652,6 +10681,20 @@ async function loginStaffSira() {
             
             // Toast final de éxito dual
             showToast(`🎉 ¡Bienvenido ${perfil.nombre}! Validado en GAS + Firebase`, "success", 5000);
+            
+            // ✅ CRÍTICO: Inicializar tabla en tiempo real para admin/diseñador
+            if (isAdmin || isDesigner) {
+                console.log("🔄 Inicializando tabla en tiempo real para admin/diseñador...");
+                setTimeout(() => {
+                    initRealTimeTable().catch(err => {
+                        console.warn("⚠️ Error al inicializar tabla en tiempo real:", err);
+                        // Fallback a tabla híbrida si falla
+                        arrancarTablaHibrida().catch(err2 => {
+                            console.error("❌ Fallback también falló:", err2);
+                        });
+                    });
+                }, 500);
+            }
             
         }, 1200);
         
@@ -10922,16 +10965,7 @@ function logout() {
         clearInterval(panelSyncInterval);
         panelSyncInterval = null;
     }
-    
-    // ✅ DETENER LISTENER DE TIEMPO REAL DE FIREBASE
-    if (unsubscribeTable) {
-        unsubscribeTable();
-        unsubscribeTable = null;
-        console.log("🔌 Listener de tiempo real detenido");
-    }
-    // 2. Limpiar estado de autenticación
-    isAdmin = false;
-    isDesigner = false;
+    // 2. Limpiar credenciales
     userCredentials = { 
         username: "", 
         password: "", 
@@ -14671,12 +14705,15 @@ let compDesignersChartInstance = null; // Nuevo
 let compDailyLineChartInstance = null; // Nuevo
 // ✅ FUNCIÓN PARA MOSTRAR/OCULTAR PESTAÑA ESTADÍSTICAS
 function updateStatsTabVisibility() {
-const statsTab = document.getElementById('tab-stats');
-if (isAdmin || isDesigner) {
-statsTab.classList.remove('hidden');
-} else {
-statsTab.classList.add('hidden');
-}
+    const statsTab = document.getElementById('tab-stats');
+    if (!statsTab) {
+        return;
+    }
+    if (isAdmin || isDesigner) {
+        statsTab.classList.remove('hidden');
+    } else {
+        statsTab.classList.add('hidden');
+    }
 }
 function renderActiveStatsTab() {
     if (!globalStatsCache.data) {
