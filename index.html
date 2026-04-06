@@ -3799,6 +3799,123 @@ min-width: 100%;
     100% { background-position: -200% 0; }
 }
 
+/* ✅ ESTILOS PARA ADVERTENCIA DE INACTIVIDAD */
+.inactivity-warning {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 99999;
+    animation: slideInRight 0.3s ease-out;
+}
+
+.inactivity-warning-content {
+    background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+    color: white;
+    padding: 16px 20px;
+    border-radius: 12px;
+    box-shadow: 0 8px 25px rgba(238, 90, 36, 0.3);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 320px;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(10px);
+}
+
+.inactivity-warning-icon {
+    font-size: 1.5rem;
+    animation: pulse 2s infinite;
+}
+
+.inactivity-warning-text {
+    flex: 1;
+}
+
+.inactivity-warning-title {
+    font-weight: 700;
+    font-size: 1rem;
+    margin-bottom: 4px;
+}
+
+.inactivity-warning-message {
+    font-size: 0.85rem;
+    opacity: 0.9;
+    line-height: 1.4;
+}
+
+.inactivity-warning-message span {
+    font-weight: 700;
+    color: #fff;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+}
+
+.inactivity-warning-btn {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(5px);
+}
+
+.inactivity-warning-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+}
+
+/* Responsive para móviles */
+@media (max-width: 768px) {
+    .inactivity-warning {
+        top: 10px;
+        right: 10px;
+        left: 10px;
+    }
+    
+    .inactivity-warning-content {
+        min-width: auto;
+        padding: 14px 16px;
+        gap: 10px;
+    }
+    
+    .inactivity-warning-icon {
+        font-size: 1.2rem;
+    }
+    
+    .inactivity-warning-title {
+        font-size: 0.9rem;
+    }
+    
+    .inactivity-warning-message {
+        font-size: 0.8rem;
+    }
+    
+    .inactivity-warning-btn {
+        padding: 6px 12px;
+        font-size: 0.8rem;
+    }
+}
+
 </style>
 
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -3914,12 +4031,12 @@ min-width: 100%;
   // Importamos Auth
   import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-auth.js";
   // ✅ Agregamos onSnapshot, orderBy, limit, persistencia, getDocs, deleteDoc y writeBatch a la importación de firestore
-  import { getFirestore, collection, query, where, getCountFromServer, doc, setDoc, getDoc, updateDoc, onSnapshot, orderBy, limit, enableIndexedDbPersistence, getDocs, deleteDoc, writeBatch } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js";
+  import { getFirestore, collection, query, where, getCountFromServer, doc, setDoc, getDoc, updateDoc, onSnapshot, orderBy, limit, enableIndexedDbPersistence, getDocs, deleteDoc, writeBatch, runTransaction } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js";
   // ✅ Importar Realtime Database para optimización de ancho de banda
   import { getDatabase, ref, set, update, onValue, remove } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-database.js";
 
   const firebaseConfig = {
-    apiKey: "AIzaSyAcUZabEwxYPqyv9NCMjGTfkuiSjmhpxH0",
+    apiKey: "AIzaSyCxVi7OFLFUb3f5Z217s1EUnFqah2ESxJs",
     authDomain: "sira-3-0.firebaseapp.com",
     projectId: "sira-3-0",
     storageBucket: "sira-3-0.appspot.com",
@@ -3969,6 +4086,7 @@ min-width: 100%;
   window.getDocs = getDocs; // ✅ Exponemos getDocs para consultas de historial
   window.deleteDoc = deleteDoc; // ✅ Exponemos deleteDoc para eliminar documentos
   window.writeBatch = writeBatch; // ✅ Exponemos writeBatch para operaciones en lote
+  window.runTransaction = runTransaction; // ✅ Exponemos runTransaction para transacciones atómicas
   // ✅ Exponer funciones de Realtime Database
   window.getDatabase = getDatabase;
   window.ref = ref;
@@ -3983,6 +4101,22 @@ min-width: 100%;
 
 <body>
 
+<!-- ✅ ADVERTENCIA DE INACTIVIDAD - Ahorro de Cuotas -->
+<div id="inactivityWarning" class="inactivity-warning" style="display: none;">
+    <div class="inactivity-warning-content">
+        <div class="inactivity-warning-icon">⏰</div>
+        <div class="inactivity-warning-text">
+            <div class="inactivity-warning-title">Sesión Inactiva</div>
+            <div class="inactivity-warning-message">
+                Serás redirigido al formulario en <span id="inactivityCountdown">1:00</span> para ahorrar cuotas
+            </div>
+        </div>
+        <button class="inactivity-warning-btn" onclick="resetInactivityTimer()">
+            Seguir aquí
+        </button>
+    </div>
+</div>
+
 <!-- Modal de Login para Usuarios Regulares -->
 <div id="userLoginModal" class="auth-modal-overlay" style="display: none !important; visibility: hidden !important; opacity: 0 !important;">
     <div class="auth-modal">
@@ -3993,9 +4127,11 @@ min-width: 100%;
             </button>
         </div>
         <div class="auth-body">
-            <input type="email" id="userLoginUsername" class="modern-input" placeholder="Correo Electrónico">
+            <input type="email" id="userLoginUsername" class="modern-input" placeholder="Correo Electrónico" 
+                   onkeypress="if(event.key === 'Enter') { document.getElementById('userLoginPassword').focus(); }">
             <div class="pass-container">
-    <input type="password" id="userLoginPassword" class="modern-input" placeholder="Contraseña">
+    <input type="password" id="userLoginPassword" class="modern-input" placeholder="Contraseña"
+           onkeypress="if(event.key === 'Enter') { ejecutarLoginRegular(); }">
     <button type="button" class="eye-icon-btn" onclick="toggleGenericPass('userLoginPassword', this)">
         <i class="fas fa-eye"></i>
     </button>
@@ -5760,10 +5896,10 @@ async function ejecutarLoginRegular() {
             window.usuarioRegular = userCredentials;
             window.userCredentials = userCredentials;
             
-            // 🔥 FIX: Inicializar tabla para usuarios regulares también
-            // Los usuarios regulares deben poder ver sus propias solicitudes
-            console.log("🔧 Inicializando tabla para usuario regular:", userData.rol);
-            initRealTimeTable();
+            // ✅ Usuarios regulares usan sistema específico (sin RTDB)
+            // Los usuarios regulares deben poder ver sus propias solicitudes de su unidad
+            console.log("🔧 Cargando datos para usuario regular:", userData.rol, "Unidad:", userData.unidad);
+            cargarDatosUsuarioRegular();
             
             showToast(`✅ ¡Bienvenido! Has iniciado sesión desde la unidad <strong>${userData.unidad}</strong>`, "success", 4000);
             
@@ -6069,6 +6205,7 @@ let cacheConteoUnidades = {};
 /**
  * Verifica cuántos registros existen para una unidad específica usando Firebase con caché local
  */
+
 async function verificarRegistrosUnidad() {
     const unidad = document.getElementById('regUnidad').value;
     const infoDiv = document.getElementById('unidad-registros-info');
@@ -6085,14 +6222,16 @@ async function verificarRegistrosUnidad() {
         return;
     }
 
-    infoDiv.innerText = '🔄 Verificando registros...';
+    infoDiv.innerText = ' Verificando disponibilidad...';
     
     try {
-        const q = window.query(window.collection(window.db, "usuarios"), window.where("unidad", "==", unidad));
-        // getCountFromServer es la forma más barata y rápida (1 lectura por consulta)
-        const snapshot = await window.getCountFromServer(q);
-        const cantidad = snapshot.data().count;
-
+        // ✅ VERIFICACIÓN DE CUPOS: Permitido para cualquier persona (incluso no autenticada)
+        const usuariosRef = window.collection(window.db, "usuarios");
+        const q = window.query(usuariosRef, window.where("unidad", "==", unidad), window.limit(50));
+        const snapshot = await window.getDocs(q);
+        
+        const cantidad = snapshot.size;
+        
         // Guardar en caché local
         cacheConteoUnidades[unidad] = {
             cantidad: cantidad,
@@ -6101,8 +6240,36 @@ async function verificarRegistrosUnidad() {
 
         renderizarInfoUnidad(cantidad, unidad);
     } catch (error) {
-        console.error("Error contando registros en Firebase:", error);
-        infoDiv.innerHTML = `<span style="color: #d32f2f; font-weight: 600;">⚠️ Error de conexión al verificar cupos</span>`;
+        // 🔄 MANEJO DE ERRORES SIN LOGGING EXCESIVO
+        if (error.code === 'unavailable' || error.code === 'deadline-exceeded') {
+            // Error de conexión temporal
+            infoDiv.innerHTML = `
+                <span style="color: #ff9800; font-weight: 600;"> 
+                    ⚠️ Conexión inestable. 
+                    <a href="#" onclick="verificarRegistrosUnidad(); return false;" style="color: #1976d2; text-decoration: underline;">Reintentar</a>
+                </span>
+            `;
+        } else if (error.code === 'permission-denied') {
+            // Error de permisos - las reglas deben estar actualizadas
+            infoDiv.innerHTML = `
+                <span style="color: #d32f2f; font-weight: 600;"> 
+                    ❌ Error de configuración. 
+                    <a href="#" onclick="verificarRegistrosUnidad(); return false;" style="color: #1976d2; text-decoration: underline;">Reintentar</a>
+                </span>
+            `;
+        } else {
+            // Error genérico con fallback
+            const limite = (unidad === "Sede Administrativa") ? 20 : 2;
+            infoDiv.innerHTML = `
+                <span style="color: #ff9800; font-weight: 600;"> 
+                    ⚠️ Error de conexión. 
+                    Asumiendo cupos disponibles (${0}/${limite}). 
+                    <a href="#" onclick="verificarRegistrosUnidad(); return false;" style="color: #1976d2; text-decoration: underline;">Reintentar</a>
+                </span>
+            `;
+            // Desbloquear el modal por si acaso para que el usuario pueda intentar registrarse
+            desbloquearModal();
+        }
     }
 }
 
@@ -6433,6 +6600,9 @@ async function ejecutarRegistroConModal() {
             fechaRegistro: new Date().toISOString()
         });
 
+        // ✅ INCREMENTAR CONTADOR DE UNIDAD
+        await incrementarContadorUnidad(datos.unidad);
+
         completeRegisterAnimation(true, '¡Registro exitoso! Ya puedes iniciar sesión con tu correo.');
 
     } catch (error) {
@@ -6643,8 +6813,19 @@ async function batchRequest(action, params) {
 let selectedRequestId = null;
 let selectedRequestData = null;
 let isPanelOpen = false;
-// ✅ POLLING PARA SINCRONIZACIÓN EN TIEMPO REAL
-let panelSyncInterval = null;
+// ❌ ELIMINADO: Sistema de polling innecesario (RTDB es tiempo real)
+// let panelSyncInterval = null;
+
+// ✅ SISTEMA DE DETECCIÓN DE INACTIVIDAD - Ahorro de Cuotas
+let inactivityTimer = null;
+let countdownTimer = null;
+let lastActivityTime = Date.now();
+let countdownSeconds = 60; // Último minuto con advertencia
+let isInactivityWarningShown = false;
+let debounceTimer = null; // Timer para evitar reinicios constantes
+const INACTIVITY_TIMEOUT = 10 * 60 * 1000; //10 minutos en milisegundos
+const WARNING_TIMEOUT = 9 * 60 * 1000; // 9 minutos para mostrar advertencia
+const DEBOUNCE_DELAY = 1000; // 1 segundo de debounce para evitar reinicios constantes
 // ============================================================
 // SISTEMA DE SUBIDA DE ARCHIVOS
 // ============================================================
@@ -6721,10 +6902,84 @@ let localData = [];
 let isMaintActive = false;
 
 // ✅ VARIABLES GLOBALES PARA SISTEMA HÍBRIDO
-let listaHistoricaGAS = []; // Se llena con handleReadAction
-let firebaseActiveData = [];
-let firebaseFinalizedData = [];  // ✅ Para datos de finalizadas cargados desde GAS
-let gasFinalizedData = [];
+let listaHistoricaGAS = []; // Se llena con handleReadAction (finalizadas)
+let firebaseActiveData = []; // Se llena desde RTDB (activas)
+
+// ✅ FUNCIÓN UTILITY: Estandarizar formato de hora con a. m. / p. m.
+function formatearHoraEstandar(hora, ampm) {
+    if (!hora) return '';
+    
+    // Limpiar y formatear la hora
+    let horaLimpia = hora.trim();
+    
+    // ✅ NORMALIZAR: Convertir 'a.m.' -> 'a. m.' y 'p.m.' -> 'p. m.' (agregar espacio)
+    horaLimpia = horaLimpia.replace(/a\.m\.?/gi, 'a. m.').replace(/p\.m\.?/gi, 'p. m.');
+    
+    // Si ya incluye a. m. / p. m., devolverla estándar (sin duplicar)
+    if (horaLimpia.includes('a. m.') || horaLimpia.includes('p. m.')) {
+        return horaLimpia.replace(/\s+/g, ' ').trim();
+    }
+    
+    // Si viene en formato 24h (ej: "14:30"), convertir a 12h
+    if (horaLimpia.includes(':') && !ampm) {
+        const [horas, minutos] = horaLimpia.split(':');
+        const horaNum = parseInt(horas);
+        if (!isNaN(horaNum)) {
+            const ampmFormat = horaNum >= 12 ? 'p. m.' : 'a. m.';
+            const hora12 = horaNum % 12 || 12;
+            horaLimpia = `${String(hora12).padStart(2, '0')}:${minutos || '00'} ${ampmFormat}`;
+        }
+    }
+    
+    // Si es solo la hora (ej: "8:00") y se proporciona ampm
+    if (ampm && ampm.trim() && !horaLimpia.includes('a. m.') && !horaLimpia.includes('p. m.')) {
+        return `${horaLimpia} ${ampm.trim()}`;
+    }
+    
+    return horaLimpia;
+}
+
+// ✅ FUNCIÓN UTILITY: Estandarizar formato de fecha y hora completo
+function formatearFechaHoraCompleta(fecha, hora, ampm) {
+    if (!fecha) return '';
+    
+    // Formatear fecha: dd/MM/yyyy
+    let fechaFormateada = fecha;
+    if (fecha.includes('-')) {
+        const [year, month, day] = fecha.split('-');
+        fechaFormateada = `${day}/${month}/${year}`;
+    }
+    
+    // Formatear hora
+    const horaFormateada = formatearHoraEstandar(hora || '', ampm || '');
+    
+    return horaFormateada ? `${fechaFormateada} ${horaFormateada}` : fechaFormateada;
+}
+
+// ✅ FUNCIÓN: Limpiar y estandarizar datos de solicitudes
+function limpiarDatosSolicitud(solicitud) {
+    if (!solicitud) return solicitud;
+    
+    const solicitudLimpia = { ...solicitud };
+    
+    // ✅ NORMALIZAR: Tipo de Solicitud puede venir como "Solicitud" (RTDB) o "Tipo de Solicitud" (GAS)
+    if (!solicitudLimpia["Tipo de Solicitud"] && solicitudLimpia["Solicitud"]) {
+        solicitudLimpia["Tipo de Solicitud"] = solicitudLimpia["Solicitud"];
+    }
+    
+    // Estandarizar hora si existe
+    if (solicitudLimpia.Hora) {
+        const horaOriginal = solicitudLimpia.Hora;
+        solicitudLimpia.Hora = formatearHoraEstandar(solicitudLimpia.Hora);
+        
+        // ✅ Hora estandarizada silenciosamente (solo si hay cambios)
+        if (horaOriginal !== solicitudLimpia.Hora) {
+            // Sin log - la estandarización es transparente al usuario
+        }
+    }
+    
+    return solicitudLimpia;
+}
 
 // ✅ Función para verificar el estado de mantenimiento desde el backend
 async function checkMaintenanceStatus() {
@@ -6838,6 +7093,7 @@ let DATA_INDEX = {
 };
 
 let unsubscribeTable = null; // Variable para poder apagar el listener si cerramos sesión
+let unsubscribeRTDB = null; // Variable para poder apagar el listener de RTDB
 
 async function initRealTimeTable() {
     return new Promise(async (resolve, reject) => {
@@ -6870,103 +7126,32 @@ async function initRealTimeTable() {
                 
                 const response = await res.json();
                 if (response.success && response.data) {
-                    listaHistoricaGAS = response.data.rows || [];
-                    console.log("📊 Históricas cargadas:", listaHistoricaGAS.length);
+                    // ✅ FILTRAR: Solo incluir solicitudes finalizadas de GAS
+                    const todasLasSolicitudes = response.data.rows || [];
+                    listaHistoricaGAS = todasLasSolicitudes
+                        .filter(solicitud => {
+                            const estatus = (solicitud.Estatus || "").trim().toUpperCase();
+                            return estatus === "FINALIZADA";
+                        })
+                        .map(solicitud => limpiarDatosSolicitud(solicitud));
+                    console.log("📊 Históricas cargadas:", listaHistoricaGAS.length, "(de", todasLasSolicitudes.length, "totales)");
                 }
             } catch (error) {
                 console.warn("⚠️ Error cargando históricas:", error);
                 listaHistoricaGAS = [];
             }
 
-            // 2. CARGAR INICIALMENTE SOLICITUDES ACTIVAS (evitar eventos added duplicados)
-            const solicitudesRef = window.collection(window.db, "solicitudes");
+            // ✅ ELIMINADO: Ya no se cargan solicitudes desde Firestore, vienen de GAS + RTDB
+            console.log("🔥 Cargando solicitudes desde GAS + RTDB");
             
-            // Admin/Diseñador: ver todas las solicitudes activas
-            const q = window.query(
-                solicitudesRef, 
-                window.where("Estatus", "!=", "FINALIZADA")
-            );
+            // Cargar solicitudes activas desde RTDB
+            await cargarSolicitudesActivasRTDB();
             
-            // Cargar datos iniciales una sola vez
-            let initialSnapshot;
-            try {
-                initialSnapshot = await window.getDocs(q);
-            } catch (queryError) {
-                console.error("❌ Error en Firestore query:", queryError);
-                
-                // Si falla por falta de índice, mostrar mensaje específico
-                if (queryError.message && queryError.message.includes('index')) {
-                    showToast("⚠️ Falta índice en Firestore. Contacte al administrador.", "error", 5000);
-                } else if (queryError.message && queryError.message.includes('permission')) {
-                    showToast("❌ Error de permisos en Firestore. Verifique autenticación.", "error", 5000);
-                }
-                
-                // Intentar fallback con consulta más simple
-                try {
-                    const simpleQuery = window.query(solicitudesRef, window.limit(50));
-                    initialSnapshot = await window.getDocs(simpleQuery);
-                } catch (fallbackError) {
-                    console.error("❌ Fallback también falló:", fallbackError);
-                    throw queryError; // Relanzar error original
-                }
-            }
-            
-            firebaseActiveData = [];
-            initialSnapshot.forEach((doc) => {
-                firebaseActiveData.push({ id: doc.id, ...doc.data() });
-            });
+            // Renderizar datos iniciales antes de conectar el listener
             mergeAndRenderData();
-
-            // 3. CONECTAR LISTENER PARA CAMBIOS POSTERIORES (sin carga inicial)
-            unsubscribeTable = window.onSnapshot(q, (snapshot) => {
-                snapshot.docChanges().forEach((change) => {
-                    const docData = { id: change.doc.id, ...change.doc.data() };
-                    
-                    // FIX: Validar permisos para usuarios regulares
-                    if (window.usuarioRegular && window.usuarioRegular.rol === 'Usuario Básico') {
-                        // Usuario regular: solo procesar si es su solicitud
-                        if (docData.Correo !== window.usuarioRegular.username) {
-                            return; // Ignorar cambios de otras solicitudes
-                        }
-                    }
-                    
-                    if (change.type === "added") {
-                        // Solo procesar si no existe (evitar duplicados de carga inicial)
-                        const existingIndex = firebaseActiveData.findIndex(item => item.id === docData.id);
-                        if (existingIndex === -1) {
-                            console.log(" Nueva solicitud activa:", docData.id);
-                            console.log("🆕 Nueva solicitud activa:", docData.id);
-                            firebaseActiveData.push(docData);
-                            mergeAndRenderData();
-                        }
-                    }
-                    
-                    if (change.type === "modified") {
-                        console.log("🔄 Solicitud activa actualizada:", docData.id);
-                        const existingIndex = firebaseActiveData.findIndex(item => item.id === docData.id);
-                        if (existingIndex !== -1) {
-                            firebaseActiveData[existingIndex] = docData;
-                        } else {
-                            firebaseActiveData.push(docData);
-                        }
-                        mergeAndRenderData();
-                    }
-                    
-                    if (change.type === "removed") {
-                        console.log(" Solicitud eliminada del radar (finalizada o borrada):", docData.id);
-                        firebaseActiveData = firebaseActiveData.filter(item => item.id !== docData.id);
-                        
-                        // ✅ OPTIMIZACIÓN: No llamar a GAS aquí
-                        // La tabla híbrida arrancarTablaHibrida() ya maneja las históricas eficientemente
-                        // Evitar peticiones innecesarias a GAS para cada eliminación
-                        
-                        mergeAndRenderData();
-                    }
-                });
-            }, (error) => {
-                console.error(" Error en Firebase listener optimizado. ¿Falta un índice? Activando Fallback...", error);
-                fallbackFirebaseListener();
-            });
+            
+            // ✅ CONECTAR LISTENER DE RTDB PARA TIEMPO REAL (después de la carga inicial)
+            conectarListenerRTDB();
 
             resolve();
         } catch (error) {
@@ -6975,6 +7160,223 @@ async function initRealTimeTable() {
             reject(error);
         }
     });
+}
+
+// ✅ FUNCIÓN: Cargar solicitudes activas desde RTDB
+async function cargarSolicitudesActivasRTDB() {
+    try {
+        const rtdbRef = window.ref(window.dbRT, 'solicitudes_vivas');
+        
+        // Obtener todos los datos una sola vez usando get() en lugar de onValue
+        const snapshot = await new Promise((resolve, reject) => {
+            window.onValue(rtdbRef, (data) => {
+                resolve(data);
+            }, reject);
+        });
+        
+        firebaseActiveData = [];
+        
+        if (snapshot.exists()) {
+            const data = snapshot.val();
+            
+            // Convertir objeto a array y filtrar solo las activas
+            Object.entries(data).forEach(([id, solicitud]) => {
+                if (solicitud && typeof solicitud === 'object') {
+                    // Reconstruir objeto con id
+                    const solicitudCompleta = limpiarDatosSolicitud({ id, ...solicitud });
+                    
+                    // Filtrar solo solicitudes activas (no finalizadas)
+                    const estatus = (solicitudCompleta.Estatus || "").trim().toUpperCase();
+                    if (estatus !== "FINALIZADA") {
+                        firebaseActiveData.push(solicitudCompleta);
+                    }
+                }
+            });
+            
+            console.log(`📊 Solicitudes activas cargadas desde RTDB: ${firebaseActiveData.length}`);
+        } else {
+            console.log("📊 No hay solicitudes activas en RTDB");
+        }
+        
+    } catch (error) {
+        console.error("❌ Error cargando solicitudes desde RTDB:", error);
+        firebaseActiveData = [];
+    }
+}
+
+// ✅ FUNCIÓN: Conectar listener de RTDB para tiempo real
+function conectarListenerRTDB() {
+    try {
+        const rtdbRef = window.ref(window.dbRT, 'solicitudes_vivas');
+        let isFirstConnection = true; // ✅ Variable para detectar primera conexión
+        
+        unsubscribeRTDB = window.onValue(rtdbRef, (snapshot) => {
+            // ✅ Guardar datos anteriores para comparar cambios
+            const datosAnteriores = [...firebaseActiveData];
+            
+            firebaseActiveData = [];
+            
+            if (snapshot.exists()) {
+                const data = snapshot.val();
+                
+                // Convertir objeto a array y filtrar solo las activas
+                Object.entries(data).forEach(([id, solicitud]) => {
+                    if (solicitud && typeof solicitud === 'object') {
+                        // Reconstruir objeto con id y limpiar/normalizar datos
+                        const solicitudCompleta = limpiarDatosSolicitud({ id, ...solicitud });
+                        
+                        // Filtrar solo solicitudes activas (no finalizadas)
+                        const estatus = (solicitudCompleta.Estatus || "").trim().toUpperCase();
+                        if (estatus !== "FINALIZADA") {
+                            firebaseActiveData.push(solicitudCompleta);
+                        }
+                    }
+                });
+                
+                // ✅ Mensaje más específico según si es primera conexión o cambio real
+                if (isFirstConnection) {
+                    console.log(`📊 Solicitudes activas cargadas desde RTDB (conexión inicial): ${firebaseActiveData.length}`);
+                } else {
+                    console.log(`📊 Solicitudes activas actualizadas por cambios: ${firebaseActiveData.length}`);
+                    
+                    // ✅ ANALIZAR CAMBIOS Y MOSTRAR TOAST INFORMATIVO
+                    const cambios = analizarCambiosRTDB(datosAnteriores, firebaseActiveData);
+                    if (cambios.hayCambios) {
+                        mostrarToastCambiosRTDB(cambios);
+                    }
+                }
+            } else {
+                // ✅ Mensaje más específico según si es primera conexión o cambio real
+                if (isFirstConnection) {
+                    console.log("📊 No hay solicitudes activas en RTDB (conexión inicial)");
+                } else {
+                    console.log("📊 No hay solicitudes activas en RTDB (actualizado)");
+                    
+                    // ✅ TOAST si se eliminaron todas las solicitudes activas
+                    if (datosAnteriores.length > 0) {
+                        showToast("🗑️ Todas las solicitudes activas fueron eliminadas", "info", 4000);
+                    }
+                }
+            }
+            
+            // ✅ Marcar que la primera conexión ya se completó
+            isFirstConnection = false;
+            
+            mergeAndRenderData();
+        }, (error) => {
+            console.error("❌ Error en listener de RTDB:", error);
+        });
+        
+        console.log("✅ Listener de RTDB conectado para tiempo real");
+        
+    } catch (error) {
+        console.error("❌ Error conectando listener de RTDB:", error);
+    }
+}
+
+// ✅ FUNCIÓN: Analizar cambios entre datos anteriores y nuevos de RTDB
+function analizarCambiosRTDB(datosAnteriores, datosNuevos) {
+    const cambios = {
+        hayCambios: false,
+        nuevasSolicitudes: [],
+        solicitudesEliminadas: [],
+        solicitudesModificadas: [],
+        cambiosDeEstado: []
+    };
+    
+    // Convertir a mapas para fácil comparación
+    const mapaAnterior = new Map(datosAnteriores.map(s => [s.id, s]));
+    const mapaNuevo = new Map(datosNuevos.map(s => [s.id, s]));
+    
+    // Detectar nuevas solicitudes
+    for (const [id, solicitud] of mapaNuevo) {
+        if (!mapaAnterior.has(id)) {
+            cambios.nuevasSolicitudes.push(solicitud);
+            cambios.hayCambios = true;
+        }
+    }
+    
+    // Detectar solicitudes eliminadas
+    for (const [id, solicitud] of mapaAnterior) {
+        if (!mapaNuevo.has(id)) {
+            cambios.solicitudesEliminadas.push(solicitud);
+            cambios.hayCambios = true;
+        }
+    }
+    
+    // Detectar solicitudes modificadas
+    for (const [id, solicitudNueva] of mapaNuevo) {
+        const solicitudAnterior = mapaAnterior.get(id);
+        if (solicitudAnterior) {
+            // Comparar campos clave
+            if (solicitudAnterior.Estatus !== solicitudNueva.Estatus) {
+                cambios.cambiosDeEstado.push({
+                    id: id,
+                    solicitud: solicitudNueva,
+                    estadoAnterior: solicitudAnterior.Estatus,
+                    estadoNuevo: solicitudNueva.Estatus
+                });
+                cambios.hayCambios = true;
+            } else if (solicitudAnterior.Diseñador !== solicitudNueva.Diseñador) {
+                cambios.solicitudesModificadas.push({
+                    id: id,
+                    solicitud: solicitudNueva,
+                    tipo: "diseñador",
+                    valorAnterior: solicitudAnterior.Diseñador,
+                    valorNuevo: solicitudNueva.Diseñador
+                });
+                cambios.hayCambios = true;
+            }
+        }
+    }
+    
+    return cambios;
+}
+
+// ✅ FUNCIÓN: Mostrar toast informativo de cambios RTDB
+function mostrarToastCambiosRTDB(cambios) {
+    let mensaje = "🔄 ";
+    let tipoToast = "info";
+    
+    // Priorizar cambios más importantes
+    if (cambios.cambiosDeEstado.length > 0) {
+        const cambio = cambios.cambiosDeEstado[0];
+        const estadoNuevo = (cambio.estadoNuevo || "").trim().toUpperCase();
+        
+        if (estadoNuevo === "FINALIZADA") {
+            mensaje += `Solicitud ${cambio.id} fue FINALIZADA`;
+            tipoToast = "success";
+        } else if (estadoNuevo === "PROCESANDO") {
+            mensaje += `Solicitud ${cambio.id} está en PROCESAMIENTO`;
+            tipoToast = "warning";
+        } else {
+            mensaje += `Solicitud ${cambio.id} cambió a ${estadoNuevo}`;
+        }
+    } else if (cambios.nuevasSolicitudes.length > 0) {
+        const nueva = cambios.nuevasSolicitudes[0];
+        mensaje += `Nueva solicitud: ${nueva["Servicio/Producto"] || nueva.id}`;
+        tipoToast = "success";
+    } else if (cambios.solicitudesEliminadas.length > 0) {
+        const eliminada = cambios.solicitudesEliminadas[0];
+        mensaje += `Solicitud ${eliminada.id} fue eliminada`;
+        tipoToast = "error";
+    } else if (cambios.solicitudesModificadas.length > 0) {
+        const modificada = cambios.solicitudesModificadas[0];
+        mensaje += `Solicitud ${modificada.id}: ${modificada.tipo} actualizado`;
+        tipoToast = "info";
+    }
+    
+    // Si hay múltiples cambios, indicar cuántos más
+    const totalCambios = cambios.cambiosDeEstado.length + 
+                        cambios.nuevasSolicitudes.length + 
+                        cambios.solicitudesEliminadas.length + 
+                        cambios.solicitudesModificadas.length;
+    
+    if (totalCambios > 1) {
+        mensaje += ` (+${totalCambios - 1} más)`;
+    }
+    
+    showToast(mensaje, tipoToast, 4000);
 }
 
 // ✅ NUEVA FUNCIÓN: Exclusiva para cargar solicitudes de la unidad del usuario regular
@@ -7088,7 +7490,7 @@ function arrancarTablaHibrida() {
                 if (typeof renderLocalTable === 'function') {
                     renderLocalTable();
                 } else {
-                    console.warn("⚠️ renderLocalTable no disponible, datos no renderizados");
+                    console.warn("renderLocalTable no disponible, datos no renderizados");
                 }
                 
                 // ✅ OPTIMIZACIÓN: Log solo cuando hay cambios significativos
@@ -7116,64 +7518,23 @@ function arrancarTablaHibrida() {
     });
 }
 
-// ✅ FUNCIÓN FALLBACK OPTIMIZADA: Solo escucha cambios en activas
-function fallbackFirebaseListener() {
-    const solicitudesRef = window.collection(window.db, "solicitudes");
-    // Filtro optimizado: solo traer NO finalizadas
-    const q = window.query(solicitudesRef, window.where("Estatus", "!=", "FINALIZADA"), window.limit(100));
-    
-    unsubscribeTable = window.onSnapshot(q, (snapshot) => {
-        // Procesar cambios específicos incluso en fallback
-        snapshot.docChanges().forEach((change) => {
-            const docData = { id: change.doc.id, ...change.doc.data() };
-            
-            if (change.type === "added") {
-                const existingIndex = firebaseActiveData.findIndex(item => item.id === docData.id);
-                if (existingIndex === -1) {
-                    console.log(" [Fallback] Nueva solicitud activa:", docData.id);
-                    firebaseActiveData.push(docData);
-                } else {
-                    // Ya existe, no hacer nada para evitar duplicados
-                    console.log(" [Fallback] Solicitud ya existe (ignorando duplicado):", docData.id);
-                }
-            }
-            
-            if (change.type === "modified") {
-                console.log(" [Fallback] Solicitud activa actualizada:", docData.id);
-                const existingIndex = firebaseActiveData.findIndex(item => item.id === docData.id);
-                if (existingIndex !== -1) {
-                    firebaseActiveData[existingIndex] = docData;
-                } else {
-                    firebaseActiveData.push(docData);
-                }
-            }
-            
-            if (change.type === "removed") {
-                console.log("🗑️ [Fallback] Solicitud eliminada del radar:", docData.id);
-                firebaseActiveData = firebaseActiveData.filter(item => item.id !== docData.id);
-            }
-        });
-        
-        mergeAndRenderData();
-    });
-    
-    console.log("✅ Listener fallback optimizado activado - Solo escucha solicitudes activas");
-}
+// ✅ ELIMINADO: Función fallback de Firestore reemplazada por RTDB
+console.log("✅ Listener de Firestore eliminado, usando RTDB");
 
 function mergeAndRenderData() {
-    // ✅ Unir Firebase (Activas) + Firebase (Finalizadas) + GAS (Finalizadas legacy)
-    // Prioridad: Datos en tiempo real de Firebase sobre datos estáticos de GAS
-    const todasFinalizadas = [...firebaseFinalizedData, ...gasFinalizedData];
+    // ✅ Unir RTDB (Activas) + GAS (Finalizadas)
+    // RTDB maneja las solicitudes activas en tiempo real
+    // GAS maneja las solicitudes finalizadas (históricas)
+    localData = [...firebaseActiveData, ...listaHistoricaGAS];
     
-    // Eliminar duplicados (prioridad a Firebase sobre GAS)
-    const finalizadasUnicas = todasFinalizadas.filter((item, index, self) => 
-        index === self.findIndex((t) => t.id === item.id)
-    );
-    
-    localData = [...firebaseActiveData, ...finalizadasUnicas];
-    
-    // 🔥 FIX: Ordenar por timestamp del ID (más preciso) como prioridad principal
+    // 🔥 FIX: Ordenar primero por estado (finalizadas al final), luego por timestamp
     localData.sort((a, b) => {
+        // Función para obtener estado prioritario (0 = activa, 1 = finalizada)
+        const getEstadoPrioridad = (item) => {
+            const estatus = (item.Estatus || "").toString().trim().toUpperCase();
+            return estatus === "FINALIZADA" ? 1 : 0; // Finalizadas van al final
+        };
+        
         // Función para obtener timestamp en milisegundos
         const getTimestampMs = (item) => {
             // Prioridad 1: ID numérico (REQ-1234567890) - MÁS PRECISO
@@ -7203,10 +7564,19 @@ function mergeAndRenderData() {
             return 0;
         };
         
-        return getTimestampMs(b) - getTimestampMs(a); // Descendente: más nuevo primero
+        // Ordenar por estado primero (activas primero, finalizadas al final)
+        const prioridadA = getEstadoPrioridad(a);
+        const prioridadB = getEstadoPrioridad(b);
+        
+        if (prioridadA !== prioridadB) {
+            return prioridadA - prioridadB; // 0 (activas) antes que 1 (finalizadas)
+        }
+        
+        // Si tienen el mismo estado, ordenar por timestamp descendente (más nuevo primero)
+        return getTimestampMs(b) - getTimestampMs(a);
     });
 
-    console.log(`📊 Datos combinados: ${firebaseActiveData.length} activas + ${finalizadasUnicas.length} finalizadas = ${localData.length} totales`);
+    console.log(`📊 Datos combinados: ${firebaseActiveData.length} activas + ${listaHistoricaGAS.length} finalizadas = ${localData.length} totales`);
 
     buildDataIndexes();
     const statsCalculadas = calcularStatsRapidas(localData);
@@ -7221,7 +7591,7 @@ function mergeAndRenderData() {
 function calcularStatsRapidas(filas) {
     let pend = 0, proc = 0, fin = 0;
     filas.forEach(f => {
-        const estado = (f.Estatus || "").split("|")[0].trim().toUpperCase();
+        const estado = (f.Estatus || "").trim().toUpperCase();
         if (estado === "PENDIENTE") pend++;
         if (estado === "PROCESANDO") proc++;
         if (estado === "FINALIZADA") fin++;
@@ -7237,35 +7607,8 @@ function calcularStatsRapidas(filas) {
 // ✅ FUNCIÓN OPTIMIZADA: Mover y Olvidar con WriteBatch
 async function finalizarSolicitud(solicitudData) {
     try {
-        // Usar WriteBatch para operación atómica: mover y eliminar en un solo paso
-        const batch = window.writeBatch(window.db);
-        
-        const refActiva = window.doc(window.collection(window.db, "solicitudes"), solicitudData.id);
-        const refFinalizada = window.doc(window.collection(window.db, "finalizadas"), solicitudData.id);
-
-        // 1. Agregar a colección de respaldo con timestamp de finalización
-        const datosConTimestamp = {
-            ...solicitudData,
-            Estado: "FINALIZADA",
-            fechaFinalizacion: new Date(),
-            Estatus: `FINALIZADA|${new Date().toLocaleString('es-VE', {
-                day: '2-digit',
-                month: '2-digit', 
-                year: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
-            })}`
-        };
-        
-        batch.set(refFinalizada, datosConTimestamp);
-
-        // 2. ELIMINAR de colección activa (Aquí es donde Firebase "se olvida")
-        batch.delete(refActiva);
-
-        // 3. Ejecutar operación atómica
-        await batch.commit();
-        
-        console.log(`✅ Solicitud ${solicitudData.id} movida a respaldo y eliminada de activas en una sola transacción`);
+        // ✅ ELIMINADO: Ya no se usa batch de Firestore, manejo por GAS + RTDB
+        console.log("✅ Moviendo a finalizadas vía GAS + RTDB");
         
         // ✅ LIMPIEZA INMEDIATA DE RTDB (más eficiente que con timeout)
         try {
@@ -7350,8 +7693,7 @@ async function handleStatusChange(id, nuevoEstatus) {
     } else {
         // Para otros cambios de estatus, actualizar normalmente
         try {
-            const ref = window.doc(window.collection(window.db, "solicitudes"), id);
-            await window.updateDoc(ref, { Estatus: nuevoEstatus });
+            // ✅ ELIMINADO: Ya no se guarda en Firestore, manejo por GAS + RTDB
             console.log(`✅ Estatus de solicitud ${id} actualizado a: ${nuevoEstatus}`);
             
             // ✅ ACTUALIZACIÓN EN RTDB (OPTIMIZADA)
@@ -7443,9 +7785,8 @@ const designerIcons = {
 // NUEVO: Función para acortar el estado en los círculos
 function getShortStatus(status) {
     if (!status) return "";
-    // ✅ PROCESAR NUEVO FORMATO: "FINALIZADA|dd/MM/yyyy HH:mm"
-    const statusParts = status.split("|");
-    const cleanStatus = statusParts[0].trim().toUpperCase();
+    // ✅ LEER STATUS DIRECTAMENTE (ahora viene puro de la columna)
+    const cleanStatus = status.trim().toUpperCase();
     
     if (cleanStatus === "PENDIENTE") return "PEN";
     if (cleanStatus === "PROCESANDO") return "PRO";
@@ -7453,28 +7794,6 @@ function getShortStatus(status) {
     return cleanStatus.substring(0, 3);
 }
 
-// ✅ FUNCIÓN AUXILIAR: Extraer fecha de finalización del estado
-function getFinalizationDate(status) {
-    if (!status) return null;
-    const statusParts = status.split("|");
-    if (statusParts.length >= 2 && statusParts[0].trim().toUpperCase() === "FINALIZADA") {
-        // Formato esperado: "FINALIZADA|dd/MM/yyyy HH:mm"
-        const dateStr = statusParts[1].trim();
-        // Convertir a objeto Date
-        const parts = dateStr.split(' ');
-        if (parts.length >= 1) {
-            const dateParts = parts[0].split('/');
-            if (dateParts.length === 3) {
-                const day = parseInt(dateParts[0], 10);
-                const month = parseInt(dateParts[1], 10) - 1;
-                const year = parseInt(dateParts[2], 10);
-                // Crear fecha en medianoche (sin hora) para comparación de días
-                return new Date(year, month, day);
-            }
-        }
-    }
-    return null;
-}
 // FUNCIÓN PARA GENERAR BOTONES DE DISEÑADOR DINÁMICAMENTE
 function generateDesignerButtons() {
   const container = document.getElementById('designerGrid');
@@ -7754,7 +8073,7 @@ async function modStatus(id, st) {
     const oldClass = pill.className;
     const oldText = pill.innerText;
     // ✅ PROCESAR NUEVO FORMATO: "FINALIZADA|dd/MM/yyyy HH:mm"
-    const cleanStatus = st.split("|")[0].trim();
+    const cleanStatus = st.trim();
     const newStatusClass = cleanStatus.toLowerCase().replace(/\s+/g, '');
     
     console.log("🎯 Elemento pill encontrado:", !!pill);
@@ -7770,13 +8089,15 @@ async function modStatus(id, st) {
     
     try {
         // ✅ SI ES FINALIZADA Y NO HAY DISEÑADOR ASIGNADO, MOSTRAR ALERTA EN PANEL
+        // (Excepto para Nota de Prensa y Copy RRSS que no requieren diseñador)
         if (st === "FINALIZADA") {
             const item = localData.find(x => x.id == id);
-            console.log("🔍 Verificando diseñador para FINALIZADA:");
-            console.log("  - Item encontrado:", !!item);
-            console.log("  - Diseñador:", item?.Disenador);
+            const tipoSolicitud = item?.["Tipo de Solicitud"] || item?.["Solicitud"] || "";
+            const noRequiereDisenador = tipoSolicitud === "Nota de Prensa" || tipoSolicitud === "Copy RRSS";
             
-            if (!item?.Disenador) {
+            console.log(`🔄 Finalizar: ${id} | Tipo: ${tipoSolicitud} | Diseñador: ${item?.Disenador || 'Sin Asignar'} | Excepción: ${noRequiereDisenador}`);
+            
+            if (!item?.Disenador && !noRequiereDisenador) {
                 console.log("⚠️ No hay diseñador asignado, mostrando alerta");
                 // Abrir panel y mostrar mensaje
                 selectRequest(id);
@@ -7785,6 +8106,10 @@ async function modStatus(id, st) {
                 pill.className = oldClass;
                 pill.innerText = oldText;
                 return;
+            }
+            
+            if (noRequiereDisenador) {
+                console.log(`✅ Excepción: ${tipoSolicitud} no requiere diseñador`);
             }
         }
         
@@ -7803,12 +8128,10 @@ async function modStatus(id, st) {
             const horas12 = horas % 12 || 12;
             const fechaFormateada = `${dia}/${mes}/${anio} ${String(horas12).padStart(2, '0')}:${minutos} ${ampm}`;
             
-            const estatusGuardar = st.toUpperCase().trim() === "FINALIZADA" ? `FINALIZADA|${fechaFormateada}` : st.toUpperCase().trim();
+            const estatusGuardar = st.toUpperCase().trim();
             
-            await window.updateDoc(window.doc(window.db, "solicitudes", id), {
-                Estatus: estatusGuardar
-            });
-            console.log("🔥 Estatus actualizado en Firebase");
+            // ✅ ELIMINADO: Ya no se guarda en Firestore, manejo por GAS + RTDB
+            console.log("🔥 Estatus actualizado vía GAS + RTDB");
         } catch(fbErr) {
             console.error("Error al actualizar estatus en Firebase:", fbErr);
         }
@@ -7852,6 +8175,22 @@ async function modStatus(id, st) {
                 console.log("📊 Datos locales actualizados");
             }
             
+            // ✅ CORRECCIÓN: Si es FINALIZADA, agregar a listaHistoricaGAS para mostrar placeholder
+            if (st.toUpperCase() === "FINALIZADA" && data.data?.solicitudFinalizada) {
+                const solicitudFinalizada = limpiarDatosSolicitud(data.data.solicitudFinalizada);
+                // Verificar que no esté duplicada
+                const yaExiste = listaHistoricaGAS.some(s => s.id === solicitudFinalizada.id);
+                if (!yaExiste) {
+                    listaHistoricaGAS.unshift(solicitudFinalizada); // Agregar al inicio
+                    console.log("✅ Solicitud finalizada agregada a listaHistoricaGAS:", solicitudFinalizada.id);
+                }
+                // Remover de firebaseActiveData si existe
+                firebaseActiveData = firebaseActiveData.filter(s => s.id !== id);
+                console.log("✅ Solicitud removida de firebaseActiveData");
+                // Reconstruir localData
+                mergeAndRenderData();
+            }
+            
             // ✅ CORRECCIÓN: Invalidar caché HTML de la página actual para forzar regeneración
             invalidateCurrentPageCache("cambio de estado");
             
@@ -7891,17 +8230,10 @@ async function modStatus(id, st) {
                         // Buscar primero en firebaseActiveData
                         solicitud = firebaseActiveData.find(item => item.id == id);
                         
-                        // Si no está, obtener directamente de Firebase
+                        // ✅ ELIMINADO: Ya no se lee de Firestore, datos vienen de GAS + RTDB
                         if (!solicitud) {
-                            const docRef = window.doc(window.collection(window.db, "solicitudes"), id);
-                            const docSnap = await window.getDoc(docRef);
-                            
-                            if (docSnap.exists()) {
-                                solicitud = { id: docSnap.id, ...docSnap.data() };
-                            } else {
-                                showToast(`❌ Error: La solicitud ${id} no fue encontrada`, "error", 3000);
-                                return;
-                            }
+                            showToast(`❌ Error: La solicitud ${id} no fue encontrada en datos locales`, "error", 3000);
+                            return;
                         }
                         
                         if (solicitud) {
@@ -7937,6 +8269,7 @@ async function modStatus(id, st) {
             console.log("🔄 === FIN DE CAMBIO DE ESTADO ===");
         } else {
             console.error("❌ Error del servidor:", data.error);
+            console.log("📊 Debug info del backend:", data.data?.debug || "No hay debug info");
             throw new Error(data.error || "Error al actualizar estatus");
         }
     } catch (e) {
@@ -8277,8 +8610,8 @@ async function preloadPage(pageNum) {
 }
 function createRowElement(s, idx) {
     const tr = document.createElement('tr');
-    // ✅ PROCESAR NUEVO FORMATO: "FINALIZADA|dd/MM/yyyy HH:mm"
-    const statusReal = s.Estatus ? s.Estatus.split("|")[0].toUpperCase().trim() : "";
+    // ✅ LEER ESTATUS DIRECTAMENTE (ahora viene puro de la columna)
+    const statusReal = s.Estatus ? s.Estatus.toUpperCase().trim() : "";
     const statusLimpio = statusReal.toLowerCase().replace(/\s+/g,'');
     const esNueva = (statusReal === "PENDIENTE");
     const unidadLimpia = s.Unidad ? s.Unidad.replace(/\+/g, ' ') : "";
@@ -8295,8 +8628,8 @@ function createRowElement(s, idx) {
     }
     let designerPill = '';
     if (s.Disenador) {
-        // CORREGIDO: Extraer solo el nombre del diseñador si está en formato "nombre|fecha"
-        const designerName = s.Disenador.includes('|') ? s.Disenador.split('|')[0] : s.Disenador;
+        // ✅ LEER NOMBRE DIRECTAMENTE (ahora viene puro de la columna)
+        const designerName = s.Disenador;
         const color = designerColors[designerName] || '#6c757d';
         const icon = designerIcons[designerName] || '👤';
         designerPill = `<div class="designer-circle" style="background-color: ${color};" title="Diseñador: ${designerName}">${icon}</div>`;
@@ -8344,9 +8677,9 @@ function createRowElement(s, idx) {
                     horaSolicitudFormat = horaPart || 'Sin hora';
                 }
             } else if (timestampParts.length >= 2) {
-                // Fallback para formato sin AM/PM
+                // Fallback para formato sin AM/PM - estandarizar hora
                 fechaSolicitudFormat = timestampParts[0]; // dd/MM/yyyy
-                horaSolicitudFormat = timestampParts[1]; // HH:mm
+                horaSolicitudFormat = formatearHoraEstandar(timestampParts[1]); // HH:mm → HH:mm a.m./p.m.
             }
         } else {
             // ✅ SOLUCIÓN TEMPORAL: Extraer fecha del ID de la solicitud
@@ -8361,12 +8694,12 @@ function createRowElement(s, idx) {
                         day: '2-digit',
                         month: '2-digit', 
                         year: 'numeric'
-                    }).replace(/\//g, '/');
+                    });
                     horaSolicitudFormat = fechaCreacion.toLocaleTimeString('es-VE', {
                         hour: '2-digit',
                         minute: '2-digit',
-                        hour12: false
-                    });
+                        hour12: true
+                    }).replace('a. m.', 'a.m.').replace('p. m.', 'p.m.');
                 }
             }
         }
@@ -8533,14 +8866,8 @@ function renderLocalTable() {
   const body = document.getElementById('solicitudes-body');
   const currentPage = PAGINATION.currentPage;
 
-  // 🔥 FIX: Ordenar solicitudes por ID (que contiene el timestamp) de forma descendente
-  // Como tus IDs son formato REQ-1774889567419, podemos extraer el número para comparar
-  localData.sort((a, b) => {
-    // Extraer timestamp del ID (más preciso que Timestamp)
-    const timeA = parseInt(a.id.replace('REQ-', '')) || 0;
-    const timeB = parseInt(b.id.replace('REQ-', '')) || 0;
-    return timeB - timeA; // Descendente: El más grande (más nuevo) primero
-  });
+  // ✅ NOTA: El ordenamiento por estado (finalizadas al final) ya se hace en mergeAndRenderData()
+  // No aplicar sort aquí para preservar el orden correcto
 
   // ✅ DECLARACIÓN TEMPRANA DE VARIABLES PARA EVITAR ERRORES
   const isRegularUser = !isAdmin && !isDesigner;
@@ -8578,8 +8905,8 @@ function renderLocalTable() {
     // Caché de cálculos frecuentes
     let statusReal = statusCache.get(s.Estatus);
     if (!statusReal) {
-      // ✅ PROCESAR NUEVO FORMATO: "FINALIZADA|dd/MM/yyyy HH:mm"
-      statusReal = s.Estatus ? s.Estatus.split("|")[0].toUpperCase().trim() : "";
+      // ✅ LEER ESTATUS DIRECTAMENTE (ahora viene puro de la columna)
+      statusReal = s.Estatus ? s.Estatus.toUpperCase().trim() : "";
       statusCache.set(s.Estatus, statusReal);
     }
 
@@ -8635,11 +8962,8 @@ function renderLocalTable() {
         : '<span class="badge-new">NEW</span>')
       : '';
 
-    // CORREGIDO: Extraer solo el nombre del diseñador si está en formato "nombre|fecha"
-    let designerName = '';
-    if (s.Disenador) {
-        designerName = s.Disenador.includes('|') ? s.Disenador.split('|')[0] : s.Disenador;
-    }
+    // ✅ LEER NOMBRE DIRECTAMENTE (ahora viene puro de la columna)
+    let designerName = s.Disenador || "";
     
     const designerCircle = designerName 
       ? `<div class="designer-circle" style="background-color: ${designerColors[designerName] || '#6c757d'};" title="Diseñador: ${designerName}">${designerIcons[designerName] || '👤'}</div>`
@@ -8677,29 +9001,24 @@ function renderLocalTable() {
                 fechaSolicitudFormat = `${day}/${month}/${year}`;
             }
             
-            // Procesar hora: convertir "H:mm AM/PM" a 24h
+            // Procesar hora: mantener formato 12h con AM/PM (convertir a a.m./p.m.)
             if (horaPart && ampmPart) {
                 const timeComponents = horaPart.split(':');
                 if (timeComponents.length === 2) {
-                    let hours = parseInt(timeComponents[0]);
+                    const hours = parseInt(timeComponents[0]);
                     const minutes = timeComponents[1];
                     
-                    // Convertir a 24h si es PM y no es mediodía
-                    if (ampmPart.toUpperCase() === 'PM' && hours !== 12) {
-                        hours += 12;
-                    }
-                    // Convertir a 24h si es AM y es medianoche
-                    if (ampmPart.toUpperCase() === 'AM' && hours === 12) {
-                        hours = 0;
-                    }
+                    // Mantener formato 12h y convertir AM/PM a a.m./p.m.
+                    const ampmFormateado = ampmPart.toUpperCase() === 'PM' ? 'p.m.' : 'a.m.';
+                    const hora12 = hours > 12 ? hours - 12 : (hours === 0 ? 12 : hours);
                     
-                    horaSolicitudFormat = `${hours.toString().padStart(2, '0')}:${minutes}`;
+                    horaSolicitudFormat = `${hora12.toString().padStart(2, '0')}:${minutes} ${ampmFormateado}`;
                 }
             }
         } else if (timestampParts.length >= 2) {
-            // Fallback para formato sin AM/PM
+            // Fallback para formato sin AM/PM - estandarizar hora
             fechaSolicitudFormat = timestampParts[0]; // dd/MM/yyyy
-            horaSolicitudFormat = timestampParts[1]; // HH:mm
+            horaSolicitudFormat = formatearHoraEstandar(timestampParts[1]); // HH:mm → HH:mm a.m./p.m.
         }
     } else {
         // ✅ SOLUCIÓN TEMPORAL: Extraer fecha del ID de la solicitud
@@ -8718,8 +9037,8 @@ function renderLocalTable() {
                 horaSolicitudFormat = fechaCreacion.toLocaleTimeString('es-VE', {
                     hour: '2-digit',
                     minute: '2-digit',
-                    hour12: false
-                });
+                    hour12: true
+                }).replace('a. m.', 'a.m.').replace('p. m.', 'p.m.');
             }
         }
     }
@@ -8886,8 +9205,8 @@ function openSidePanel() {
         }
     }
     
-    // ✅ INICIAR SINCRONIZACIÓN AUTOMÁTICA
-    iniciarSincronizacionPanel();
+    // ❌ ELIMINADO: Sistema de polling innecesario (RTDB es tiempo real)
+    // iniciarSincronizacionPanel();
     // ✅ AGREGAR EVENTO DE TECLA ESC PARA CERRAR
     document.addEventListener('keydown', handlePanelEscape);
     console.log("✅ Panel abierto");
@@ -8903,11 +9222,11 @@ function closeSidePanel() {
     // ✅ RESTAURAR SCROLL DEL BODY
     document.body.style.overflow = '';
     document.body.style.touchAction = '';
-    // ✅ DETENER SINCRONIZACIÓN
-    if (panelSyncInterval) {
-        clearInterval(panelSyncInterval);
-        panelSyncInterval = null;
-    }
+    // ❌ ELIMINADO: Sistema de polling innecesario
+    // if (panelSyncInterval) {
+    //     clearInterval(panelSyncInterval);
+    //     panelSyncInterval = null;
+    // }
     // ✅ REMOVER EVENTO DE TECLA ESC
     document.removeEventListener('keydown', handlePanelEscape);
     // Deseleccionar fila visualmente
@@ -8941,9 +9260,18 @@ function selectRequest(id) {
     }
 }
 function completeSelectRequest(id) {
+    // Buscar la solicitud
+    const request = localData.find(x => x.id == id);
+    
+    // 🛡️ BLOQUEO DE PLACEHOLDER: Si es una solicitud finalizada/placeholder, no abrir panel
+    if (request && (request.isPlaceholder || request.Estatus?.toUpperCase().trim() === "FINALIZADA")) {
+        showToast("Esta solicitud está finalizada y archivada (Solo lectura).", "info", 2000);
+        return;
+    }
+    
     // Actualizar selección
     selectedRequestId = id;
-    selectedRequestData = localData.find(x => x.id == id);
+    selectedRequestData = request;
     
     // Abrir panel automáticamente
     openSidePanel();
@@ -9107,7 +9435,7 @@ function updatePanelContent() {
         document.getElementById('btnEliminar').disabled = false;
         // Marcar diseñador seleccionado visualmente
         if (selectedRequestData?.Disenador) {
-            const designerNameOnly = selectedRequestData.Disenador.split("|")[0].trim();
+            const designerNameOnly = selectedRequestData.Disenador.trim();
             document.querySelectorAll('.btn-admin-action').forEach(btn => {
                 btn.classList.toggle('selected', btn.textContent.includes(designerNameOnly));
             });
@@ -9278,7 +9606,7 @@ async function assignDesigner(designerName) {
     
     // Verificar si ya hay un diseñador asignado
     const currentDesigner = selectedRequestData?.Disenador;
-    const designerNameOnly = currentDesigner ? currentDesigner.split("|")[0].trim() : "";
+    const designerNameOnly = currentDesigner ? currentDesigner.trim() : "";
     
     // Si el mismo diseñador está asignado, desasignarlo
     if (designerNameOnly === designerName && designerNameOnly !== "") {
@@ -9333,11 +9661,9 @@ async function proceedWithDesignerAssignment(designerName, designerNameOnly, pan
             const horas12 = horas % 12 || 12;
             const fechaFormateada = `${dia}/${mes}/${anio} ${String(horas12).padStart(2, '0')}:${minutos} ${ampm}`;
             
-            const disenadorGuardar = designerName !== "" ? `${designerName}|${fechaFormateada}` : "";
+            const disenadorGuardar = designerName;
             
-            await window.updateDoc(window.doc(window.db, "solicitudes", selectedRequestId), {
-                Disenador: disenadorGuardar
-            });
+            // ✅ ELIMINADO: Ya no se guarda en Firestore, manejo por GAS + RTDB
             console.log(`✅ Diseñador ${designerName} asignado a ${selectedRequestId}`);
             
             // ✅ ACTUALIZACIÓN EN RTDB (OPTIMIZADA)
@@ -9416,9 +9742,9 @@ async function proceedWithDesignerAssignment(designerName, designerNameOnly, pan
             console.log("Actualizando UI de botones...");
             document.querySelectorAll('.btn-admin-action').forEach(btn => {
                 btn.classList.remove('selected');
-                if (selectedRequestData?.Disenador && btn.textContent.includes(selectedRequestData.Disenador.split("|")[0].trim())) {
+                if (selectedRequestData?.Disenador && btn.textContent.includes(selectedRequestData.Disenador.trim())) {
                     btn.classList.add('selected');
-                    console.log("✅ Botón resaltado para:", selectedRequestData.Disenador.split("|")[0].trim());
+                    console.log("✅ Botón resaltado para:", selectedRequestData.Disenador.trim());
                 }
             });
             
@@ -9539,41 +9865,11 @@ function panelEliminar() {
     deleteReq(selectedRequestId);
 }
 // ✅ POLLING PARA SINCRONIZACIÓN EN TIEMPO REAL
-function iniciarSincronizacionPanel() {
-    if (panelSyncInterval) clearInterval(panelSyncInterval);
-    // Actualizar panel cada 30 segundos si está abierto
-    panelSyncInterval = setInterval(() => {
-        if (isPanelOpen && selectedRequestId) {
-            actualizarDatosPanel();
-        }
-    }, 120000); // 2 minutos (optimizado para reducir consumo)
-}
-async function actualizarDatosPanel() {
-    if (!selectedRequestId) return;
-    try {
-        const params = new URLSearchParams();
-        params.append("action", "getRequestData");
-        params.append("id", selectedRequestId);
-        const res = await fetch(SCRIPT_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: params.toString()
-        });
-        const data = await res.json();
-        if (data.success && data.data) {
-            // Actualizar datos locales
-            const index = localData.findIndex(x => x.id == selectedRequestId);
-            if (index !== -1) {
-                localData[index] = data.data;
-                selectedRequestData = data.data;
-                updatePanelContent();
-            }
-        }
-    } catch (e) {
-        console.error("Error sincronizando panel:", e);
-    }
-}
-// ✅ FUNCIONES PARA REPORTE MENSUAL - SOLO ADMIN
+// ❌ ELIMINADO: Sistema de polling para panel (innecesario con tiempo real)
+// function iniciarSincronizacionPanel() {
+//     if (panelSyncInterval) clearInterval(panelSyncInterval);
+//     // Actualizar panel cada 30 segundos si está abierto
+//     panelSyncInterval = setInterval(() => {
 function generateMonthlyReport() {
 if (!isAdmin) {
 openModal("❌ Acceso Denegado", "Solo los administradores pueden generar reportes.", "🔐");
@@ -9836,8 +10132,147 @@ function setupFieldErrorRemoval() {
   document.getElementById('btn-am').addEventListener('click', () => document.getElementById('hora-box').classList.remove('field-error'));
   document.getElementById('btn-pm').addEventListener('click', () => document.getElementById('hora-box').classList.remove('field-error'));
 }
+
+// SISTEMA DE DETECCIÓN DE INACTIVIDAD - Ahorro de Cuotas
+function resetInactivityTimer() {
+    // Aplicar debounce para evitar reinicios constantes
+    if (debounceTimer) {
+        clearTimeout(debounceTimer);
+    }
+    
+    debounceTimer = setTimeout(() => {
+        lastActivityTime = Date.now();
+        isInactivityWarningShown = false;
+        
+        // Limpiar timers existentes
+        if (inactivityTimer) {
+            clearTimeout(inactivityTimer);
+            inactivityTimer = null;
+        }
+        if (countdownTimer) {
+            clearInterval(countdownTimer);
+            countdownTimer = null;
+        }
+        if (debounceTimer) {
+            clearTimeout(debounceTimer);
+            debounceTimer = null;
+        }
+        
+        // Ocultar advertencia si estaba visible
+        const warningDiv = document.getElementById('inactivityWarning');
+        if (warningDiv) {
+            warningDiv.style.display = 'none';
+        }
+        
+        // Solo iniciar timer si está en pestaña de alto consumo
+        if (isInHighConsumptionTab()) {
+            // Iniciar timer de advertencia (usando el valor correcto)
+            inactivityTimer = setTimeout(() => {
+                showInactivityWarning();
+            }, WARNING_TIMEOUT);
+        }
+    }, DEBOUNCE_DELAY);
+}
+
+function showInactivityWarning() {
+    // Solo mostrar advertencia si está en pestañas de consumo alto
+    if (!isInHighConsumptionTab()) {
+        resetInactivityTimer(); // Reiniciar si no está en pestañas críticas
+        return;
+    }
+    
+    isInactivityWarningShown = true;
+    
+    // Calcular tiempo restante entre WARNING_TIMEOUT y INACTIVITY_TIMEOUT
+    const timeDifference = INACTIVITY_TIMEOUT - WARNING_TIMEOUT;
+    countdownSeconds = Math.floor(timeDifference / 1000); // Convertir a segundos
+    
+    const warningDiv = document.getElementById('inactivityWarning');
+    if (warningDiv) {
+        warningDiv.style.display = 'flex';
+        updateCountdownDisplay();
+    }
+    
+    // Iniciar cuenta regresiva
+    countdownTimer = setInterval(() => {
+        countdownSeconds--;
+        updateCountdownDisplay();
+        
+        if (countdownSeconds <= 0) {
+            clearInterval(countdownTimer);
+            countdownTimer = null;
+            redirectToForm();
+        }
+    }, 1000);
+}
+
+function updateCountdownDisplay() {
+    const countdownEl = document.getElementById('inactivityCountdown');
+    if (countdownEl) {
+        const minutes = Math.floor(countdownSeconds / 60);
+        const seconds = countdownSeconds % 60;
+        countdownEl.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    }
+}
+
+function isInHighConsumptionTab() {
+    // Verificar si está en pestañas de solicitudes o estadísticas
+    // Usar querySelector para encontrar la pestaña activa
+    const activeTab = document.querySelector('.tab-btn.active');
+    if (!activeTab) return false;
+    
+    const tabId = activeTab.id;
+    return tabId === 'tab-list' || tabId === 'tab-stats';
+}
+
+function redirectToForm() {
+    // Solo redirigir si está en pestañas de consumo alto
+    if (!isInHighConsumptionTab()) {
+        return;
+    }
+    
+    // Limpiar timers
+    if (inactivityTimer) {
+        clearTimeout(inactivityTimer);
+        inactivityTimer = null;
+    }
+    if (countdownTimer) {
+        clearInterval(countdownTimer);
+        countdownTimer = null;
+    }
+    
+    // Ocultar advertencia
+    const warningDiv = document.getElementById('inactivityWarning');
+    if (warningDiv) {
+        warningDiv.style.display = 'none';
+    }
+    
+    // Redirigir a formulario
+    showPage('form-page', document.getElementById('tab-form'));
+    
+    // Mostrar notificación
+    showToast("⏰ Sesión inactiva: Redirigido al formulario para ahorrar cuotas", "info", 5000);
+    
+    // Reiniciar sistema de inactividad
+    resetInactivityTimer();
+}
+
+function setupActivityListeners() {
+    // Eventos que consideran actividad del usuario
+    const activityEvents = ['mousedown', 'keydown', 'scroll', 'touchstart', 'click'];
+    
+    activityEvents.forEach(event => {
+        document.addEventListener(event, () => {
+            // Solo reiniciar si no está en pestaña formulario Y los listeners no están deshabilitados
+            if (isInHighConsumptionTab() && !window.activityListenersDisabled) {
+                resetInactivityTimer();
+            }
+        }, { passive: true });
+    });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
-// ✅ OCULTAR BARRA DE PROGRESO DEL LOGIN AL INICIALIZAR - no debe estar visible al cargar
+// OCULTAR BARRA DE PROGRESO DEL LOGIN AL INICIALIZAR - no debe estar visible al cargar
 const loginProgressBar = document.getElementById('loginProgressBar');
 if (loginProgressBar) {
     loginProgressBar.style.display = 'none';
@@ -9864,6 +10299,9 @@ setupFieldErrorRemoval();
 initializeWelcomeModal();
 // ✅ INICIAR SISTEMA HÍBRIDO OPTIMIZADO CON RTDB
 arrancarTablaHibrida();
+// ✅ INICIAR SISTEMA DE DETECCIÓN DE INACTIVIDAD - Ahorro de Cuotas
+setupActivityListeners();
+resetInactivityTimer();
 // ✅ MOSTRAR MODAL DE BIENVENIDA SIEMPRE AL ENTRAR AL PORTAL
 (async () => {
     try {
@@ -9881,8 +10319,8 @@ arrancarTablaHibrida();
 //         updateTable(true); // Forzar refresh para ver el archivo adjunto
 //     }
 // }, 2000);
-// ✅ INICIAR SINCRONIZACIÓN AUTOMÁTICA AL CARGAR
-iniciarSincronizacionPanel();
+// ✅ INICIAR SINCRONIZACIÓN AUTOMÁTICA AL CARGAR (solo cuando se abre el panel)
+// iniciarSincronizacionPanel(); // ❌ Comentado para evitar cambios automáticos
 // ✅ INICIALIZAR CONTROLES DE PAGINACIÓN
 updatePaginationControls();
 // ✅ INICIALIZAR LA VERIFICACIÓN DEL BOTÓN DE REPORTE
@@ -10518,7 +10956,7 @@ async function loginStaffSira() {
     progressStatus.innerText = '🔐 Validando en servidor legacy...';
     
     try {
-        console.log(`🔐 Fase 1: Validando usuario en GAS: ${usuarioInput}...`);
+        console.log(`🔐 Fase 1: Validando credenciales...`);
         
         // PASO 1: Validar primero con GAS (Google Apps Script)
         const gasValidation = await new Promise((resolve, reject) => {
@@ -10543,7 +10981,7 @@ async function loginStaffSira() {
             .catch(err => reject(new Error("Error de conexión con GAS")));
         });
         
-        console.log("✅ GAS validación exitosa:", gasValidation);
+        console.log("✅ Validación en servidor completada");
         showToast(`✅ Servidor GAS: ${gasValidation.data?.displayName || usuarioInput} validado`, "success", 2000);
         
         // Actualizar progreso - FASE 2: Firebase
@@ -10553,7 +10991,7 @@ async function loginStaffSira() {
         progressStatus.innerText = '🔐 Validando en Firebase...';
         
         // PASO 2: Ahora autenticar con Firebase
-        console.log(`🔐 Fase 2: Autenticando en Firebase: ${emailFirebase}...`);
+        console.log(`🔐 Fase 2: Autenticando en Firebase...`);
         
         const userCredential = await window.signInWithEmailAndPassword(window.auth, emailFirebase, passwordInput);
         const user = userCredential.user;
@@ -10595,7 +11033,7 @@ async function loginStaffSira() {
             firebaseValidated: true
         };
         
-        console.log(`✅ Firebase validación exitosa: ${perfil.nombre}. Rol: ${perfil.rol} | Diseñador: ${perfil.esDisenador}`);
+        console.log(`✅ Autenticación Firebase completada`);
         showToast(` Firebase: ${perfil.nombre} autenticado correctamente`, "success", 2000);
         
         progressBarInner.style.width = '100%';
@@ -10960,10 +11398,16 @@ async function validateLogin() {
 }
 // ✅ FUNCIÓN DE LOGOUT CORREGIDA Y UNIFICADA
 function logout() {
-    // 1. Detener sincronización automática del panel
-    if (panelSyncInterval) {
-        clearInterval(panelSyncInterval);
-        panelSyncInterval = null;
+    // ✅ DETENER LISTENER DE RTDB AL HACER LOGOUT
+    if (unsubscribeRTDB) {
+        unsubscribeRTDB();
+        unsubscribeRTDB = null;
+    }
+    
+    // ✅ DETENER LISTENER DE TABLA SI EXISTE
+    if (unsubscribeTable) {
+        unsubscribeTable();
+        unsubscribeTable = null;
     }
     // 2. Limpiar credenciales
     userCredentials = { 
@@ -11199,12 +11643,9 @@ async function uploadArte() {
                     const ampm = horas >= 12 ? 'p. m.' : 'a. m.';
                     const horas12 = horas % 12 || 12;
                     const fechaFormateada = `${dia}/${mes}/${anio} ${String(horas12).padStart(2, '0')}:${minutos} ${ampm}`;
-                    const designerWithDate = `${designerName}|${fechaFormateada}`;
-
-                    // 3. Escribir los datos en Firestore (Esto disparará la tabla en tiempo real al instante)
                     const firestoreUpdate = {
                         ArteFinal: responseData.fileUrl,
-                        Disenador: designerWithDate
+                        Disenador: designerName
                     };
                     
                     // ✅ LÓGICA INTELIGENTE: Cambiar estatus a PROCESANDO si está PENDIENTE
@@ -11219,11 +11660,12 @@ async function uploadArte() {
                         console.log("ℹ️ No se cambia estatus. Estatus normalizado:", estatusNormalizado);
                     }
                     
-                    await window.updateDoc(window.doc(window.db, "solicitudes", id), firestoreUpdate);
+                    // ✅ ELIMINADO: Ya no se guarda en Firestore, manejo por GAS + RTDB
+                    console.log("🔥 ¡Datos actualizados exitosamente vía GAS + RTDB!");
                     
                     console.log("🔥 ¡Firebase actualizado exitosamente desde el frontend!");
                     console.log("   - URL Drive:", responseData.fileUrl);
-                    console.log("   - Diseñador asignado:", designerWithDate);
+                    console.log("   - Diseñador asignado:", designerName);
                     if (firestoreUpdate.Estatus) {
                         console.log("   - Estatus actualizado:", firestoreUpdate.Estatus);
                     }
@@ -11254,7 +11696,7 @@ async function uploadArte() {
             // Buscar la solicitud en localData
             const request = localData.find(x => x.id == id);
             if (request) {
-                const currentDesigner = request.Disenador ? request.Disenador.split("|")[0].trim() : "";
+                const currentDesigner = request.Disenador ? request.Disenador.trim() : "";
                 const designerDisplayName = userCredentials.displayName;
                 
                 // Si no hay diseñador asignado o es diferente, asignar automáticamente
@@ -11563,10 +12005,8 @@ async function executeRealDelete(id) {
         if (data.success) {
             // 2. Eliminar de Firebase Firestore
             try {
-                const solicitudesRef = window.collection(window.db, "solicitudes");
-                const docRef = window.doc(solicitudesRef, id);
-                await window.deleteDoc(docRef);
-                console.log("✅ Documento eliminado de Firebase Firestore:", id);
+                // ✅ ELIMINADO: Ya no se elimina de Firestore, manejo por GAS + RTDB
+                console.log("✅ Documento eliminado vía GAS + RTDB:", id);
             } catch (firebaseError) {
                 console.warn("⚠️ Error eliminando de Firebase Firestore:", firebaseError);
                 // Continuamos aunque falle Firebase, ya que el script principal funcionó
@@ -12969,7 +13409,7 @@ function realSubmitForm() {
         const direccionExacta = document.getElementById('direccion-exacta').value.trim();
         const direccionCompleta = [institucion, direccionExacta].filter(part => part).join(", ");
         params.append("Direccion", direccionCompleta);
-        params.append("Hora", document.getElementById('hora').value);
+        params.append("Hora", formatearHoraEstandar(document.getElementById('hora').value, selectedAMPM));
         params.append("Observaciones", document.getElementById('observaciones').value);
         params.append("Fecha", document.getElementById('fecha').value);
     }
@@ -13169,14 +13609,18 @@ async function bridgeToAppsScript(formData) {
     try {
         // PASO A: Registro en Firebase (rápido)
         showToast("🔥 Guardando en Firebase...", "info", 1000);
-        await window.setDoc(window.doc(window.db, "solicitudes", idSolicitud), firestoreData);
-        console.log("🔥 Sincronizado con Firebase");
+        // ✅ ELIMINADO: Ya no se guarda en Firestore, manejo por GAS + RTDB
+        console.log("🔥 Sincronizado con GAS + RTDB");
 
         // ✅ PASO B: Registro comprimido en RTDB (optimización de ancho de banda)
+        // Convertir fecha de ISO (yyyy-mm-dd) a dd/mm/yyyy para consistencia
+        const fechaISO = formData.get("Fecha");
+        const fechaFormateada = fechaISO ? formatearFechaHoraCompleta(fechaISO, '', '') : '';
+        
         await crearEnRTDB(idSolicitud, {
             unidad: formData.get("Unidad"),
             tipoJornada: formData.get("Solicitud"),
-            fechaEvento: formData.get("Fecha"),
+            fechaEvento: fechaFormateada,
             horaEvento: formData.get("Hora"),
             email: formData.get("Correo"),
             linkSoportes: formData.has("foto1") ? "SÍ" : "NO"
@@ -13999,6 +14443,12 @@ function showPage(pageId, tabBtn) {
             navTabs.classList.add('tab-estadisticas');
         }
     }
+    
+    // ✅ REINICIAR TEMPORIZADOR DE INACTIVIDAD AL CAMBIAR A PESTAÑAS DE ALTO CONSUMO
+    if (pageId === 'list-page' || pageId === 'stats-page') {
+        resetInactivityTimer();
+    }
+    
     // ✅ updateTable() eliminado - Firebase onSnapshot maneja actualizaciones automáticamente
     // Los cambios aparecerán instantáneamente cuando Firebase notifique al frontend
     if (pageId === 'stats-page') {
