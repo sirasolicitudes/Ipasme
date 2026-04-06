@@ -11409,6 +11409,13 @@ function logout() {
         unsubscribeTable();
         unsubscribeTable = null;
     }
+    
+    // ✅ RESETEAR VARIABLES DE PERMISOS (CRÍTICO)
+    isAdmin = false;
+    isDesigner = false;
+    window.isAdmin = false;
+    window.isDesigner = false;
+    
     // 2. Limpiar credenciales
     userCredentials = { 
         username: "", 
