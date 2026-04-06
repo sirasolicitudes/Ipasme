@@ -6600,9 +6600,6 @@ async function ejecutarRegistroConModal() {
             fechaRegistro: new Date().toISOString()
         });
 
-        // ✅ INCREMENTAR CONTADOR DE UNIDAD
-        await incrementarContadorUnidad(datos.unidad);
-
         completeRegisterAnimation(true, '¡Registro exitoso! Ya puedes iniciar sesión con tu correo.');
 
     } catch (error) {
