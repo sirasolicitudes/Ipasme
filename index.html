@@ -5901,6 +5901,9 @@ async function ejecutarLoginRegular() {
             console.log("🔧 Cargando datos para usuario regular:", userData.rol, "Unidad:", userData.unidad);
             cargarDatosUsuarioRegular();
             
+            // ✅ FORZAR PESTAÑA FORMULARIO AL INICIAR SESIÓN
+            showPage('form-page', document.getElementById('tab-form'));
+            
             showToast(`✅ ¡Bienvenido! Has iniciado sesión desde la unidad <strong>${userData.unidad}</strong>`, "success", 4000);
             
             // Pre-llenar formulario si existe
@@ -6549,6 +6552,12 @@ function switchToLogin() {
  * Registra usuarios con Firebase Auth y Firestore
  */
 async function ejecutarRegistroConModal() {
+    // ✅ CERRAR INMEDIATAMENTE EL MODAL DE REGISTRO AL HACER CLIC
+    closeUserRegisterModal();
+    
+    // ✅ MOSTRAR TOAST IMPORTANTE DE CONFIRMACIÓN INMEDIATA
+    showToast("📝 Procesando tu registro... Por favor espera un momento.", "info", 8000);
+    
     // Captura de datos desde el HTML
     const datos = {
         nombre: document.getElementById('rNombre').value.trim(),
@@ -6562,11 +6571,15 @@ async function ejecutarRegistroConModal() {
     // Validaciones básicas
     if (Object.values(datos).some(x => x === "")) {
         showToast("⚠️ Todos los campos son obligatorios", "warning");
+        // Reabrir modal de registro si hay error
+        setTimeout(() => {
+            document.getElementById('userRegisterModal').style.display = 'flex';
+        }, 1000);
         return;
     }
 
-    startRegisterProgressAnimation();
-    updateRegisterProgress(20, 'Verificando cupos...', 'Consultando disponibilidad en la unidad...');
+    // ✅ MOSTRAR MODAL DE BIENVENIDA MIENTRAS PROCESA
+    showWelcomeModal();
 
     try {
         // 1. LÓGICA DE LÍMITES (Sede Administrativa 20, el resto 2)
@@ -6577,17 +6590,13 @@ async function ejecutarRegistroConModal() {
         const ocupados = snapshot.data().count;
 
         if (ocupados >= limite) {
-            completeRegisterAnimation(false, null, `La unidad ${datos.unidad} ya tiene el máximo de ${limite} registros.`);
+            showToast(`❌ La unidad ${datos.unidad} ya tiene el máximo de ${limite} registros.`, "error", 6000);
             return;
         }
-
-        updateRegisterProgress(50, 'Creando cuenta...', 'Registrando correo en el sistema seguro...');
 
         // 2. CREAR USUARIO EN FIREBASE AUTH (Usando el correo)
         const userCredential = await window.createUserWithEmailAndPassword(window.auth, datos.correo, datos.password);
         const user = userCredential.user;
-
-        updateRegisterProgress(80, 'Guardando perfil...', 'Configurando rol de usuario básico...');
 
         // 3. GUARDAR EN FIRESTORE (Sin el campo "usuario", solo nombre/apellido)
         await window.setDoc(window.doc(window.db, "usuarios", user.uid), {
@@ -6600,13 +6609,16 @@ async function ejecutarRegistroConModal() {
             fechaRegistro: new Date().toISOString()
         });
 
-        completeRegisterAnimation(true, '¡Registro exitoso! Ya puedes iniciar sesión con tu correo.');
+        // ✅ TOAST DE ÉXITO IMPORTANTE Y PERMANENTE
+        showToast(`🎉 ¡REGISTRO EXITOSO! ${datos.nombre} ${datos.apellido} ya puede iniciar sesión con su correo: ${datos.correo}`, "success", 10000);
 
     } catch (error) {
         console.error(error);
         let msg = "Error al registrar.";
         if (error.code === 'auth/email-already-in-use') msg = "Este correo ya está en uso.";
-        completeRegisterAnimation(false, null, msg);
+        
+        // ✅ TOAST DE ERROR IMPORTANTE
+        showToast(`❌ Error en registro: ${msg}`, "error", 8000);
     }
 }
 
@@ -8127,7 +8139,9 @@ async function modStatus(id, st) {
             
             const estatusGuardar = st.toUpperCase().trim();
             
-            // ✅ ELIMINADO: Ya no se guarda en Firestore, manejo por GAS + RTDB
+            // ✅ ACTUALIZACIÓN EN TIEMPO REAL EN RTDB (FALTABA ESTA LÍNEA)
+            cambiarEstadoRTDB(id, estatusGuardar, null);
+            
             console.log("🔥 Estatus actualizado vía GAS + RTDB");
         } catch(fbErr) {
             console.error("Error al actualizar estatus en Firebase:", fbErr);
@@ -10423,48 +10437,21 @@ document.getElementById('adminUser').value = '';
 document.getElementById('adminPass').value = '';
 }
 // ============================================================
-// SISTEMA DE TOASTS (Notificaciones no bloqueantes)
 // ============================================================
-// Sistema de gestión de toast para evitar superposición
-let toastQueue = [];
-let isToastShowing = false;
+// SISTEMA DE TOASTS (Versión Robusta y sin bloqueos)
+// ============================================================
 
 /**
- * Muestra un toast notification con gestión de cola para evitar superposición
+ * Muestra un toast notification de forma independiente
  * @param {string} message - Mensaje a mostrar
  * @param {string} type - 'success' | 'error' | 'warning' | 'info'
  * @param {number} duration - Duración en ms (default: 3000)
  * @param {function} onClose - Callback al cerrar (opcional)
  */
 function showToast(message, type = 'info', duration = 3000, onClose = null) {
-    // Agregar a la cola
-    toastQueue.push({ message, type, duration, onClose });
-    
-    // Procesar la cola si no hay toast mostrándose actualmente
-    if (!isToastShowing) {
-        processToastQueue();
-    }
-}
-
-/**
- * Procesa la cola de toast secuencialmente
- */
-function processToastQueue() {
-    if (toastQueue.length === 0) {
-        isToastShowing = false;
-        return;
-    }
-    
-    isToastShowing = true;
-    const toastData = toastQueue.shift(); // Obtener el primer toast de la cola
-    
-    showSingleToast(toastData.message, toastData.type, toastData.duration, () => {
-        // Cuando se cierra el toast, procesar el siguiente
-        if (toastData.onClose && typeof toastData.onClose === 'function') {
-            toastData.onClose();
-        }
-        setTimeout(() => processToastQueue(), 300); // Pequeña pausa entre toast
-    });
+    // Ya no usamos cola restrictiva, simplemente lo disparamos.
+    // El offset dinámico se encarga de apilarlos visualmente.
+    showSingleToast(message, type, duration, onClose);
 }
 
 /**
@@ -10479,11 +10466,15 @@ function showSingleToast(message, type, duration, onClose) {
     };
     const style = colors[type] || colors.info;
     
+    // ✅ DETECTAR SI EL MENSAJE YA TIENE ICONO PARA EVITAR DOBLE ICONO
+    const hasIcon = /✅|❌|⚠️|ℹ️/.test(message);
+    const iconToShow = hasIcon ? '' : style.icon;
+    
     // Crear elemento toast
     const toast = document.createElement('div');
     toast.className = 'toast-notification';
     toast.innerHTML = `
-        <div class="toast-icon">${style.icon}</div>
+        <div class="toast-icon">${iconToShow}</div>
         <div class="toast-message">${message}</div>
         <button class="toast-close" onclick="this.parentElement.remove()">×</button>
     `;
@@ -10805,14 +10796,11 @@ function showSolicitudIdModal(solicitudId) {
     const btn = document.getElementById('mainModalBtn');
     btn.innerText = "ENTENDIDO";
     btn.onclick = () => {
-        closeModal();
+        // ✅ CERRAR DIRECTO SIN PASAR POR closeModal() QUE FUERZA EL WELCOME MODAL
+        document.getElementById('modalAlert').style.display = 'none';
         
-        // ✅ OPTIMIZACIÓN: Invalidar caché - Firebase onSnapshot manejará la actualización
         invalidatePageCache();
-        // ✅ updateTable() eliminado - Firebase onSnapshot maneja actualizaciones automáticamente
-        // Los cambios aparecerán instantáneamente cuando Firebase notifique al frontend
-        
-        // ✅ REDIRIGIR A PESTAÑA DE SOLICITUDES
+        // REDIRIGIR A PESTAÑA DE SOLICITUDES
         showPage('list-page', document.getElementById('tab-list'));
     };
     
@@ -11113,6 +11101,9 @@ async function loginStaffSira() {
                 showToast("⚠️ Error al conectar en tiempo real, pero puedes continuar trabajando", "warning", 5000);
             });
             
+            // ✅ FORZAR PESTAÑA FORMULARIO AL INICIAR SESIÓN
+            showPage('form-page', document.getElementById('tab-form'));
+            
             // Toast final de éxito dual
             showToast(`🎉 ¡Bienvenido ${perfil.nombre}! Validado en GAS + Firebase`, "success", 5000);
             
@@ -11406,13 +11397,14 @@ function logout() {
         unsubscribeTable = null;
     }
     
-    // ✅ RESETEAR VARIABLES DE PERMISOS (CRÍTICO)
+    // ✅ RESETEAR VARIABLES DE PERMISOS Y DATOS (CRÍTICO)
     isAdmin = false;
     isDesigner = false;
     window.isAdmin = false;
     window.isDesigner = false;
+    window.usuarioRegular = null; // ✅ Limpiar usuario regular
     
-    // 2. Limpiar credenciales
+    // 2. Limpiar credenciales y memoria
     userCredentials = { 
         username: "", 
         password: "", 
@@ -11420,6 +11412,15 @@ function logout() {
         role: "", 
         designerName: "" 
     };
+    
+    // ✅ LIMPIAR DATOS PARA EVITAR CRUCE ENTRE SESIONES
+    localData = [];
+    firebaseActiveData = [];
+    listaHistoricaGAS = [];
+    PAGINATION.totalRecords = 0;
+    
+    // ✅ REDIRIGIR AL FORMULARIO POR DEFECTO AL SALIR
+    showPage('form-page', document.getElementById('tab-form'));
     
     // ✅ ACTUALIZAR UI DE MANTENIMIENTO DESPUÉS DE LOGOUT
     updateMaintenanceUI();
@@ -13636,12 +13637,14 @@ async function bridgeToAppsScript(formData) {
         if (catType === 'copy-rrss') {
             showSolicitudIdModal(idSolicitud);
         } else {
-            showToast("✅ Solicitud registrada correctamente", "success", 3000, () => {
+            // 1. Mostramos la notificación libremente
+            showToast("✅ Solicitud registrada correctamente", "success", 3000);
+            
+            // 2. Redirigimos de forma independiente y segura tras 1.5 segundos
+            setTimeout(() => {
                 invalidatePageCache();
-                // ✅ updateTable() eliminado - Firebase onSnapshot maneja actualizaciones automáticamente
-                // Los cambios aparecerán instantáneamente cuando Firebase notifique al frontend
                 showPage('list-page', document.getElementById('tab-list'));
-            });
+            }, 1500);
         }
 
         // PASO B: Envío asíncrono al backend
