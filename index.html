@@ -4033,7 +4033,7 @@ min-width: 100%;
   // ✅ Agregamos onSnapshot, orderBy, limit, persistencia, getDocs, deleteDoc y writeBatch a la importación de firestore
   import { getFirestore, collection, query, where, getCountFromServer, doc, setDoc, getDoc, updateDoc, onSnapshot, orderBy, limit, enableIndexedDbPersistence, getDocs, deleteDoc, writeBatch, runTransaction } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js";
   // ✅ Importar Realtime Database para optimización de ancho de banda
-  import { getDatabase, ref, set, update, onValue, remove } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-database.js";
+  import { getDatabase, ref, set, update, onValue, remove, get } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-database.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyCxVi7OFLFUb3f5Z217s1EUnFqah2ESxJs",
@@ -4095,6 +4095,7 @@ min-width: 100%;
   window.update = update;
   window.onValue = onValue;
   window.remove = remove;
+  window.get = get; // ✅ Exponer get para leer documentos específicos
 </script>
 
 </head>
@@ -7620,13 +7621,9 @@ async function finalizarSolicitud(solicitudData) {
         // ✅ ELIMINADO: Ya no se usa batch de Firestore, manejo por GAS + RTDB
         console.log("✅ Moviendo a finalizadas vía GAS + RTDB");
         
-        // ✅ LIMPIEZA INMEDIATA DE RTDB (más eficiente que con timeout)
-        try {
-            await limpiarSolicitudDeRTDB(solicitudData.id);
-            console.log(`🧹 Solicitud ${solicitudData.id} eliminada de RTDB simultáneamente`);
-        } catch(rtdbErr) {
-            console.warn(`⚠️ Error limpiando RTDB para ${solicitudData.id}:`, rtdbErr);
-        }
+        // ✅ ELIMINADO: La limpieza de RTDB ahora se maneja en modStatus después de respuesta exitosa de GAS
+        // Esto evita eliminaciones prematuras si GAS falla
+        console.log(`ℹ️ La limpieza de RTDB para ${solicitudData.id} se manejará después de confirmación de GAS`);
         
         // 4. Notificar a GAS (opcional, para sincronización con backend)
         // await enviarAGAS(solicitudData);
@@ -8075,27 +8072,30 @@ async function modStatus(id, st) {
     }
     
     const pill = document.getElementById('pill-' + id);
+    // ✅ CORRECCIÓN: Si no se encuentra el pill, puede ser que la solicitud ya fue finalizada y movida
     if (!pill) {
-        console.error("❌ No se encontró el pill para ID:", id);
-        return;
+        console.warn(`⚠️ No se encontró el pill para ID: ${id}. La solicitud puede haber sido finalizada y movida.`);
+        // Continuar con el proceso sin modificar el DOM, ya que el backend ya procesó
+        // Esto evita que falle el proceso de finalización
+    } else {
+        // Solo modificar el DOM si el elemento existe
+        const oldClass = pill.className;
+        const oldText = pill.innerText;
+        // ✅ PROCESAR NUEVO FORMATO: "FINALIZADA|dd/MM/yyyy HH:mm"
+        const cleanStatus = st.trim();
+        const newStatusClass = cleanStatus.toLowerCase().replace(/\s+/g, '');
+        
+        console.log("🎯 Elemento pill encontrado:", !!pill);
+        console.log("📝 Estado actual:", oldText);
+        console.log("🎨 Clase nueva:", `status-${newStatusClass}`);
+        
+        // ✅ Actualizamos a .status-circle y colocamos el texto acortado
+        pill.className = `status-circle status-${newStatusClass}`;
+        pill.innerText = getShortStatus(st);
+        pill.title = `Estado: ${st}`;
+        
+        console.log("✅ UI actualizada localmente");
     }
-    
-    const oldClass = pill.className;
-    const oldText = pill.innerText;
-    // ✅ PROCESAR NUEVO FORMATO: "FINALIZADA|dd/MM/yyyy HH:mm"
-    const cleanStatus = st.trim();
-    const newStatusClass = cleanStatus.toLowerCase().replace(/\s+/g, '');
-    
-    console.log("🎯 Elemento pill encontrado:", !!pill);
-    console.log("📝 Estado actual:", oldText);
-    console.log("🎨 Clase nueva:", `status-${newStatusClass}`);
-    
-    // ✅ Actualizamos a .status-circle y colocamos el texto acortado
-    pill.className = `status-circle status-${newStatusClass}`;
-    pill.innerText = getShortStatus(st);
-    pill.title = `Estado: ${st}`;
-    
-    console.log("✅ UI actualizada localmente");
     
     try {
         // ✅ SI ES FINALIZADA Y NO HAY DISEÑADOR ASIGNADO, MOSTRAR ALERTA EN PANEL
@@ -8112,9 +8112,11 @@ async function modStatus(id, st) {
                 // Abrir panel y mostrar mensaje
                 selectRequest(id);
                 openModal("⚠️ Atención", "Debes asignar un diseñador antes de finalizar la solicitud. Usa el panel lateral.", "👨‍🎨");
-                // Revertir cambio visual
-                pill.className = oldClass;
-                pill.innerText = oldText;
+                // Revertir cambio visual solo si el pill existe
+                if (pill) {
+                    pill.className = oldClass;
+                    pill.innerText = oldText;
+                }
                 return;
             }
             
@@ -8153,6 +8155,20 @@ async function modStatus(id, st) {
         params.append("id", id);
         params.append("status", st.toUpperCase().trim());
         params.append("username", userCredentials.username);
+        
+        // ✅ Agregar fecha de finalización si el estado es FINALIZADA
+        if (st.toUpperCase().trim() === "FINALIZADA") {
+            const ahora = new Date();
+            const fechaFormateada = ahora.toLocaleString('es-VE', {
+                day: '2-digit',
+                month: '2-digit', 
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+            params.append("fechaFinalizacion", fechaFormateada);
+            console.log("📅 Fecha de finalización enviada a GAS:", fechaFormateada);
+        }
         params.append("password", userCredentials.password);
         
         console.log("🔗 Parámetros enviados: [OCULTOS POR SEGURIDAD]");
@@ -8187,20 +8203,64 @@ async function modStatus(id, st) {
                 console.log("📊 Datos locales actualizados");
             }
             
-            // ✅ CORRECCIÓN: Si es FINALIZADA, agregar a listaHistoricaGAS para mostrar placeholder
-            if (st.toUpperCase() === "FINALIZADA" && data.data?.solicitudFinalizada) {
-                const solicitudFinalizada = limpiarDatosSolicitud(data.data.solicitudFinalizada);
-                // Verificar que no esté duplicada
-                const yaExiste = listaHistoricaGAS.some(s => s.id === solicitudFinalizada.id);
-                if (!yaExiste) {
-                    listaHistoricaGAS.unshift(solicitudFinalizada); // Agregar al inicio
-                    console.log("✅ Solicitud finalizada agregada a listaHistoricaGAS:", solicitudFinalizada.id);
+            // ✅ CORRECCIÓN: Si es FINALIZADA, eliminar de RTDB y actualizar listas locales
+            if (st.toUpperCase() === "FINALIZADA") {
+                // Buscar la solicitud directamente en RTDB para agregar a históricos
+                try {
+                    const docRef = window.ref(window.dbRT, 'solicitudes_vivas/' + id);
+                    const docSnap = await get(docRef);
+                    
+                    if (docSnap.exists()) {
+                        const solicitudEncontrada = docSnap.val();
+                        
+                        // Crear solicitud finalizada con fecha actual
+                        const ahora = new Date();
+                        const fechaFormateada = ahora.toLocaleString('es-VE', {
+                            day: '2-digit',
+                            month: '2-digit', 
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                        });
+                        
+                        const solicitudFinalizada = {
+                            ...solicitudEncontrada,
+                            Estatus: `FINALIZADA|${fechaFormateada}`
+                        };
+                        
+                        // Agregar a listaHistoricaGAS
+                        const yaExiste = listaHistoricaGAS.some(s => s.id === solicitudFinalizada.id);
+                        if (!yaExiste) {
+                            listaHistoricaGAS.unshift(solicitudFinalizada);
+                            console.log("✅ Solicitud finalizada agregada a listaHistoricaGAS:", solicitudFinalizada.id);
+                        }
+                        
+                        // Remover de firebaseActiveData si existe
+                        firebaseActiveData = firebaseActiveData.filter(s => s.id !== id);
+                        console.log("✅ Solicitud removida de firebaseActiveData");
+                        
+                        // Reconstruir localData
+                        mergeAndRenderData();
+                        
+                        // ✅ Eliminar de RTDB después de confirmación exitosa de GAS
+                        setTimeout(async () => {
+                            try {
+                                console.log(`🧹 Eliminando solicitud ${id} de RTDB después de finalización exitosa en GAS...`);
+                                await limpiarSolicitudDeRTDB(id);
+                                console.log(`✅ Solicitud ${id} eliminada exitosamente de RTDB`);
+                                showToast(`🗑️ Solicitud ${id} eliminada de RTDB`, "success", 2000);
+                            } catch (error) {
+                                console.error(`❌ Error eliminando solicitud ${id} de RTDB:`, error);
+                                showToast(`⚠️ Error eliminando de RTDB: ${error.message}`, "error", 3000);
+                            }
+                        }, 1000); // Pequeño delay para asegurar que todo se procese correctamente
+                    } else {
+                        console.warn(`⚠️ No se encontró la solicitud ${id} en RTDB para procesar finalización`);
+                    }
+                } catch (error) {
+                    console.error(`❌ Error buscando solicitud ${id} en RTDB:`, error);
+                    showToast(`⚠️ Error buscando solicitud en RTDB: ${error.message}`, "error", 3000);
                 }
-                // Remover de firebaseActiveData si existe
-                firebaseActiveData = firebaseActiveData.filter(s => s.id !== id);
-                console.log("✅ Solicitud removida de firebaseActiveData");
-                // Reconstruir localData
-                mergeAndRenderData();
             }
             
             // ✅ CORRECCIÓN: Invalidar caché HTML de la página actual para forzar regeneración
@@ -8233,51 +8293,6 @@ async function modStatus(id, st) {
             
             showToast(toastMessage, toastType, 2000);
             
-            // ✅ SI ES FINALIZADA, MOVER INMEDIATAMENTE A COLECCIÓN 'FINALIZADAS' DE FIREBASE
-            if (st.toUpperCase() === "FINALIZADA") {
-                setTimeout(async () => {
-                    try {
-                        let solicitud = null;
-                        
-                        // Buscar primero en firebaseActiveData
-                        solicitud = firebaseActiveData.find(item => item.id == id);
-                        
-                        // ✅ ELIMINADO: Ya no se lee de Firestore, datos vienen de GAS + RTDB
-                        if (!solicitud) {
-                            showToast(`❌ Error: La solicitud ${id} no fue encontrada en datos locales`, "error", 3000);
-                            return;
-                        }
-                        
-                        if (solicitud) {
-                            const ahora = new Date();
-                            const fechaFormateada = ahora.toLocaleString('es-VE', {
-                                day: '2-digit',
-                                month: '2-digit', 
-                                year: 'numeric',
-                                hour: '2-digit',
-                                minute: '2-digit'
-                            });
-                            
-                            // Crear copia con el estatus actualizado
-                            const datosCompletos = {
-                                ...solicitud,
-                                Estatus: `FINALIZADA|${fechaFormateada}`
-                            };
-                            
-                            const exito = await finalizarSolicitud(datosCompletos);
-                            if (exito) {
-                                showToast(`✅ Solicitud ${id} finalizada y archivada`, "success", 3000);
-                            } else {
-                                showToast(`⚠️ Error archivando solicitud ${id}`, "error", 3000);
-                            }
-                        }
-                    } catch (error) {
-                        console.error(`❌ Error en movimiento a 'finalizadas':`, error);
-                        showToast(`❌ Error al archivar solicitud: ${error.message}`, "error", 3000);
-                    }
-                }, 500);
-            }
-            
             console.log("🔄 === FIN DE CAMBIO DE ESTADO ===");
         } else {
             console.error("❌ Error del servidor:", data.error);
@@ -8285,8 +8300,12 @@ async function modStatus(id, st) {
             throw new Error(data.error || "Error al actualizar estatus");
         }
     } catch (e) {
-        pill.className = oldClass;
-        pill.innerText = oldText;
+        // Revertir cambio visual solo si el pill existe
+        const pillElement = document.getElementById('pill-' + id);
+        if (pillElement && pillElement) {
+            pillElement.className = oldClass;
+            pillElement.innerText = oldText;
+        }
         console.error("Error completo:", e);
         openModal("", "Error de conexión: " + e.message, "");
     }
