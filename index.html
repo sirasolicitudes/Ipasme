@@ -7782,12 +7782,12 @@ const designerColors = {
 };
 // NUEVO: Emojis de diseñadores globales - FORMATO ESTÁNDAR
 const designerIcons = {
-    "Bermina": "👵",
+    "Bermina": "🦋",
     "Jorsy": "😎", 
     "Xamir": "🐲",
     "Fulan@": "👋",
     // MANTENER COMPATIBILIDAD CON MINÚSCULAS
-    "bermina": "👵",
+    "bermina": "🦋",
     "jorsy": "😎", 
     "xamir": "🐲",
     "fulan@": "👋"
@@ -7814,7 +7814,7 @@ function generateDesignerButtons() {
   
   // ✅ SOLO LOS 4 DISEÑADORES PRINCIPALES - USAR FORMATO ESTÁNDAR (PRIMERA LETRA MAYÚSCULA)
   const designers = [
-    { name: "Bermina", color: "#fb8500", icon: "👵" },
+    { name: "Bermina", color: "#fb8500", icon: "🦋" },
     { name: "Jorsy", color: "#2908f1", icon: "😎" },
     { name: "Xamir", color: "#572364", icon: "🐲" },
     { name: "Fulan@", color: "#9d0208", icon: "👋" }
@@ -16562,7 +16562,7 @@ function updateDesignerPerformanceTable(data) {
         const percentage = totalFinalizadas > 0 ? ((finalized / totalFinalizadas) * 100).toFixed(1) : 0;
         // Determinar inicial del diseñador - USAR MISMOS ICONOS QUE BOTONES
         const getInitial = (name) => {
-            if (name === 'Bermina') return '👵';
+            if (name === 'Bermina') return '🦋';
             if (name === 'Jorsy') return '😎';
             if (name === 'Xamir') return '🐲';
             if (name === 'Fulan@') return '👋';
