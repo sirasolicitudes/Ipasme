@@ -4066,9 +4066,10 @@ min-width: 100%;
   });
 
   // Exponemos las variables a "window" para que el resto de tu código pueda usarlas
+  window.firebaseApp = app; // Exponer la app de Firebase
   window.auth = auth;
   window.db = db;
-  window.dbRT = dbRT; // ✅ Exponer Realtime Database
+  window.dbRT = dbRT; // Exponer Realtime Database
   window.createUserWithEmailAndPassword = createUserWithEmailAndPassword;
   window.signInWithEmailAndPassword = signInWithEmailAndPassword;
   window.sendPasswordResetEmail = sendPasswordResetEmail;
@@ -12010,19 +12011,43 @@ async function executeRealDelete(id) {
             // 2. Eliminar de Firebase Firestore
             try {
                 // ✅ ELIMINADO: Ya no se elimina de Firestore, manejo por GAS + RTDB
-                console.log("✅ Documento eliminado vía GAS + RTDB:", id);
+                console.log(" Documento eliminado vía GAS + RTDB:", id);
             } catch (firebaseError) {
-                console.warn("⚠️ Error eliminando de Firebase Firestore:", firebaseError);
+                console.warn(" Error eliminando de Firebase Firestore:", firebaseError);
                 // Continuamos aunque falle Firebase, ya que el script principal funcionó
             }
             
             // 3. Eliminar de Firebase RTDB
             try {
+                // Verificar que window.dbRT esté disponible
+                if (!window.dbRT) {
+                    console.warn(" Firebase RTDB no está inicializado, intentando inicializar...");
+                    // Intentar inicializar RTDB si no está disponible
+                    const app = window.firebaseApp;
+                    if (app) {
+                        window.dbRT = window.getDatabase(app);
+                        console.log(" Firebase RTDB inicializado correctamente");
+                    } else {
+                        throw new Error("Firebase app no está disponible");
+                    }
+                }
+                
                 const rtdbRef = window.ref(window.dbRT, 'solicitudes_vivas/' + id);
                 await window.remove(rtdbRef);
-                console.log("✅ Documento eliminado de Firebase RTDB:", id);
+                console.log(" Documento eliminado de Firebase RTDB:", id);
+                
+                // También eliminar de firebaseActiveData local
+                firebaseActiveData = firebaseActiveData.filter(s => s.id !== id);
+                console.log(" Solicitud eliminada de firebaseActiveData local");
+                
             } catch (rtdbError) {
-                console.warn("⚠️ Error eliminando de Firebase RTDB:", rtdbError);
+                console.error(" Error eliminando de Firebase RTDB:", rtdbError);
+                console.warn(" Detalles del error:", {
+                    errorMessage: rtdbError.message,
+                    errorStack: rtdbError.stack,
+                    windowDbRT: !!window.dbRT,
+                    firebaseApp: !!window.firebaseApp
+                });
                 // Continuamos aunque falle RTDB, ya que el script principal funcionó
             }
             
@@ -12030,7 +12055,57 @@ async function executeRealDelete(id) {
             // El backend ya elimina el archivo de Drive según el código existente (líneas 2582-2590)
             
             // Completar animación hasta 100%
-            completeDeleteAnimation(true, id, "Solicitud eliminada de Spreadsheet, Firebase Firestore, RTDB y Drive");
+            completeDeleteAnimation(true, id, "Solicitud eliminada de Spreadsheet, Firebase RTDB y Drive");
+        } else if (data.error && data.error.includes("ID no encontrado")) {
+            // CASO ESPECIAL: La solicitud no existe en GAS pero podría existir en RTDB
+            console.warn(" Solicitud no encontrada en GAS, verificando y eliminando de RTDB:", id);
+            
+            try {
+                // Verificar que window.dbRT esté disponible
+                if (!window.dbRT) {
+                    console.warn(" Firebase RTDB no está inicializado, intentando inicializar...");
+                    const app = window.firebaseApp;
+                    if (app) {
+                        window.dbRT = window.getDatabase(app);
+                        console.log(" Firebase RTDB inicializado correctamente");
+                    } else {
+                        throw new Error("Firebase app no está disponible");
+                    }
+                }
+                
+                // Verificar si la solicitud existe en RTDB antes de eliminar
+                const rtdbRef = window.ref(window.dbRT, 'solicitudes_vivas/' + id);
+                
+                // Usar onValue para verificar si existe
+                const exists = await new Promise((resolve) => {
+                    window.onValue(rtdbRef, (snapshot) => {
+                        resolve(snapshot.exists());
+                    }, (error) => {
+                        console.error(" Error verificando existencia en RTDB:", error);
+                        resolve(false);
+                    });
+                });
+                
+                if (exists) {
+                    // Eliminar de RTDB
+                    await window.remove(rtdbRef);
+                    console.log(" Solicitud eliminada de Firebase RTDB (no existía en GAS):", id);
+                    
+                    // Eliminar de firebaseActiveData local
+                    firebaseActiveData = firebaseActiveData.filter(s => s.id !== id);
+                    console.log(" Solicitud eliminada de firebaseActiveData local");
+                    
+                    // Completar animación con mensaje específico
+                    completeDeleteAnimation(true, id, "Solicitud eliminada de Firebase RTDB (no existía en Spreadsheet)");
+                } else {
+                    console.log(" La solicitud no existe ni en GAS ni en RTDB:", id);
+                    completeDeleteAnimation(true, id, "La solicitud no existe en ninguna base de datos");
+                }
+                
+            } catch (rtdbError) {
+                console.error(" Error manejando eliminación de RTDB para solicitud no encontrada en GAS:", rtdbError);
+                completeDeleteAnimation(false, id, "Error al eliminar de Firebase RTDB: " + rtdbError.message);
+            }
         } else {
             throw new Error(data.error || "Error al eliminar la solicitud");
         }
