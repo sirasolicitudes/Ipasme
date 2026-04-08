@@ -14547,6 +14547,20 @@ function showPage(pageId, tabBtn) {
             globalCountersSystem.forceUpdate();
         }
     }
+    
+    // ✅ ACTUALIZAR CONTADORES GLOBALES AL ENTRAR A SOLICITUDES
+    if (pageId === 'list-page') {
+        if (isAdmin || isDesigner) {
+            console.log("🔄 Actualizando contadores globales al entrar a solicitudes");
+            globalCountersSystem.fetchRealData();
+        } else if (localData && localData.length > 0) {
+            // Para usuarios no-admin (incluidos regulares), calcular desde datos locales
+            const statsCalculadas = calcularStatsRapidas(localData);
+            globalCountersSystem.updateFromRealData(statsCalculadas);
+        }
+        // Nota: Usuarios regulares también ejecutan cargarDatosUsuarioRegular() 
+        // que actualiza contadores después de cargar datos desde GAS
+    }
 }
 // ✅ FUNCIONES PARA PÁGINA DE ESTADÍSTICAS
 // Función para refrescar todas las estadísticas
