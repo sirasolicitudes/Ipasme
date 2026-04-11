@@ -4440,7 +4440,7 @@ Verifica que el ID sea correcto o limpia la búsqueda para ver todas las solicit
 <label class="section-title">🏥 1. REGIÓN *</label>
 <div class="category-row" id="region-grid"></div>
 <div id="unidad-section" class="hidden">
-<label class="section-title">🏥 1.5. UNIDAD MÉDICA *</label>
+<label class="section-title">🏥 1.5. UNIDAD *</label>
 <div class="category-row" id="unidad-grid"></div>
 </div>
 <label class="section-title">📂 2. TIPO DE SOLICITUD *</label>
@@ -5143,7 +5143,7 @@ line-height: 1.4;">
 <script>
 // === CONFIGURACIÓN DE SCRIPT URL ===
 // ✅ VERSIÓN DE DESARROLLO - URL actualizada del sistema con CORS fix
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycby1Pe3aYJeFT_LZVCAbOnMlc-IKEb1rAFuo-jZ_qMP7iIotj6LDO9Bf5yCLko4PvyyFyw/exec";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyT8cYXtorErKPf9XToe8Zd-gWNDSJVfypFiqezK0TdS8KWW895n8az0zYh_wf3YfXOvQ/exec";
 // const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbypTMlgxEJqGCBkLyTkkZ_8h1zuN9QmIfU2uGG82YvrbuIWyCzNZEHrL4MoxtLV31C6TQ/exec"; // Producción
 
 // ✅ MODO MOCK - Descomentar para desarrollo local sin conexión
@@ -6885,7 +6885,10 @@ const UNIDADES_IPASME_RAW = {
 "Don Simón Rodríguez",
 "C.N.E.D. Dr. Julio de Armas",
 "Centro de Salud para El Buen Vivir Dr. Salvador Allende",
-"Sede Administrativa"
+"Sede Administrativa",
+"Gerencia de CRDT",
+"CIFAP",
+"C.E.I.A. Dr. Manuel Montero"
 ],
 "Región Central": [
 "Maracay", "La Victoria", "Valencia", "Puerto Cabello",
@@ -12480,6 +12483,7 @@ document.getElementById('btn-pm').classList.remove('active');
 document.getElementById(val === 'a. m.' ? 'btn-am' : 'btn-pm').classList.add('active');
 document.getElementById('hora-box').classList.remove('field-error');
 }
+
 function selectCat(btn, tipo) {
     // ✅ Función unificada para restaurar TODO el formulario a su estado por defecto
     function resetFormToDefault() {
@@ -12752,8 +12756,6 @@ function selectCat(btn, tipo) {
     } else if (tipo === 'otros') {
         // Formulario otros: formulario estático
         document.getElementById('form-otros').classList.remove('hidden');
-        document.getElementById('sec-3').classList.remove('hidden');
-        document.getElementById('label-3').innerText = "📝 3. DESCRIPCIÓN DEL REQUERIMIENTO *";
     }
 }
 // Función para manejar la selección de tipo de arte (Certificado/Reconocimiento)
@@ -13175,7 +13177,7 @@ label: 'Región'
 fieldsInOrder.push({
 id: 'unidad-grid',
 isValid: () => !!selectedUnidad,
-label: 'Unidad Médica'
+label: 'Unidad'
 });
 fieldsInOrder.push({
 id: 'cat-grid',
@@ -13365,7 +13367,7 @@ if (!validateForm()) return;
 const preview = document.getElementById('previewContent');
 let html = `
 <p><b>📍 Región:</b> ${getNombreRegionLimpio(selectedRegionKey)}</p>
-<p><b>🏥 Unidad Médica:</b> ${selectedUnidad}</p>
+<p><b>🏥 Unidad:</b> ${selectedUnidad}</p>
 `;
 html += `<p><b>📂 Tipo de Solicitud:</b> ${catName}</p>`;
 if (catType === 'obituario') {
@@ -13539,7 +13541,10 @@ function realSubmitForm() {
         "Centro de Salud para El Buen Vivir Dr. Salvador Allende",
         "Club Villas Ipasmar",
         "Hotel Valle Grande",
-        "Sede Administrativa"
+        "Sede Administrativa",
+        "Gerencia de CRDT",
+        "CIFAP",
+        "C.E.I.A. Dr. Manuel Montero"
     ];
 
     // 1. CARGAMOS LOS DATOS SEGÚN EL TIPO DE SOLICITUD
@@ -13711,6 +13716,8 @@ function realSubmitForm() {
         const direccionExacta = document.getElementById('direccion-exacta').value.trim();
         const direccionCompleta = [institucion, direccionExacta].filter(part => part).join(", ");
         params.append("Direccion", direccionCompleta);
+        
+        // Campos estándar para todas las solicitudes incluyendo Otros
         params.append("Hora", formatearHoraEstandar(document.getElementById('hora').value, selectedAMPM));
         params.append("Observaciones", document.getElementById('observaciones').value);
         params.append("Fecha", document.getElementById('fecha').value);
