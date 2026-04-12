@@ -7205,6 +7205,9 @@ async function initRealTimeTable() {
             
             // ✅ CONECTAR LISTENER DE RTDB PARA TIEMPO REAL (después de la carga inicial)
             conectarListenerRTDB();
+            
+            // ✅ AGREGAR BOTÓN DE SINCRONIZACIÓN MANUAL
+            agregarBotonSincronizacionManual();
 
             resolve();
         } catch (error) {
@@ -7215,21 +7218,17 @@ async function initRealTimeTable() {
     });
 }
 
-// ✅ FUNCIÓN: Cargar solicitudes activas desde RTDB
+// ✅ FUNCIÓN: Cargar solicitudes activas desde RTDB (LECTURA ÚNICA CON GET)
 async function cargarSolicitudesActivasRTDB() {
     try {
         const rtdbRef = window.ref(window.dbRT, 'solicitudes_vivas');
         
-        // Obtener todos los datos una sola vez usando get() en lugar de onValue
-        const snapshot = await new Promise((resolve, reject) => {
-            window.onValue(rtdbRef, (data) => {
-                resolve(data);
-            }, reject);
-        });
+        // ✅ CORRECCIÓN: Usar get() para lectura única, no onValue que deja listeners colgados
+        const snapshot = await window.get(rtdbRef);
         
         firebaseActiveData = [];
         
-        if (snapshot.exists()) {
+        if (snapshot && snapshot.exists()) {
             const data = snapshot.val();
             
             // Convertir objeto a array y filtrar solo las activas
@@ -7257,13 +7256,53 @@ async function cargarSolicitudesActivasRTDB() {
     }
 }
 
-// ✅ FUNCIÓN: Conectar listener de RTDB para tiempo real
+// ✅ VARIABLES GLOBALES PARA SISTEMA DE CONECTIVIDAD RTDB
+let rtdbConnectivity = {
+    isConnected: false,
+    lastSyncTime: 0,
+    lastUpdateTimestamp: 0,
+    heartbeatInterval: null,
+    syncCheckInterval: null,
+    reconnectAttempts: 0,
+    isSyncing: false  // Flag para evitar sincronizaciones duplicadas
+};
+const RTDB_HEARTBEAT_INTERVAL = 30000; // 30 segundos - solo actualiza indicador visual de conectividad
+// const RTDB_FORCE_SYNC_INTERVAL = ... // ELIMINADO - No hay sincronización automática
+const RTDB_CONNECTIVITY_KEY = 'sira_rtdb_last_sync';
+
+// ✅ FUNCIÓN: Conectar listener de RTDB para tiempo real - VERSIÓN ROBUSTA
 function conectarListenerRTDB() {
     try {
         const rtdbRef = window.ref(window.dbRT, 'solicitudes_vivas');
-        let isFirstConnection = true; // ✅ Variable para detectar primera conexión
+        let isFirstConnection = true;
+        
+        // ✅ Configurar detector de conectividad
+        const connectedRef = window.ref(window.dbRT, '.info/connected');
+        window.onValue(connectedRef, (snap) => {
+            rtdbConnectivity.isConnected = snap.val() === true;
+            actualizarIndicadorConectividad();
+            
+            if (rtdbConnectivity.isConnected) {
+                console.log("🟢 Conectado a RTDB");
+                rtdbConnectivity.reconnectAttempts = 0;
+                // Sincronizar inmediatamente al reconectar
+                if (!isFirstConnection) {
+                    setTimeout(() => sincronizacionForzadaRTDB(), 500);
+                }
+            } else {
+                console.warn("🔴 Desconectado de RTDB");
+                showToast("⚠️ Sin conexión en tiempo real. Reconectando...", "warning", 3000);
+            }
+        });
         
         unsubscribeRTDB = window.onValue(rtdbRef, (snapshot) => {
+            // ✅ Actualizar timestamp de última sincronización
+            rtdbConnectivity.lastSyncTime = Date.now();
+            localStorage.setItem(RTDB_CONNECTIVITY_KEY, JSON.stringify({
+                timestamp: rtdbConnectivity.lastSyncTime,
+                count: snapshot.exists() ? Object.keys(snapshot.val()).length : 0
+            }));
+            
             // ✅ Guardar datos anteriores para comparar cambios
             const datosAnteriores = [...firebaseActiveData];
             
@@ -7275,10 +7314,7 @@ function conectarListenerRTDB() {
                 // Convertir objeto a array y filtrar solo las activas
                 Object.entries(data).forEach(([id, solicitud]) => {
                     if (solicitud && typeof solicitud === 'object') {
-                        // Reconstruir objeto con id y limpiar/normalizar datos
                         const solicitudCompleta = limpiarDatosSolicitud({ id, ...solicitud });
-                        
-                        // Filtrar solo solicitudes activas (no finalizadas)
                         const estatus = (solicitudCompleta.Estatus || "").trim().toUpperCase();
                         if (estatus !== "FINALIZADA") {
                             firebaseActiveData.push(solicitudCompleta);
@@ -7286,7 +7322,6 @@ function conectarListenerRTDB() {
                     }
                 });
                 
-                // ✅ Mensaje más específico según si es primera conexión o cambio real
                 if (isFirstConnection) {
                     console.log(`📊 Solicitudes activas cargadas desde RTDB (conexión inicial): ${firebaseActiveData.length}`);
                 } else {
@@ -7299,32 +7334,187 @@ function conectarListenerRTDB() {
                     }
                 }
             } else {
-                // ✅ Mensaje más específico según si es primera conexión o cambio real
                 if (isFirstConnection) {
                     console.log("📊 No hay solicitudes activas en RTDB (conexión inicial)");
                 } else {
                     console.log("📊 No hay solicitudes activas en RTDB (actualizado)");
-                    
-                    // ✅ TOAST si se eliminaron todas las solicitudes activas
                     if (datosAnteriores.length > 0) {
                         showToast("🗑️ Todas las solicitudes activas fueron eliminadas", "info", 4000);
                     }
                 }
             }
             
-            // ✅ Marcar que la primera conexión ya se completó
             isFirstConnection = false;
-            
             mergeAndRenderData();
         }, (error) => {
             console.error("❌ Error en listener de RTDB:", error);
+            showToast("❌ Error de sincronización en tiempo real", "error", 3000);
         });
         
-        console.log("✅ Listener de RTDB conectado para tiempo real");
+        // ✅ Solo iniciar heartbeat de conectividad (sin sincronización automática)
+        // El usuario controla cuándo sincronizar con el botón manual
+        iniciarHeartbeatRTDB();
+        
+        console.log("✅ Listener de RTDB conectado. Sincronización manual disponible.");
         
     } catch (error) {
         console.error("❌ Error conectando listener de RTDB:", error);
     }
+}
+
+// ✅ FUNCIÓN: Heartbeat de conectividad RTDB - SOLO MONITOREO
+// Solo actualiza el indicador visual, NO sincroniza automáticamente
+// El usuario tiene control total via botón manual
+function iniciarHeartbeatRTDB() {
+    if (rtdbConnectivity.heartbeatInterval) {
+        clearInterval(rtdbConnectivity.heartbeatInterval);
+    }
+    
+    // Solo verificar conectividad cada 30 segundos para actualizar indicador visual
+    rtdbConnectivity.heartbeatInterval = setInterval(async () => {
+        const isConnected = await verificarConectividadRTDB();
+        
+        // Solo actualizar indicador si cambió el estado
+        if (isConnected !== rtdbConnectivity.isConnected) {
+            rtdbConnectivity.isConnected = isConnected;
+            actualizarIndicadorConectividad();
+            
+            if (isConnected) {
+                console.log("🟢 Reconectado a RTDB");
+                // Solo sincronizar automáticamente al reconectar después de desconexión
+                showToast("🟢 Conexión restaurada. Usa 🔄 si necesitas sincronizar.", "success", 3000);
+            } else {
+                console.warn("🔴 Desconectado de RTDB");
+                showToast("🔴 Sin conexión. Cambios pueden no verse en tiempo real.", "warning", 3000);
+            }
+        }
+    }, 30000); // Cada 30 segundos solo para actualizar indicador
+    
+    console.log("✅ Heartbeat RTDB iniciado (solo monitoreo, sin sync automática)");
+}
+
+// ✅ FUNCIÓN ELIMINADA: No hay sincronización forzada automática
+// El usuario tiene control total mediante el botón 🔄 manual
+// function iniciarSyncForzadaRTDB() { ... } // ELIMINADO
+
+// ✅ FUNCIÓN: Sincronización forzada inmediata (con protección contra duplicados)
+async function sincronizacionForzadaRTDB() {
+    // Evitar sincronizaciones simultáneas
+    if (rtdbConnectivity.isSyncing) {
+        console.log("⏳ Sincronización ya en progreso, ignorando petición duplicada");
+        return;
+    }
+    
+    rtdbConnectivity.isSyncing = true;
+    
+    try {
+        console.log("🔄 Ejecutando sincronización forzada de RTDB...");
+        showToast("🔄 Sincronizando datos...", "info", 2000);
+        
+        // Actualizar timestamp ANTES de la operación para evitar que otros sistemas disparen
+        rtdbConnectivity.lastSyncTime = Date.now();
+        
+        // Recargar datos desde RTDB
+        await cargarSolicitudesActivasRTDB();
+        mergeAndRenderData();
+        
+        console.log("✅ Sincronización forzada completada");
+        showToast("✅ Datos sincronizados", "success", 2000);
+    } catch (error) {
+        console.error("❌ Error en sincronización forzada:", error);
+        showToast("⚠️ Error sincronizando datos", "error", 3000);
+    } finally {
+        rtdbConnectivity.isSyncing = false;
+    }
+}
+
+// ✅ FUNCIÓN: Actualizar indicador visual de conectividad
+function actualizarIndicadorConectividad() {
+    let indicador = document.getElementById('rtdb-connectivity-indicator');
+    
+    // Crear indicador si no existe
+    if (!indicador) {
+        indicador = document.createElement('div');
+        indicador.id = 'rtdb-connectivity-indicator';
+        indicador.style.cssText = `
+            position: fixed;
+            bottom: 10px;
+            right: 10px;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            z-index: 9999;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        `;
+        document.body.appendChild(indicador);
+    }
+    
+    if (rtdbConnectivity.isConnected) {
+        indicador.innerHTML = `🟢 Sincronizado`;
+        indicador.style.background = '#28a745';
+        indicador.style.color = 'white';
+    } else {
+        indicador.innerHTML = `🔴 Sin conexión`;
+        indicador.style.background = '#dc3545';
+        indicador.style.color = 'white';
+    }
+}
+
+// ✅ FUNCIÓN: Botón de sincronización manual
+function agregarBotonSincronizacionManual() {
+    // Verificar si ya existe
+    if (document.getElementById('btn-sync-manual')) return;
+    
+    const btn = document.createElement('button');
+    btn.id = 'btn-sync-manual';
+    btn.innerHTML = '🔄';
+    btn.title = 'Sincronizar ahora';
+    btn.style.cssText = `
+        position: fixed;
+        bottom: 10px;
+        right: 100px;
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        border: none;
+        background: var(--rojo, #dc3545);
+        color: white;
+        font-size: 18px;
+        cursor: pointer;
+        z-index: 9999;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        transition: transform 0.2s, background 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    `;
+    
+    btn.addEventListener('mouseenter', () => {
+        btn.style.transform = 'scale(1.1)';
+    });
+    
+    btn.addEventListener('mouseleave', () => {
+        btn.style.transform = 'scale(1)';
+    });
+    
+    btn.addEventListener('click', () => {
+        btn.style.transform = 'rotate(360deg)';
+        btn.style.transition = 'transform 0.5s';
+        sincronizacionForzadaRTDB().then(() => {
+            setTimeout(() => {
+                btn.style.transform = 'rotate(0deg)';
+                btn.style.transition = 'transform 0.2s';
+            }, 500);
+        });
+    });
+    
+    document.body.appendChild(btn);
+    console.log("✅ Botón de sincronización manual agregado");
 }
 
 // ✅ FUNCIÓN: Analizar cambios entre datos anteriores y nuevos de RTDB
@@ -8267,16 +8457,21 @@ async function modStatus(id, st) {
                     // Reconstruir localData sin la solicitud finalizada
                     mergeAndRenderData();
                     
-                    // ✅ Eliminar de RTDB después de confirmación exitosa de GAS
+                    // ✅ Eliminar de RTDB después de confirmación exitosa de GAS (con reintentos robustos)
                     setTimeout(async () => {
-                        try {
-                            console.log(`🧹 Eliminando solicitud ${id} de RTDB después de finalización exitosa en GAS...`);
-                            await limpiarSolicitudDeRTDB(id);
-                            console.log(`✅ Solicitud ${id} eliminada exitosamente de RTDB`);
+                        console.log(`🧹 Iniciando limpieza de solicitud ${id} en RTDB...`);
+                        
+                        const resultado = await limpiarSolicitudDeRTDB(id, 5);
+                        
+                        if (resultado.success) {
+                            console.log(`✅ Solicitud ${id} eliminada exitosamente de RTDB en ${resultado.attempts} intento(s)`);
                             showToast(`🗑️ Solicitud ${id} eliminada de RTDB`, "success", 2000);
-                        } catch (error) {
-                            console.error(`❌ Error eliminando solicitud ${id} de RTDB:`, error);
-                            showToast(`⚠️ Error eliminando de RTDB: ${error.message}`, "error", 3000);
+                        } else if (resultado.queued) {
+                            console.warn(`⚠️ Solicitud ${id} agregada a cola de limpieza pendiente por conexión lenta`);
+                            showToast(`⏳ Solicitud ${id} en cola de limpieza (conexión lenta). Se reintentará automáticamente.`, "warning", 4000);
+                        } else {
+                            console.error(`❌ Error eliminando solicitud ${id} de RTDB:`, resultado.error);
+                            showToast(`⚠️ Error eliminando de RTDB: ${resultado.error}`, "error", 3000);
                         }
                     }, 1000); // Pequeño delay para asegurar que todo se procese correctamente
                     
@@ -13845,16 +14040,149 @@ async function esperarPlaceholderGAS(docId, timeoutMs = 10000) {
     return false;
 }
 
-// ✅ FUNCIÓN PARA LIMPIAR SOLICITUD DE RTDB (CICLO DE VIDA)
-async function limpiarSolicitudDeRTDB(docId) {
+// ✅ FUNCIÓN PARA LIMPIAR SOLICITUD DE RTDB (CICLO DE VIDA) - CON RETRYS ROBUSTOS
+async function limpiarSolicitudDeRTDB(docId, maxRetries = 5) {
+    const registroRef = window.ref(window.dbRT, 'solicitudes_vivas/' + docId);
+    
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+            // Verificar conectividad antes de intentar
+            const isConnected = await verificarConectividadRTDB();
+            if (!isConnected) {
+                console.warn(`⚠️ Intento ${attempt}/${maxRetries}: Sin conectividad RTDB, esperando...`);
+                await delay(Math.min(1000 * Math.pow(2, attempt - 1), 10000)); // Backoff exponencial max 10s
+                continue;
+            }
+            
+            // Intentar eliminación
+            await window.remove(registroRef);
+            console.log(`🧹 Solicitud ${docId} eliminada de RTDB (intento ${attempt})`);
+            
+            // Verificar que realmente se eliminó
+            const existe = await verificarExistenciaRTDB(docId);
+            if (!existe) {
+                console.log(`✅ Verificado: Solicitud ${docId} ya no existe en RTDB`);
+                // Eliminar de cola de pendientes si estaba
+                eliminarDeColaLimpiezaPendiente(docId);
+                return { success: true, attempts: attempt };
+            } else {
+                console.warn(`⚠️ Solicitud ${docId} sigue existiendo después de remove, reintentando...`);
+            }
+        } catch (error) {
+            console.error(`❌ Error intento ${attempt}/${maxRetries} al limpiar RTDB (${docId}):`, error.message);
+            
+            // Si es el último intento, agregar a cola de limpieza pendiente
+            if (attempt === maxRetries) {
+                console.warn(`📝 Agregando ${docId} a cola de limpieza pendiente`);
+                agregarAColaLimpiezaPendiente(docId);
+                return { success: false, error: error.message, queued: true };
+            }
+            
+            // Esperar con backoff exponencial antes de reintentar
+            const delayMs = Math.min(1000 * Math.pow(2, attempt - 1), 10000);
+            console.log(`⏳ Esperando ${delayMs}ms antes de reintentar...`);
+            await delay(delayMs);
+        }
+    }
+    
+    return { success: false, error: "Max retries exceeded", queued: true };
+}
+
+// ✅ FUNCIÓN AUXILIAR: Delay promisificado
+function delay(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+// ✅ FUNCIÓN AUXILIAR: Verificar conectividad RTDB
+async function verificarConectividadRTDB() {
     try {
-        const registroRef = window.ref(window.dbRT, 'solicitudes_vivas/' + docId);
-        await window.remove(registroRef);
-        console.log(`🧹 Solicitud ${docId} eliminada de RTDB (Archivada en Sheet/Firestore)`);
-    } catch (error) {
-        console.error("❌ Error al limpiar RTDB:", error);
+        const connectedRef = window.ref(window.dbRT, '.info/connected');
+        return new Promise((resolve) => {
+            const timeout = setTimeout(() => resolve(false), 3000);
+            window.onValue(connectedRef, (snap) => {
+                clearTimeout(timeout);
+                resolve(snap.val() === true);
+            }, { onlyOnce: true });
+        });
+    } catch (e) {
+        return false;
     }
 }
+
+// ✅ FUNCIÓN AUXILIAR: Verificar si solicitud existe en RTDB
+async function verificarExistenciaRTDB(docId) {
+    try {
+        const registroRef = window.ref(window.dbRT, 'solicitudes_vivas/' + docId);
+        const snapshot = await window.get(registroRef);
+        return snapshot.exists();
+    } catch (e) {
+        return true; // Asumimos que existe para ser conservadores
+    }
+}
+
+// ✅ SISTEMA DE COLA DE LIMPIEZA PENDIENTE
+const COLA_LIMPIEZA_KEY = 'sira_cola_limpieza_rtdb';
+
+function agregarAColaLimpiezaPendiente(docId) {
+    try {
+        const cola = JSON.parse(localStorage.getItem(COLA_LIMPIEZA_KEY) || '[]');
+        if (!cola.includes(docId)) {
+            cola.push({ id: docId, timestamp: Date.now(), retries: 0 });
+            localStorage.setItem(COLA_LIMPIEZA_KEY, JSON.stringify(cola));
+            console.log(`📝 Solicitud ${docId} agregada a cola de limpieza pendiente`);
+        }
+    } catch (e) {
+        console.error("Error agregando a cola:", e);
+    }
+}
+
+function eliminarDeColaLimpiezaPendiente(docId) {
+    try {
+        const cola = JSON.parse(localStorage.getItem(COLA_LIMPIEZA_KEY) || '[]');
+        const nuevaCola = cola.filter(item => item.id !== docId);
+        localStorage.setItem(COLA_LIMPIEZA_KEY, JSON.stringify(nuevaCola));
+    } catch (e) {
+        console.error("Error eliminando de cola:", e);
+    }
+}
+
+// ✅ FUNCIÓN DE PROCESAMIENTO DE COLA PENDIENTE (ejecutar periódicamente)
+async function procesarColaLimpiezaPendiente() {
+    try {
+        const cola = JSON.parse(localStorage.getItem(COLA_LIMPIEZA_KEY) || '[]');
+        if (cola.length === 0) return;
+        
+        console.log(`🧹 Procesando cola de limpieza: ${cola.length} solicitudes pendientes`);
+        const nuevaCola = [];
+        
+        for (const item of cola) {
+            // Solo reintentar si no ha excedido los 10 intentos o si pasaron más de 5 minutos
+            if (item.retries < 10 && (Date.now() - item.timestamp) < 24 * 60 * 60 * 1000) {
+                const resultado = await limpiarSolicitudDeRTDB(item.id, 3);
+                if (!resultado.success && !resultado.queued) {
+                    item.retries++;
+                    nuevaCola.push(item);
+                }
+            } else {
+                console.log(`🗑️ Solicitud ${item.id} descartada de cola (máximos intentos alcanzados)`);
+            }
+        }
+        
+        localStorage.setItem(COLA_LIMPIEZA_KEY, JSON.stringify(nuevaCola));
+        
+        if (nuevaCola.length > 0) {
+            console.log(`⏳ Quedan ${nuevaCola.length} solicitudes en cola de limpieza`);
+        } else {
+            console.log(`✅ Cola de limpieza vaciada`);
+        }
+    } catch (e) {
+        console.error("Error procesando cola:", e);
+    }
+}
+
+// ✅ Iniciar procesamiento periódico de cola (cada 30 segundos)
+setInterval(procesarColaLimpiezaPendiente, 30000);
+console.log("🧹 Sistema de cola de limpieza RTDB inicializado (intervalo: 30s)");
 
 // ✅ FUNCIÓN PARA ACTUALIZAR ESTADO O DISEÑADOR
 function cambiarEstadoRTDB(docId, nuevoEstado, proDisenador) {
