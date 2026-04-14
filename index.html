@@ -5187,86 +5187,34 @@ function markTodayVisit(ip) {
     const today = new Date().toDateString();
     localStorage.setItem(`lastVisit_${ip}`, today);
 }
-// Load welcome image from Drive
-// NUEVO: Prioridad total a Firestore, solo fallback al sistema antiguo si Firestore falla completamente
-async function loadWelcomeImage(welcomeImageUrl = null) {
-    const startTime = Date.now();
+
+// ✅ LIMPIAR CACHÉ ANTIGUO DE GAS (obsoleto - ahora usa Firestore)
+(function limpiarCacheAntiguo() {
+    const clavesAntiguas = ['welcomeImageCache'];
+    clavesAntiguas.forEach(key => {
+        if (localStorage.getItem(key)) {
+            localStorage.removeItem(key);
+            console.log("🗑️ Caché antiguo eliminado:", key);
+        }
+    });
+})();
+
+// Load welcome image from Firestore
+// ✅ Sistema simplificado: Solo Firestore con caché de 24 horas
+async function loadWelcomeImage() {
     
-    // ✅ PRIMERO: Intentar cargar desde Firestore con caché (ultra rápido)
+    // ✅ Intentar cargar desde Firestore con caché
     try {
         await cargarImagenBienvenidaConCache();
         console.log("🖼️ Imagen cargada desde Firestore con éxito");
         return;
     } catch (firestoreError) {
-        console.log("⚠️ No se pudo cargar desde Firestore, intentando sistema antiguo:", firestoreError);
+        console.log("⚠️ Firestore no disponible:", firestoreError);
     }
     
-    // Si recibimos URL desde datos principales (solo si no tenemos imagen de Firestore)
-    if (welcomeImageUrl) {
-        
-        const imageData = {
-            fileName: 'imagen-del-dia.jpg',
-            downloadUrl: welcomeImageUrl,
-            aspectRatio: '16-9', // Default
-            fileSize: 0,
-            mimeType: 'image/jpeg'
-        };
-        
-        await processWelcomeImage(imageData);
-        return;
-    }
-    
-    try {
-        // Verificar cache primero (5 minutos)
-        const cacheKey = 'welcomeImageCache';
-        const cachedData = localStorage.getItem(cacheKey);
-        const now = Date.now();
-        
-        if (cachedData) {
-            const cache = JSON.parse(cachedData);
-            if (now - cache.timestamp < 300000 && cache.data && cache.data.success && cache.data.data && cache.data.data.image) {
-                console.log("📦 Usando imagen cacheada del sistema antiguo");
-                const cacheTime = Date.now() - startTime;
-                
-                await processWelcomeImage(cache.data.data.image);
-                return;
-            } else {
-                localStorage.removeItem(cacheKey);
-            }
-        }
-        
-        // Solo si Firestore falla completamente, intentar el sistema antiguo
-        console.log("🔄 Intentando sistema antiguo como último recurso...");
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 15000);
-        
-                
-        clearTimeout(timeoutId);
-        
-        if (response.ok) {
-            const data = await response.json();
-            
-            const totalTime = Date.now() - startTime;
-            
-            if (data.success && data.data && data.data.image) {
-                const imageFileName = data.data.image.fileName || 'unknown';
-                
-                // Guardar en cache LOCAL
-                localStorage.setItem(cacheKey, JSON.stringify({
-                    data: data,
-                    timestamp: now
-                }));
-                
-                await processWelcomeImage(data.data.image);
-            } else {
-                showWelcomeImageFallback();
-            }
-        } else {
-            showWelcomeImageFallback();
-        }
-    } catch (fetchError) {
-        showWelcomeImageFallback();
-    }
+    // Si Firestore falla, mostrar fallback inmediatamente (sin sistema antiguo GAS)
+    console.log("⚠️ Firestore no disponible, mostrando fallback de fecha/hora");
+    showWelcomeImageFallback();
 }
 
 // Process welcome image (separated for caching)
@@ -7397,7 +7345,7 @@ function iniciarHeartbeatRTDB() {
 // El usuario tiene control total mediante el botón 🔄 manual
 // function iniciarSyncForzadaRTDB() { ... } // ELIMINADO
 
-// ✅ FUNCIÓN: Sincronización forzada inmediata (con protección contra duplicados)
+// ✅ FUNCIÓN: Sincronización forzada inmediata (con reconexión si es necesario)
 async function sincronizacionForzadaRTDB() {
     // Evitar sincronizaciones simultáneas
     if (rtdbConnectivity.isSyncing) {
@@ -7411,18 +7359,58 @@ async function sincronizacionForzadaRTDB() {
         console.log("🔄 Ejecutando sincronización forzada de RTDB...");
         showToast("🔄 Sincronizando datos...", "info", 2000);
         
-        // Actualizar timestamp ANTES de la operación para evitar que otros sistemas disparen
-        rtdbConnectivity.lastSyncTime = Date.now();
+        // ✅ PASO 1: Verificar si hay conexión y reconectar listener si es necesario
+        const isConnected = await verificarConectividadRTDB();
         
-        // Recargar datos desde RTDB
+        if (!isConnected) {
+            console.warn("🔴 Sin conexión a RTDB. Intentando reconectar...");
+            showToast("🔴 Sin conexión. Intentando reconectar...", "warning", 3000);
+            
+            // Esperar un momento para que Firebase intente reconectar automáticamente
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            
+            const reconnected = await verificarConectividadRTDB();
+            if (!reconnected) {
+                showToast("❌ No se pudo reconectar. Verifica tu conexión a internet.", "error", 4000);
+                rtdbConnectivity.isSyncing = false;
+                return;
+            }
+        }
+        
+        // ✅ PASO 2: Si el listener parece estar muerto (no hay actualizaciones recientes), reconectarlo
+        const tiempoSinActualizaciones = Date.now() - rtdbConnectivity.lastSyncTime;
+        if (tiempoSinActualizaciones > 60000 && unsubscribeRTDB) {
+            // Más de 1 minuto sin actualizaciones, reconectar listener
+            console.warn("⚠️ Listener de RTDB inactivo. Reconectando...");
+            
+            // Desconectar listener viejo
+            unsubscribeRTDB();
+            unsubscribeRTDB = null;
+            
+            // Esperar un momento
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            // Reconectar listener nuevo
+            conectarListenerRTDB();
+            
+            showToast("🔄 Reconectando sistema de tiempo real...", "info", 2000);
+            await new Promise(resolve => setTimeout(resolve, 1500));
+        }
+        
+        // ✅ PASO 3: Recargar datos desde RTDB
         await cargarSolicitudesActivasRTDB();
         mergeAndRenderData();
+        
+        // Actualizar timestamp
+        rtdbConnectivity.lastSyncTime = Date.now();
+        rtdbConnectivity.isConnected = true;
+        actualizarIndicadorConectividad();
         
         console.log("✅ Sincronización forzada completada");
         showToast("✅ Datos sincronizados", "success", 2000);
     } catch (error) {
         console.error("❌ Error en sincronización forzada:", error);
-        showToast("⚠️ Error sincronizando datos", "error", 3000);
+        showToast("⚠️ Error sincronizando: " + error.message, "error", 4000);
     } finally {
         rtdbConnectivity.isSyncing = false;
     }
@@ -7625,14 +7613,34 @@ function mostrarToastCambiosRTDB(cambios) {
 // ✅ NUEVA FUNCIÓN: Exclusiva para cargar solicitudes de la unidad del usuario regular
 async function cargarDatosUsuarioRegular(page = 1) {
     try {
+        // 🎯 FIX CRÍTICO: Normalizar la unidad al formato que usa GAS (con prefijo U.M.I.)
+        const EXCEPCIONES_SIN_UMI = [
+            "C.N.E.D. Dr. Julio de Armas",
+            "Centro de Salud para El Buen Vivir Dr. Salvador Allende",
+            "Club Villas Ipasmar",
+            "Sede Administrativa",
+            "Gerencia de CRDT",
+            "CIFAP",
+            "C.E.I.A. Dr. Manuel Montero",
+            "Don Simón Rodríguez"
+        ];
+        
+        let unidadFiltro = window.usuarioRegular.unidad;
+        // Si la unidad no tiene prefijo U.M.I. y no es excepción, agregarlo
+        if (unidadFiltro && !unidadFiltro.startsWith("U.M.I.") && !EXCEPCIONES_SIN_UMI.includes(unidadFiltro)) {
+            unidadFiltro = "U.M.I. " + unidadFiltro;
+        }
+        
+        console.log("🔧 Unidad original:", window.usuarioRegular.unidad, "→ Normalizada:", unidadFiltro);
+        
         const body = document.getElementById('solicitudes-body');
-        if(body) body.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:20px;color:var(--turquesa);">⚡ Cargando solicitudes de la unidad: ${window.usuarioRegular.unidad}...</td></tr>`;
+        if(body) body.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:20px;color:var(--turquesa);">⚡ Cargando solicitudes de la unidad: ${unidadFiltro}...</td></tr>`;
 
         const params = new URLSearchParams();
         params.append("action", "read");
         params.append("page", page.toString());
         params.append("limit", PAGINATION.limit.toString());
-        params.append("unidadFiltro", window.usuarioRegular.unidad); // 🎯 Filtro mágico
+        params.append("unidadFiltro", unidadFiltro); // 🎯 Filtro mágico (unidad normalizada)
 
         const res = await fetch(SCRIPT_URL, {
             method: 'POST',
@@ -7674,25 +7682,24 @@ function arrancarTablaHibrida() {
             const vivasRef = window.ref(window.dbRT, 'solicitudes_vivas');
 
             window.onValue(vivasRef, (snapshot) => {
+                // ✅ FIX CRÍTICO: No procesar RTDB para usuarios básicos
+                // Los usuarios básicos usan cargarDatosUsuarioRegular() que carga desde GAS filtrado por unidad
+                if (window.usuarioRegular && window.usuarioRegular.rol === 'Usuario Básico') {
+                    // No hacer nada - los datos ya fueron cargados por cargarDatosUsuarioRegular()
+                    if (!window.tablaHibridaIniciada) {
+                        window.tablaHibridaIniciada = true;
+                        resolve();
+                    }
+                    return;
+                }
+                
                 const vivas = snapshot.val() ? Object.values(snapshot.val()) : [];
                 
-                // FIX: Filtrar para usuarios regulares
-                let vivasFiltradas = vivas;
-                if (window.usuarioRegular && window.usuarioRegular.rol === 'Usuario Básico') {
-                    // Usuario regular: solo ver sus solicitudes vivas
-                    vivasFiltradas = vivas.filter(v => v.Correo === window.usuarioRegular.username);
-                }
-                
                 // Evitar duplicados: Si está en RTDB (vivo), no mostrar la versión de GAS (placeholder)
-                const idsVivos = new Set(vivasFiltradas.map(v => v.id));
+                const idsVivos = new Set(vivas.map(v => v.id));
                 let historicas = listaHistoricaGAS.filter(h => !idsVivos.has(h.id));
-                
-                // FIX: También filtrar históricas para usuarios regulares
-                if (window.usuarioRegular && window.usuarioRegular.rol === 'Usuario Básico') {
-                    historicas = historicas.filter(h => h.Correo === window.usuarioRegular.username);
-                }
 
-                const total = [...vivasFiltradas, ...historicas];
+                const total = [...vivas, ...historicas];
                 
                 // ✅ ACTUALIZAR localData para que renderLocalTable() funcione correctamente
                 localData = total.sort((a, b) => {
@@ -8091,7 +8098,7 @@ designerName: "" // Solo para diseñadores
 const especialidades = ["Alergología", "Cardiología", "Cirugía general", "Dermatología", "Fisiatría", "Foniatría", "Gastroenterología", "Geriatría", "Ginecología y obstetricia", "Infectología", "Medicina familiar", "Medicina general", "Medicina interna", "Nefrología", "Neumología", "Neurología", "Nutrición", "Odontología", "Oftalmología", "Oncología", "Optometría", "Pediatría", "Psicología", "Psiquiatría", "Reumatología", "Traumatología", "Urología"];
 const servicios = ["Actividades recreativas", "Afiliación", "Agudeza visual", "Aplicación de flúor", "Asesoría legal", "Bienestar social", "Captación odontológica", "Captación quirúrgica general", "Captación quirúrgica oftalmológica", "Charlas odontológicas", "Citología", "Control de glicemia", "Control de talla y peso", "Desparasitación", "Despistaje de glicemia capilar", "Despistaje HTA", "Ecografía", "Electrocardiograma", "Espirometría", "Farmacia", "Fisioterapia", "Fonoaudiología", "Gerontología", "Ingeniería biomédica", "Inmunización", "Laboratorio", "Liberación de hipoteca", "Masoterapia", "Podología", "Quiropraxia", "Reposos médicos", "Sesión educativa", "Servicios sociales", "Terapia de lenguaje (Logopedia)", "Terapia del dolor", "Terapia ocupacional", "Tipiaje", "Trabajo social"];
 const vacunas = ["Fiebre amarilla", "Pentavalente", "Polio IPV", "Polio oral", "Toxoide (tetánico/diftérico)", "Trivalente viral (SRP)"];
-const quirurgica = ["Bocio hiperfuncionante", "Colectomía", "Enfermedad hemorroidal", "Esterilización", "Fibromatosis", "Fimosis", "Hernia abdominal", "Hernia epigástrica", "Hernia escrotal", "Hernia inguinal", "Hernia umbilical", "Hidrocele", "Histerectomía", "Lipomas", "Litiasis vesicular (Colecistectomías)", "Lunares", "Miomatosis uterina", "Nevus", "Nódulos mamarios simples", "Paridad satisfecha", "Prolapso", "Quiste (TU)", "Quiste de epidídimo", "Quiste sebáceo", "Quiste tirogloso", "Quistes sebáceos", "Tumores ováricos", "Varicocele", "Vasectomía", "Verrugas"];
+const quirurgica = ["Bocio hiperfuncionante", "Colectomía", "Enfermedad hemorroidal", "Esterilización", "Fibromatosis", "Fimosis", "Hernia abdominal", "Hernia epigástrica", "Hernia escrotal", "Hernia inguinal", "Hernia umbilical", "Hidrocele", "Histerectomía", "Lipomas", "Litiasis vesicular (Colecistectomía)", "Lunares", "Miomatosis uterina", "Nevus", "Nódulos mamarios simples", "Paridad satisfecha", "Prolapso", "Quiste (TU)", "Quiste de epidídimo", "Quiste sebáceo", "Quiste tirogloso", "Quistes sebáceos", "Tumores ováricos", "Varicocele", "Vasectomía", "Verrugas"];
 const pediatrica = ["Criptorquidias", "Fimosis", "Hernia epigástrica", "Hernia inguinal", "Hernia umbilical", "Hidrocele", "Quiste tirogloso", "Varicocele"];
 const oftalmo = ["Cataratas", "Cirugía plástica ocular", "Dacriocistorrinostomía", "Desprendimiento de retina", "Glaucoma", "Melanoma uveal", "Pterigión", "Ptosis palpebral", "Queratoplastía", "Retinoblastoma", "Tumores oculares"];
 // ✅ FUNCIÓN ÚNICA DE BÚSQUEDA POR ID (CON BÚSQUEDA PARCIAL)
@@ -13324,11 +13331,8 @@ async function fetchTableData() {
     DATA_CACHE.serverTimestamp = parseInt(data.cacheTimestamp || Date.now());
     DATA_CACHE.totalRows = data.totalRows || totalRecords; // Guarda el total físico de filas
     
-    // ✅ NUEVO: Cargar imagen de bienvenida desde Firestore (prioridad total)
-    // Firebase maneja la imagen de bienvenida, no se necesita leer de Z1
-    if (data.welcomeImageUrl) {
-      loadWelcomeImage(data.welcomeImageUrl);
-    }
+    // ✅ Cargar imagen de bienvenida desde Firestore con caché
+    loadWelcomeImage();
     
     return {
       rows: data.rows || [],
@@ -14592,7 +14596,7 @@ function testCargarImagen() {
 // ✅ FUNCIÓN PARA CARGAR IMAGEN DE BIENVENIDA CON CACHE DE DOBLE CAPA (Tiempo + Persistencia)
 async function cargarImagenBienvenidaConCache(forceRefresh = false) {
     const CACHE_KEY = 'sira_welcome_image';
-    const CACHE_TIME = 60 * 60 * 1000; // 1 hora en milisegundos
+    const CACHE_TIME = 24 * 60 * 60 * 1000; // 24 horas - la imagen del día no cambia
     const now = Date.now();
 
     // 1. Si es forzado, limpiar caché
