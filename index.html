@@ -2531,6 +2531,30 @@ animation: badgePulse 2s infinite;
     color: var(--turquesa);
     word-break: break-all;
     line-height: 1.3;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+.btn-copy-id {
+    background: var(--celeste);
+    border: none;
+    border-radius: 6px;
+    padding: 4px 8px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+}
+.btn-copy-id:hover {
+    background: var(--turquesa);
+    transform: scale(1.1);
+}
+.btn-copy-id:active {
+    transform: scale(0.95);
 }
 .selected-request-info {
     font-size: 0.8rem;
@@ -2952,6 +2976,10 @@ animation: badgePulse 2s infinite;
     /* ✅ Textos más pequeños */
     .selected-request-id {
         font-size: 1rem;
+    }
+    .btn-copy-id {
+        padding: 3px 6px;
+        font-size: 0.8rem;
     }
     .selected-request-info {
         font-size: 0.75rem;
@@ -9654,6 +9682,30 @@ function handlePanelEscape(e) {
         closeSidePanel();
     }
 }
+
+// ✅ COPIAR NÚMERO DE REQUERIMIENTO AL PORTAPAPELES
+function copyRequestId(requestId) {
+    if (!requestId) return;
+    
+    navigator.clipboard.writeText(requestId).then(() => {
+        showToast(`📋 ${requestId} copiado al portapapeles`, "success", 2000);
+    }).catch(err => {
+        console.error('Error al copiar:', err);
+        // Fallback para navegadores antiguos
+        const textArea = document.createElement("textarea");
+        textArea.value = requestId;
+        document.body.appendChild(textArea);
+        textArea.select();
+        try {
+            document.execCommand('copy');
+            showToast(`📋 ${requestId} copiado al portapapeles`, "success", 2000);
+        } catch (err) {
+            showToast("❌ No se pudo copiar el número", "error", 3000);
+        }
+        document.body.removeChild(textArea);
+    });
+}
+
 function selectRequest(id) {
     // Verificar permisos
     if (!isAdmin && !isDesigner) {
@@ -9804,7 +9856,7 @@ function updatePanelContent() {
     }
     
     container.innerHTML = `
-    <div class="selected-request-id">${selectedRequestId} ${badge}</div>
+    <div class="selected-request-id">${selectedRequestId} ${badge} <button class="btn-copy-id" onclick="copyRequestId('${selectedRequestId}')" title="Copiar número de requerimiento">📋</button></div>
     <div class="selected-request-info">
         <strong>${selectedRequestData.Unidad}</strong><br>
         ${selectedRequestData.Solicitud}<br>
