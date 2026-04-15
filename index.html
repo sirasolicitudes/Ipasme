@@ -15368,8 +15368,14 @@ function showPage(pageId, tabBtn) {
     
     // ✅ ACTUALIZAR CONTADORES GLOBALES AL ENTRAR A SOLICITUDES
     if (pageId === 'list-page') {
+        // ✅ PRIMERO: Restaurar contadores con valores existentes para evitar skeletons vacíos
+        if (globalCounters.loaded) {
+            console.log("🔄 Restaurando contadores globales al entrar a solicitudes");
+            globalCountersSystem.updateUI();
+        }
+        
         if (isAdmin || isDesigner) {
-            console.log("🔄 Actualizando contadores globales al entrar a solicitudes");
+            console.log("🔄 Actualizando contadores globales desde backend");
             globalCountersSystem.fetchRealData();
         } else if (localData && localData.length > 0) {
             // Para usuarios no-admin (incluidos regulares), calcular desde datos locales
@@ -16462,13 +16468,17 @@ async function loadStats(period, forceRefresh = false) {
     }
     
     // 2. MOSTRAR PLACEHOLDERS (Skeletons) inmediatamente
-    // ✅ NO sobrescribir contadores globales si ya están cargados
-    document.querySelectorAll('.stat-val').forEach(el => {
-        // Solo mostrar skeleton si no es un contador global cargado
-        if (!globalCounters.loaded || !el.id.startsWith('stats-count-')) {
-            el.innerHTML = '<span class="skeleton"></span>';
-        }
-    });
+    // ✅ SOLO afectar contadores dentro de la pestaña estadísticas (#stats-page)
+    // ✅ NO tocar contadores de otras pestañas como solicitudes
+    const statsPage = document.getElementById('stats-page');
+    if (statsPage) {
+        statsPage.querySelectorAll('.stat-val').forEach(el => {
+            // Solo mostrar skeleton si no es un contador global cargado
+            if (!globalCounters.loaded || !el.id.startsWith('stats-count-')) {
+                el.innerHTML = '<span class="skeleton"></span>';
+            }
+        });
+    }
     
     // Bloquear interfaz durante la carga
     if(btnRefresh) {
