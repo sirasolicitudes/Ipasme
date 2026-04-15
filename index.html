@@ -8594,40 +8594,23 @@ async function modStatus(id, st) {
                     // Reconstruir localData sin la solicitud finalizada
                     mergeAndRenderData();
                     
-                    // ✅ PRIMERO verificar que GAS tiene el placeholder antes de eliminar de RTDB
-                    // Esto evita solicitudes huérfanas si hubo error de red durante el proceso
-                    setTimeout(async () => {
-                        console.log(`🔍 Verificando que GAS tiene el placeholder para ${id} antes de limpiar RTDB...`);
-                        
-                        const placeholderExiste = await esperarPlaceholderGAS(id, 10000);
-                        
-                        if (!placeholderExiste) {
-                            console.error(`❌ GAS no confirmó placeholder para ${id}. NO se eliminará de RTDB para evitar huérfano.`);
-                            showToast(`⚠️ No se pudo verificar el registro histórico. Solicitud ${id} permanece en tabla. Reintente más tarde.`, "warning", 5000);
-                            
-                            // Agregar a cola para reintento automático más tarde
-                            agregarAColaLimpiezaPendiente(id);
-                            return;
-                        }
-                        
-                        console.log(`✅ Placeholder confirmado en GAS. Procediendo a limpiar RTDB...`);
-                        
-                        // ✅ Ahora sí eliminar de RTDB después de confirmar placeholder en GAS
-                        const resultado = await limpiarSolicitudDeRTDB(id, 5);
-                        
-                        if (resultado.success) {
-                            console.log(`✅ Solicitud ${id} eliminada exitosamente de RTDB en ${resultado.attempts} intento(s)`);
-                            showToast(`🗑️ Solicitud ${id} eliminada de RTDB`, "success", 2000);
-                        } else if (resultado.queued) {
-                            console.warn(`⚠️ Solicitud ${id} agregada a cola de limpieza pendiente por conexión lenta`);
-                            showToast(`⏳ Solicitud ${id} en cola de limpieza (conexión lenta). Se reintentará automáticamente.`, "warning", 4000);
-                        } else {
-                            console.error(`❌ Error eliminando solicitud ${id} de RTDB:`, resultado.error);
-                            showToast(`⚠️ Error eliminando de RTDB: ${resultado.error}`, "error", 3000);
-                        }
-                    }, 500); // Pequeño delay para asegurar que GAS procese
+                    // 🔥 FIX: GAS ya nos confirmó el éxito arriba en `data.success`. 
+                    // No necesitamos dudarlo. Eliminamos directamente de RTDB.
+                    console.log(`✅ Cambio a FINALIZADA confirmado por GAS. Procediendo a limpiar RTDB...`);
                     
-                    console.log(`ℹ️ Solicitud ${id} finalizada. GAS manejará el placeholder histórico.`);
+                    const resultado = await limpiarSolicitudDeRTDB(id, 5);
+                    
+                    if (resultado.success) {
+                        console.log(`✅ Solicitud ${id} eliminada exitosamente de RTDB`);
+                        showToast(`🗑️ Solicitud archivada correctamente`, "success", 2000);
+                    } else if (resultado.queued) {
+                        console.warn(`⚠️ Solicitud ${id} agregada a cola de limpieza pendiente por conexión lenta`);
+                        showToast(`⏳ Solicitud en cola de limpieza (conexión lenta)`, "warning", 4000);
+                    } else {
+                        console.error(`❌ Error eliminando solicitud ${id} de RTDB:`, resultado.error);
+                    }
+                    
+                    console.log(`ℹ️ Solicitud ${id} finalizada. GAS manejará el historial.`);
                 } catch (error) {
                     console.error(`❌ Error procesando finalización de solicitud ${id}:`, error);
                     showToast(`⚠️ Error procesando finalización: ${error.message}`, "error", 3000);
@@ -14165,9 +14148,11 @@ async function esperarPlaceholderGAS(docId, timeoutMs = 10000) {
             params.append("action", "verificarPlaceholder");
             params.append("id", docId);
             
+            // 🔥 FIX: Añadir headers obligatorios y convertir el body a String
             const response = await fetch(SCRIPT_URL, { 
-                method: 'POST', 
-                body: params 
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: params.toString() 
             });
             
             const data = await response.json();
