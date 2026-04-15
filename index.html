@@ -7118,8 +7118,9 @@ let DATA_INDEX = {
     byDesigner: new Map()
 };
 
-let unsubscribeTable = null; // Variable para poder apagar el listener si cerramos sesión
-let unsubscribeRTDB = null; // Variable para poder apagar el listener de RTDB
+let unsubscribeTable = null; 
+let unsubscribeRTDB = null; 
+let unsubscribeConnected = null; // ✅ NUEVO: Evita la fuga de memoria del detector de conexión
 
 async function initRealTimeTable() {
     return new Promise(async (resolve, reject) => {
@@ -7252,9 +7253,12 @@ function conectarListenerRTDB() {
         const rtdbRef = window.ref(window.dbRT, 'solicitudes_vivas');
         let isFirstConnection = true;
         
-        // ✅ Configurar detector de conectividad
+        // ✅ Configurar detector de conectividad (EVITANDO CLONES)
         const connectedRef = window.ref(window.dbRT, '.info/connected');
-        window.onValue(connectedRef, (snap) => {
+        if (unsubscribeConnected) {
+            unsubscribeConnected(); // Apagar el anterior si existe
+        }
+        unsubscribeConnected = window.onValue(connectedRef, (snap) => {
             rtdbConnectivity.isConnected = snap.val() === true;
             actualizarIndicadorConectividad();
             
@@ -7351,6 +7355,11 @@ function iniciarHeartbeatRTDB() {
         // Usar timeout corto para heartbeat (solo verificación rápida)
         const isConnected = await verificarConectividadRTDB(3000);
         
+        if (isConnected) {
+            // ✅ CRÍTICO: Avisar al botón manual que seguimos vivos aunque no haya nuevas solicitudes
+            rtdbConnectivity.lastSyncTime = Date.now();
+        }
+        
         // Solo actualizar indicador si cambió el estado
         if (isConnected !== rtdbConnectivity.isConnected) {
             rtdbConnectivity.isConnected = isConnected;
@@ -7430,15 +7439,17 @@ async function sincronizacionForzadaRTDB() {
             showToast("✅ Conexión restaurada", "success", 2000);
         }
         
-        // ✅ PASO 2: Si el listener parece estar muerto (no hay actualizaciones recientes), reconectarlo
+        // ✅ PASO 2: Si el listener está muerto O fue desconectado, reconectarlo
         const tiempoSinActualizaciones = Date.now() - rtdbConnectivity.lastSyncTime;
-        if (tiempoSinActualizaciones > 60000 && unsubscribeRTDB) {
-            // Más de 1 minuto sin actualizaciones, reconectar listener
-            console.warn("⚠️ Listener de RTDB inactivo. Reconectando...");
+        if (!unsubscribeRTDB || tiempoSinActualizaciones > 60000) {
+            // Más de 1 minuto sin actualizaciones o listener desconectado, reconectar
+            console.warn("⚠️ Listener de RTDB inactivo o desconectado. Reconectando...");
             
-            // Desconectar listener viejo
-            unsubscribeRTDB();
-            unsubscribeRTDB = null;
+            // Desconectar listener viejo si existe
+            if (unsubscribeRTDB) {
+                unsubscribeRTDB();
+                unsubscribeRTDB = null;
+            }
             
             // Esperar un momento
             await new Promise(resolve => setTimeout(resolve, 500));
@@ -15307,6 +15318,22 @@ function showPage(pageId, tabBtn) {
     // ✅ REINICIAR TEMPORIZADOR DE INACTIVIDAD AL CAMBIAR A PESTAÑAS DE ALTO CONSUMO
     if (pageId === 'list-page' || pageId === 'stats-page') {
         resetInactivityTimer();
+    }
+    
+    // ✅ APAGAR FIREBASE AL IR AL FORMULARIO PARA REALMENTE AHORRAR CUOTAS
+    if (pageId === 'form-page') {
+        if (unsubscribeRTDB) {
+            unsubscribeRTDB();
+            unsubscribeRTDB = null;
+            console.log("💤 Firebase pausado para ahorrar recursos.");
+        }
+        if (unsubscribeConnected) {
+            unsubscribeConnected();
+            unsubscribeConnected = null;
+        }
+    } else if ((pageId === 'list-page' || pageId === 'stats-page') && !unsubscribeRTDB && (isAdmin || isDesigner)) {
+        console.log("🔋 Reactivando Firebase en tiempo real...");
+        conectarListenerRTDB();
     }
     
     // ✅ updateTable() eliminado - Firebase onSnapshot maneja actualizaciones automáticamente
