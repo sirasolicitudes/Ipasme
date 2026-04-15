@@ -1996,6 +1996,7 @@ td.admin-actions-cell {
 .status-pendiente { background: var(--celeste); color: var(--azul-deep); }
 .status-procesando { background: var(--amarillo); color: var(--azul-deep); }
 .status-finalizada { background: var(--verde); color: white; }
+.status-rechazada { background: var(--rojo); color: white; }
 /* ✅ UTILIDADES DE TEXTO */
 .txt-bold { font-weight: 800; color: var(--azul-deep); }
 .txt-small { font-size: 0.72rem; color: #4b4b4b; display: block; margin-bottom: 1px; font-weight: 500; }
@@ -2691,6 +2692,11 @@ animation: badgePulse 2s infinite;
     background: var(--verde); 
     color: white; 
 }
+.panel-btn-rechazada { 
+    background: var(--rojo); 
+    color: white; 
+}
+#indRec.active { background: var(--rojo) !important; box-shadow: 0 0 8px var(--rojo) !important; }
 .btn-status-indicator {
     position: absolute;
     right: 12px;
@@ -4237,6 +4243,10 @@ onclick="showLogin()">🔓 ACCESO ADMINISTRADOR</button>
 <button class="panel-btn panel-btn-finalizada" id="btnStatusFin" onclick="modStatus(selectedRequestId, 'FINALIZADA')" disabled>
 ✅ Finalizada
 <span class="btn-status-indicator" id="indFin"></span>
+</button>
+<button class="panel-btn panel-btn-rechazada" id="btnStatusRec" onclick="modStatus(selectedRequestId, 'RECHAZADA')" disabled>
+❌ Rechazada
+<span class="btn-status-indicator" id="indRec"></span>
 </button>
 </div>
 <!-- Asignación de Diseñador (Solo Admin) -->
@@ -7158,7 +7168,7 @@ async function initRealTimeTable() {
                     listaHistoricaGAS = todasLasSolicitudes
                         .filter(solicitud => {
                             const estatus = (solicitud.Estatus || "").trim().toUpperCase();
-                            return estatus === "FINALIZADA";
+                            return estatus === "FINALIZADA" || estatus === "RECHAZADA";
                         })
                         .map(solicitud => ({
                             ...limpiarDatosSolicitud(solicitud),
@@ -7214,9 +7224,9 @@ async function cargarSolicitudesActivasRTDB() {
                     // Reconstruir objeto con id
                     const solicitudCompleta = limpiarDatosSolicitud({ id, ...solicitud });
                     
-                    // Filtrar solo solicitudes activas (no finalizadas)
+                    // Filtrar solo solicitudes activas (no finalizadas ni rechazadas)
                     const estatus = (solicitudCompleta.Estatus || "").trim().toUpperCase();
-                    if (estatus !== "FINALIZADA") {
+                    if (estatus !== "FINALIZADA" && estatus !== "RECHAZADA") {
                         firebaseActiveData.push(solicitudCompleta);
                     }
                 }
@@ -7954,10 +7964,10 @@ function mergeAndRenderData() {
     
     // 🔥 FIX: Ordenar primero por estado (finalizadas al final), luego por timestamp
     localData.sort((a, b) => {
-        // Función para obtener estado prioritario (0 = activa, 1 = finalizada)
+        // Función para obtener estado prioritario (0 = activa, 1 = finalizada/rechazada)
         const getEstadoPrioridad = (item) => {
             const estatus = (item.Estatus || "").toString().trim().toUpperCase();
-            return estatus === "FINALIZADA" ? 1 : 0; // Finalizadas van al final
+            return (estatus === "FINALIZADA" || estatus === "RECHAZADA") ? 1 : 0; // Finalizadas y rechazadas van al final
         };
         
         // Función para obtener timestamp en milisegundos
@@ -8223,6 +8233,7 @@ function getShortStatus(status) {
     if (cleanStatus === "PENDIENTE") return "PEN";
     if (cleanStatus === "PROCESANDO") return "PRO";
     if (cleanStatus === "FINALIZADA") return "FIN";
+    if (cleanStatus === "RECHAZADA") return "REC";
     return cleanStatus.substring(0, 3);
 }
 
@@ -8554,7 +8565,7 @@ async function modStatus(id, st) {
         
         // ✅ PREPARAR DATOS (sin actualizar RTDB aún para FINALIZADA)
         const estatusGuardar = st.toUpperCase().trim();
-        const esFinalizacion = estatusGuardar === "FINALIZADA";
+        const esFinalizacion = estatusGuardar === "FINALIZADA" || estatusGuardar === "RECHAZADA";
         
         // ✅ SOLO actualizar RTDB inmediatamente si NO es finalización
         // Para finalización, esperamos confirmación de GAS primero (evita huérfanos)
@@ -8575,8 +8586,8 @@ async function modStatus(id, st) {
         params.append("status", st.toUpperCase().trim());
         params.append("username", userCredentials.username);
         
-        // ✅ Agregar fecha de finalización si el estado es FINALIZADA
-        if (st.toUpperCase().trim() === "FINALIZADA") {
+        // ✅ Agregar fecha de finalización si el estado es FINALIZADA o RECHAZADA
+        if (st.toUpperCase().trim() === "FINALIZADA" || st.toUpperCase().trim() === "RECHAZADA") {
             const ahora = new Date();
             const fechaFormateada = ahora.toLocaleString('es-VE', {
                 day: '2-digit',
@@ -8622,9 +8633,9 @@ async function modStatus(id, st) {
                 console.log("📊 Datos locales actualizados");
             }
             
-            // ✅ CORRECCIÓN: Si es FINALIZADA, solo eliminar de RTDB y firebaseActiveData
-            // Las solicitudes finalizadas serán manejadas por GAS como placeholders
-            if (st.toUpperCase() === "FINALIZADA") {
+            // ✅ CORRECCIÓN: Si es FINALIZADA o RECHAZADA, solo eliminar de RTDB y firebaseActiveData
+            // Las solicitudes finalizadas/rechazadas serán manejadas por GAS como placeholders
+            if (st.toUpperCase() === "FINALIZADA" || st.toUpperCase() === "RECHAZADA") {
                 try {
                     // Remover de firebaseActiveData si existe
                     firebaseActiveData = firebaseActiveData.filter(s => s.id !== id);
@@ -8678,6 +8689,10 @@ async function modStatus(id, st) {
                 case "FINALIZADA":
                     toastMessage = "✅ Estado cambiado a FINALIZADA";
                     toastType = "success";  // Verde para finalizada
+                    break;
+                case "RECHAZADA":
+                    toastMessage = "❌ Estado cambiado a RECHAZADA";
+                    toastType = "error";
                     break;
                 default:
                     toastMessage = `🔄 Estado cambiado a ${st}`;
@@ -9368,7 +9383,7 @@ function renderLocalTable() {
     const solicitudLimpia = s.Solicitud ? s.Solicitud.replace(/\+/g, ' ') : "";
 
     // Agrega la evaluación del placeholder
-    const isPlaceholder = s.isPlaceholder || statusReal === "FINALIZADA";
+    const isPlaceholder = s.isPlaceholder || statusReal === "FINALIZADA" || statusReal === "RECHAZADA";
 
     // Caché de clases de fila
     let rowClass = rowClassCache.get(solicitudLimpia + esNueva + isPlaceholder);
@@ -9880,6 +9895,7 @@ function updatePanelContent() {
     document.getElementById('indPend').classList.toggle('active', currentStatus === 'PENDIENTE');
     document.getElementById('indProc').classList.toggle('active', currentStatus === 'PROCESANDO');
     document.getElementById('indFin').classList.toggle('active', currentStatus === 'FINALIZADA');
+    document.getElementById('indRec').classList.toggle('active', currentStatus === 'RECHAZADA');
     // ✅ CORRECCIÓN: Habilitar botones según permisos (Esto activa los botones de estado)
     enablePanelButtons();
     // Referencias a elementos sensibles
@@ -10031,9 +10047,11 @@ function disableAllPanelButtons() {
     const btnStatusPend = document.getElementById('btnStatusPend');
     const btnStatusProc = document.getElementById('btnStatusProc');
     const btnStatusFin = document.getElementById('btnStatusFin');
+    const btnStatusRec = document.getElementById('btnStatusRec');
     if (btnStatusPend) btnStatusPend.disabled = true;
     if (btnStatusProc) btnStatusProc.disabled = true;
     if (btnStatusFin) btnStatusFin.disabled = true;
+    if (btnStatusRec) btnStatusRec.disabled = true;
     
     // Botones de archivo
     const btnAttach = document.getElementById('admin-attach-btn');
@@ -10057,6 +10075,7 @@ function enablePanelButtons() {
     document.getElementById('btnStatusPend').disabled = false;
     document.getElementById('btnStatusProc').disabled = false;
     document.getElementById('btnStatusFin').disabled = false;
+    document.getElementById('btnStatusRec').disabled = false;
     // Botones de archivo
     document.getElementById('admin-attach-btn').disabled = false;
     document.getElementById('admin-view-btn').disabled = !selectedRequestData?.ArteFinal;
