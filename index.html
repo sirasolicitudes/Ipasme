@@ -7320,7 +7320,8 @@ function iniciarHeartbeatRTDB() {
     
     // Solo verificar conectividad cada 30 segundos para actualizar indicador visual
     rtdbConnectivity.heartbeatInterval = setInterval(async () => {
-        const isConnected = await verificarConectividadRTDB();
+        // Usar timeout corto para heartbeat (solo verificación rápida)
+        const isConnected = await verificarConectividadRTDB(3000);
         
         // Solo actualizar indicador si cambió el estado
         if (isConnected !== rtdbConnectivity.isConnected) {
@@ -7333,7 +7334,12 @@ function iniciarHeartbeatRTDB() {
                 showToast("🟢 Conexión restaurada. Usa 🔄 si necesitas sincronizar.", "success", 3000);
             } else {
                 console.warn("🔴 Desconectado de RTDB");
-                showToast("🔴 Sin conexión. Cambios pueden no verse en tiempo real.", "warning", 3000);
+                // Solo mostrar advertencia si el navegador reporta conexión
+                if (navigator.onLine) {
+                    showToast("🔴 Conexión lenta. La tabla puede no actualizarse en tiempo real.", "warning", 4000);
+                } else {
+                    showToast("🔴 Sin conexión a internet.", "warning", 3000);
+                }
             }
         }
     }, 30000); // Cada 30 segundos solo para actualizar indicador
@@ -7359,22 +7365,41 @@ async function sincronizacionForzadaRTDB() {
         console.log("🔄 Ejecutando sincronización forzada de RTDB...");
         showToast("🔄 Sincronizando datos...", "info", 2000);
         
-        // ✅ PASO 1: Verificar si hay conexión y reconectar listener si es necesario
-        const isConnected = await verificarConectividadRTDB();
+        // ✅ PASO 1: Verificar conexión con múltiples intentos progresivos
+        let isConnected = await verificarConectividadRTDB(5000); // Primer intento: 5 segundos
         
         if (!isConnected) {
-            console.warn("🔴 Sin conexión a RTDB. Intentando reconectar...");
-            showToast("🔴 Sin conexión. Intentando reconectar...", "warning", 3000);
+            console.warn("🔴 Primer intento fallido. Probando conexión de navegador...");
             
-            // Esperar un momento para que Firebase intente reconectar automáticamente
-            await new Promise(resolve => setTimeout(resolve, 2000));
+            // Verificar si el navegador tiene internet (puede que RTDB esté lento)
+            if (navigator.onLine) {
+                showToast("🟡 Conexión lenta detectada. Intentando reconectar...", "warning", 4000);
+                
+                // Intento 2: Esperar más tiempo y reintentar
+                await new Promise(resolve => setTimeout(resolve, 3000));
+                isConnected = await verificarConectividadRTDB(8000); // Segundo intento: 8 segundos
+                
+                if (!isConnected) {
+                    // Intento 3: Timeout más largo
+                    console.warn("🔴 Segundo intento fallido. Último intento con timeout extendido...");
+                    showToast("⏳ Conexión muy lenta. Último intento...", "warning", 4000);
+                    await new Promise(resolve => setTimeout(resolve, 5000));
+                    isConnected = await verificarConectividadRTDB(12000); // Tercer intento: 12 segundos
+                }
+            }
             
-            const reconnected = await verificarConectividadRTDB();
-            if (!reconnected) {
-                showToast("❌ No se pudo reconectar. Verifica tu conexión a internet.", "error", 4000);
+            if (!isConnected) {
+                if (!navigator.onLine) {
+                    showToast("❌ Sin conexión a internet. Verifica tu red WiFi/Datos.", "error", 5000);
+                } else {
+                    showToast("❌ No se pudo conectar al servidor. Intenta de nuevo en un momento.", "error", 5000);
+                }
                 rtdbConnectivity.isSyncing = false;
                 return;
             }
+            
+            console.log("✅ Reconectado después de múltiples intentos");
+            showToast("✅ Conexión restaurada", "success", 2000);
         }
         
         // ✅ PASO 2: Si el listener parece estar muerto (no hay actualizaciones recientes), reconectarlo
@@ -7490,19 +7515,130 @@ function agregarBotonSincronizacionManual() {
         btn.style.transform = 'scale(1)';
     });
     
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', async () => {
+        // Feedback visual inmediato
         btn.style.transform = 'rotate(360deg)';
         btn.style.transition = 'transform 0.5s';
-        sincronizacionForzadaRTDB().then(() => {
+        btn.disabled = true;
+        btn.style.opacity = '0.7';
+        
+        try {
+            // Verificar si el listener está activo
+            const tiempoSinActualizaciones = Date.now() - rtdbConnectivity.lastSyncTime;
+            if (tiempoSinActualizaciones > 60000 && unsubscribeRTDB) {
+                console.log("🔄 Botón detectó listener inactivo. Reconectando primero...");
+                
+                // Reconectar listener antes de sincronizar
+                unsubscribeRTDB();
+                unsubscribeRTDB = null;
+                await new Promise(resolve => setTimeout(resolve, 500));
+                conectarListenerRTDB();
+                await new Promise(resolve => setTimeout(resolve, 1500));
+            }
+            
+            // Intentar sincronización con reintentos
+            let intentos = 0;
+            let success = false;
+            
+            while (intentos < 2 && !success) {
+                intentos++;
+                try {
+                    await sincronizacionForzadaRTDB();
+                    success = true;
+                } catch (syncError) {
+                    if (intentos < 2) {
+                        console.warn(`⚠️ Intento ${intentos} fallido. Reintentando...`);
+                        await new Promise(resolve => setTimeout(resolve, 2000));
+                    } else {
+                        throw syncError;
+                    }
+                }
+            }
+        } catch (error) {
+            console.error("❌ Error al sincronizar desde botón:", error);
+            showToast("❌ Error de sincronización. Intenta recargar la página.", "error", 5000);
+        } finally {
+            // Restaurar botón
             setTimeout(() => {
                 btn.style.transform = 'rotate(0deg)';
                 btn.style.transition = 'transform 0.2s';
+                btn.disabled = false;
+                btn.style.opacity = '1';
             }, 500);
-        });
+        }
     });
     
     document.body.appendChild(btn);
     console.log("✅ Botón de sincronización manual agregado");
+}
+
+// ✅ FUNCIÓN: Reconexión de emergencia para RTDB
+async function reconectarRTDBEmergencia() {
+    console.log("🚨 Iniciando reconexión de emergencia a RTDB...");
+    showToast("🔄 Intentando reconexión de emergencia...", "warning", 3000);
+    
+    try {
+        // Paso 1: Desconectar completamente el listener actual
+        if (unsubscribeRTDB) {
+            unsubscribeRTDB();
+            unsubscribeRTDB = null;
+            console.log("🔌 Listener anterior desconectado");
+        }
+        
+        // Paso 2: Esperar para permitir que Firebase cierre la conexión
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Paso 3: Verificar si hay conexión a internet
+        if (!navigator.onLine) {
+            console.warn("📡 Sin conexión a internet reportada por navegador");
+            showToast("❌ Sin conexión a internet. Verifica tu red.", "error", 4000);
+            return false;
+        }
+        
+        // Paso 4: Intentar reconectar el listener con múltiples intentos
+        let intentos = 0;
+        const maxIntentos = 3;
+        
+        while (intentos < maxIntentos) {
+            intentos++;
+            console.log(`🔄 Intento de reconexión ${intentos}/${maxIntentos}...`);
+            
+            try {
+                // Reconectar listener
+                conectarListenerRTDB();
+                
+                // Esperar un momento para que se establezca la conexión
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                
+                // Verificar conexión con timeout largo
+                const isConnected = await verificarConectividadRTDB(10000);
+                
+                if (isConnected) {
+                    console.log("✅ Reconexión de emergencia exitosa");
+                    rtdbConnectivity.isConnected = true;
+                    actualizarIndicadorConectividad();
+                    showToast("✅ Reconexión exitosa", "success", 3000);
+                    return true;
+                }
+                
+                console.warn(`⚠️ Intento ${intentos} fallido. Esperando antes de reintentar...`);
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                
+            } catch (reconnectError) {
+                console.error(`❌ Error en intento ${intentos}:`, reconnectError);
+                await new Promise(resolve => setTimeout(resolve, 1500));
+            }
+        }
+        
+        console.error("❌ Reconexión de emergencia fallida después de todos los intentos");
+        showToast("❌ No se pudo reconectar al servidor. Intenta más tarde.", "error", 5000);
+        return false;
+        
+    } catch (error) {
+        console.error("❌ Error crítico en reconexión de emergencia:", error);
+        showToast("❌ Error de conexión. Recarga la página si el problema persiste.", "error", 5000);
+        return false;
+    }
 }
 
 // ✅ FUNCIÓN: Analizar cambios entre datos anteriores y nuevos de RTDB
@@ -8377,27 +8513,21 @@ async function modStatus(id, st) {
         
         console.log("📤 Enviando solicitud al backend...");
         
-        // ✅ AGREGAR ACTUALIZACIÓN EN FIREBASE
-        try {
-            // Formato estandarizado: dd/MM/yyyy hh:mm a (sin coma)
-            const ahora = new Date();
-            const dia = String(ahora.getDate()).padStart(2, '0');
-            const mes = String(ahora.getMonth() + 1).padStart(2, '0');
-            const anio = ahora.getFullYear();
-            const horas = ahora.getHours();
-            const minutos = String(ahora.getMinutes()).padStart(2, '0');
-            const ampm = horas >= 12 ? 'p. m.' : 'a. m.';
-            const horas12 = horas % 12 || 12;
-            const fechaFormateada = `${dia}/${mes}/${anio} ${String(horas12).padStart(2, '0')}:${minutos} ${ampm}`;
-            
-            const estatusGuardar = st.toUpperCase().trim();
-            
-            // ✅ ACTUALIZACIÓN EN TIEMPO REAL EN RTDB (FALTABA ESTA LÍNEA)
-            cambiarEstadoRTDB(id, estatusGuardar, null);
-            
-            console.log("🔥 Estatus actualizado vía GAS + RTDB");
-        } catch(fbErr) {
-            console.error("Error al actualizar estatus en Firebase:", fbErr);
+        // ✅ PREPARAR DATOS (sin actualizar RTDB aún para FINALIZADA)
+        const estatusGuardar = st.toUpperCase().trim();
+        const esFinalizacion = estatusGuardar === "FINALIZADA";
+        
+        // ✅ SOLO actualizar RTDB inmediatamente si NO es finalización
+        // Para finalización, esperamos confirmación de GAS primero (evita huérfanos)
+        if (!esFinalizacion) {
+            try {
+                cambiarEstadoRTDB(id, estatusGuardar, null);
+                console.log("🔥 Estatus actualizado en RTDB:", estatusGuardar);
+            } catch(fbErr) {
+                console.error("Error al actualizar estatus en RTDB:", fbErr);
+            }
+        } else {
+            console.log("⏳ Finalización detectada: Esperando confirmación de GAS antes de actualizar RTDB...");
         }
         
         const params = new URLSearchParams();
@@ -8464,10 +8594,25 @@ async function modStatus(id, st) {
                     // Reconstruir localData sin la solicitud finalizada
                     mergeAndRenderData();
                     
-                    // ✅ Eliminar de RTDB después de confirmación exitosa de GAS (con reintentos robustos)
+                    // ✅ PRIMERO verificar que GAS tiene el placeholder antes de eliminar de RTDB
+                    // Esto evita solicitudes huérfanas si hubo error de red durante el proceso
                     setTimeout(async () => {
-                        console.log(`🧹 Iniciando limpieza de solicitud ${id} en RTDB...`);
+                        console.log(`🔍 Verificando que GAS tiene el placeholder para ${id} antes de limpiar RTDB...`);
                         
+                        const placeholderExiste = await esperarPlaceholderGAS(id, 10000);
+                        
+                        if (!placeholderExiste) {
+                            console.error(`❌ GAS no confirmó placeholder para ${id}. NO se eliminará de RTDB para evitar huérfano.`);
+                            showToast(`⚠️ No se pudo verificar el registro histórico. Solicitud ${id} permanece en tabla. Reintente más tarde.`, "warning", 5000);
+                            
+                            // Agregar a cola para reintento automático más tarde
+                            agregarAColaLimpiezaPendiente(id);
+                            return;
+                        }
+                        
+                        console.log(`✅ Placeholder confirmado en GAS. Procediendo a limpiar RTDB...`);
+                        
+                        // ✅ Ahora sí eliminar de RTDB después de confirmar placeholder en GAS
                         const resultado = await limpiarSolicitudDeRTDB(id, 5);
                         
                         if (resultado.success) {
@@ -8480,7 +8625,7 @@ async function modStatus(id, st) {
                             console.error(`❌ Error eliminando solicitud ${id} de RTDB:`, resultado.error);
                             showToast(`⚠️ Error eliminando de RTDB: ${resultado.error}`, "error", 3000);
                         }
-                    }, 1000); // Pequeño delay para asegurar que todo se procese correctamente
+                    }, 500); // Pequeño delay para asegurar que GAS procese
                     
                     console.log(`ℹ️ Solicitud ${id} finalizada. GAS manejará el placeholder histórico.`);
                 } catch (error) {
@@ -9952,11 +10097,12 @@ async function proceedWithDesignerAssignment(designerName, designerNameOnly, pan
             console.log(`✅ Diseñador ${designerName} asignado a ${selectedRequestId}`);
             
             // ✅ ACTUALIZACIÓN EN RTDB (OPTIMIZADA)
-            if (designerName !== "") {
-                cambiarEstadoRTDB(selectedRequestId, null, designerName);
-            } else {
-                cambiarEstadoRTDB(selectedRequestId, null, "Sin Asignar");
-            }
+            // Detectar si es desasignación usando la misma lógica que GAS
+            const esDesasignacion = (designerNameOnly === designerName && designerNameOnly !== "");
+            const disenadorParaRTDB = esDesasignacion ? "Sin Asignar" : (designerName || "Sin Asignar");
+            
+            cambiarEstadoRTDB(selectedRequestId, null, disenadorParaRTDB);
+            console.log(`🔄 RTDB actualizado: ${esDesasignacion ? 'Desasignado' : designerName || 'Sin Asignar'}`);
         } catch(fbErr) {
             console.error("Error al actualizar diseñador en Firebase:", fbErr);
         }
@@ -14097,18 +14243,42 @@ function delay(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-// ✅ FUNCIÓN AUXILIAR: Verificar conectividad RTDB
-async function verificarConectividadRTDB() {
+// ✅ FUNCIÓN AUXILIAR: Verificar conectividad RTDB - VERSIÓN ROBUSTA
+async function verificarConectividadRTDB(timeoutMs = 8000) {
     try {
+        // ✅ PASO 1: Verificar si el navegador reporta conexión a internet
+        if (typeof navigator !== 'undefined' && !navigator.onLine) {
+            console.warn("📡 Navegador reporta sin conexión a internet (navigator.onLine = false)");
+            return false;
+        }
+        
+        // ✅ PASO 2: Verificar conectividad a RTDB con timeout configurable
         const connectedRef = window.ref(window.dbRT, '.info/connected');
         return new Promise((resolve) => {
-            const timeout = setTimeout(() => resolve(false), 3000);
+            let resolved = false;
+            
+            const timeout = setTimeout(() => {
+                if (!resolved) {
+                    resolved = true;
+                    console.warn(`⏱️ Timeout de ${timeoutMs}ms alcanzado verificando RTDB`);
+                    resolve(false);
+                }
+            }, timeoutMs);
+            
             window.onValue(connectedRef, (snap) => {
-                clearTimeout(timeout);
-                resolve(snap.val() === true);
+                if (!resolved) {
+                    resolved = true;
+                    clearTimeout(timeout);
+                    const isConnected = snap.val() === true;
+                    if (isConnected) {
+                        console.log("✅ Conectado a RTDB confirmado");
+                    }
+                    resolve(isConnected);
+                }
             }, { onlyOnce: true });
         });
     } catch (e) {
+        console.error("❌ Error verificando conectividad RTDB:", e);
         return false;
     }
 }
@@ -14160,15 +14330,38 @@ async function procesarColaLimpiezaPendiente() {
         const nuevaCola = [];
         
         for (const item of cola) {
-            // Solo reintentar si no ha excedido los 10 intentos o si pasaron más de 5 minutos
+            // Solo reintentar si no ha excedido los 10 intentos y no ha expirado (24 horas)
             if (item.retries < 10 && (Date.now() - item.timestamp) < 24 * 60 * 60 * 1000) {
+                console.log(`🔍 Verificando placeholder para ${item.id} antes de limpiar...`);
+                
+                // ✅ PRIMERO verificar que GAS tiene el placeholder
+                const placeholderExiste = await esperarPlaceholderGAS(item.id, 8000);
+                
+                if (!placeholderExiste) {
+                    console.warn(`⚠️ Placeholder no encontrado para ${item.id}. Reintentando más tarde...`);
+                    item.retries++;
+                    nuevaCola.push(item);
+                    continue;
+                }
+                
+                console.log(`✅ Placeholder confirmado. Procediendo a limpiar ${item.id}...`);
+                
+                // ✅ Ahora sí intentar limpiar RTDB
                 const resultado = await limpiarSolicitudDeRTDB(item.id, 3);
+                
                 if (!resultado.success && !resultado.queued) {
                     item.retries++;
                     nuevaCola.push(item);
+                    console.warn(`⚠️ Limpieza falló para ${item.id}. Intento ${item.retries}/10`);
+                } else if (resultado.queued) {
+                    // Si se encoló por conectividad, mantener en cola sin incrementar retries
+                    nuevaCola.push(item);
+                    console.log(`⏳ ${item.id} en espera por conectividad...`);
+                } else {
+                    console.log(`✅ ${item.id} limpiado exitosamente de RTDB`);
                 }
             } else {
-                console.log(`🗑️ Solicitud ${item.id} descartada de cola (máximos intentos alcanzados)`);
+                console.log(`🗑️ Solicitud ${item.id} descartada de cola (máximos intentos alcanzados o expirada)`);
             }
         }
         
