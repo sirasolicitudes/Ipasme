@@ -4277,6 +4277,9 @@ onclick="showLogin()">🔓 ACCESO ADMINISTRADOR</button>
 <!-- Acciones Especiales (Solo Admin) -->
 <div class="panel-actions hidden" id="adminActions">
 <div class="panel-section-title">⚠️ Acciones Especiales</div>
+<button class="panel-btn panel-btn-info" id="btnResendCopy" onclick="openResendCopyModal()">
+🚀 Re-enviar Copy a Telegram
+</button>
 <button class="panel-btn panel-btn-danger" id="btnEliminar" onclick="panelEliminar()" disabled>
 🗑️ Eliminar Solicitud
 </button>
@@ -10360,6 +10363,127 @@ function panelEliminar() {
     }
     deleteReq(selectedRequestId);
 }
+
+// ✅ FUNCIÓN PARA BUSCAR Y RE-ENVIAR COPY RRSS A TELEGRAM
+async function openResendCopyModal() {
+    if (!isAdmin) {
+        showToast("Solo los administradores pueden usar esta función.", "error");
+        return;
+    }
+
+    // Paso 1: Pedir el ID usando SweetAlert2
+    const { value: reqId } = await Swal.fire({
+        title: 'Re-enviar Copy RRSS',
+        input: 'text',
+        inputLabel: 'Ingrese el ID de la solicitud',
+        inputPlaceholder: 'Ej: REQ-1234567890',
+        icon: 'search',
+        showCancelButton: true,
+        confirmButtonText: 'Buscar Solicitud',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#0799b6',
+        inputValidator: (value) => {
+            if (!value) return 'Debe ingresar un ID válido';
+            if (!value.toUpperCase().startsWith('REQ-')) return 'El ID debe comenzar con REQ-';
+        }
+    });
+
+    if (!reqId) return;
+
+    // Paso 2: Mostrar loading y buscar en GAS
+    Swal.fire({
+        title: 'Buscando en la base de datos...',
+        html: `Buscando la solicitud <b>${reqId.trim().toUpperCase()}</b>`,
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading()
+    });
+
+    try {
+        const params = new URLSearchParams();
+        params.append("action", "getRequestData");
+        params.append("id", reqId.trim().toUpperCase());
+        params.append("username", userCredentials.username);
+        params.append("password", userCredentials.password);
+
+        const res = await fetch(SCRIPT_URL, { method: 'POST', body: params });
+        const data = await res.json();
+
+        // Verificar si la solicitud existe
+        if (!data.success) {
+            Swal.fire('No encontrada', data.error || `No se encontró la solicitud ${reqId}`, 'error');
+            return;
+        }
+
+        const solicitud = data.data;
+        const tipoSolicitud = (solicitud.Solicitud || "").toLowerCase();
+
+        // Verificar rigurosamente que sea Copy RRSS
+        if (!tipoSolicitud.includes('copy rrss')) {
+            Swal.fire({
+                title: 'Tipo Inválido',
+                html: `La solicitud <b>${solicitud.id}</b> es de tipo <b>"${solicitud.Solicitud}"</b>.<br><br>Esta función es exclusiva para solicitudes <b>Copy RRSS</b>.`,
+                icon: 'warning',
+                confirmButtonColor: '#fb8500'
+            });
+            return;
+        }
+
+        // Paso 3: Confirmar si se desea re-enviar
+        const confirmResult = await Swal.fire({
+            title: '¡Solicitud Encontrada!',
+            html: `
+                <div style="text-align: left; font-size: 0.9rem; background: #f8f9fa; color: #212529; padding: 15px; border-radius: 8px; border-left: 4px solid #0799b6;">
+                    <p style="margin: 5px 0; color: #212529;"><b style="color: #0799b6;">🆔 ID:</b> ${solicitud.id}</p>
+                    <p style="margin: 5px 0; color: #212529;"><b style="color: #0799b6;">🏥 Unidad:</b> ${solicitud.Unidad}</p>
+                    <p style="margin: 5px 0; color: #212529;"><b style="color: #0799b6;">📅 Fecha:</b> ${solicitud.Fecha}</p>
+                    <p style="margin: 5px 0; color: #212529;"><b style="color: #0799b6;">✉️ Correo:</b> ${solicitud.Correo || 'No especificado'}</p>
+                </div>
+                <p style="margin-top: 15px; color: #e74c3c; font-weight: 600;">¿Desea enviar la notificación al grupo de Prensa en Telegram?</p>
+            `,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: '🚀 Sí, Enviar a Telegram',
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: '#219ebc',
+            cancelButtonColor: '#6c757d'
+        });
+
+        if (confirmResult.isConfirmed) {
+            // Paso 4: Ejecutar el re-envío en el backend
+            Swal.fire({
+                title: 'Enviando...',
+                text: 'Transmitiendo datos a Telegram',
+                allowOutsideClick: false,
+                didOpen: () => Swal.showLoading()
+            });
+
+            const sendParams = new URLSearchParams();
+            sendParams.append("action", "resendCopyTelegram");
+            sendParams.append("id", solicitud.id);
+            sendParams.append("username", userCredentials.username);
+            sendParams.append("password", userCredentials.password);
+
+            const sendRes = await fetch(SCRIPT_URL, { method: 'POST', body: sendParams });
+            const sendData = await sendRes.json();
+
+            if (sendData.success) {
+                Swal.fire({
+                    title: '¡Enviado Exitosamente!',
+                    text: 'El mensaje ha sido despachado al grupo de Prensa.',
+                    icon: 'success',
+                    confirmButtonColor: '#28a745'
+                });
+            } else {
+                Swal.fire('Error al enviar', sendData.error || 'Hubo un problema de conexión con Telegram.', 'error');
+            }
+        }
+
+    } catch (error) {
+        console.error("Error en re-envío:", error);
+        Swal.fire('Error de red', 'No se pudo contactar con el servidor. Revise su conexión.', 'error');
+    }
+}
+
 // ✅ POLLING PARA SINCRONIZACIÓN EN TIEMPO REAL
 // ❌ ELIMINADO: Sistema de polling para panel (innecesario con tiempo real)
 // function iniciarSincronizacionPanel() {
