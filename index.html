@@ -6877,7 +6877,8 @@ const UNIDADES_IPASME_RAW = {
 "Sede Administrativa",
 "Gerencia de CRDT",
 "CIFAP",
-"C.E.I.A. Dr. Manuel Montero"
+"C.E.I.A. Dr. Manuel Montero",
+"Fondo Editorial"
 ],
 "Región Central": [
 "Maracay", "La Victoria", "Valencia", "Puerto Cabello",
@@ -7810,7 +7811,8 @@ async function cargarDatosUsuarioRegular(page = 1) {
             "Gerencia de CRDT",
             "CIFAP",
             "C.E.I.A. Dr. Manuel Montero",
-            "Don Simón Rodríguez"
+            "Don Simón Rodríguez",
+            "Fondo Editorial"
         ];
         
         let unidadFiltro = window.usuarioRegular.unidad;
@@ -8284,8 +8286,8 @@ designerName: "" // Solo para diseñadores
 };
 
 // Arrays para tipos de cirugía y servicios
-const especialidades = ["Alergología", "Cardiología", "Cirugía general", "Dermatología", "Fisiatría", "Foniatría", "Gastroenterología", "Geriatría", "Ginecología y obstetricia", "Infectología", "Medicina familiar", "Medicina general", "Medicina interna", "Nefrología", "Neumología", "Neurología", "Nutrición", "Odontología", "Oftalmología", "Oncología", "Optometría", "Pediatría", "Psicología", "Psiquiatría", "Reumatología", "Traumatología", "Urología"];
-const servicios = ["Actividades recreativas", "Afiliación", "Agudeza visual", "Aplicación de flúor", "Asesoría legal", "Bienestar social", "Captación odontológica", "Captación quirúrgica general", "Captación quirúrgica oftalmológica", "Charlas odontológicas", "Citología", "Control de glicemia", "Control de talla y peso", "Desparasitación", "Despistaje de glicemia capilar", "Despistaje HTA", "Ecografía", "Electrocardiograma", "Espirometría", "Farmacia", "Fisioterapia", "Fonoaudiología", "Gerontología", "Ingeniería biomédica", "Inmunización", "Laboratorio", "Liberación de hipoteca", "Masoterapia", "Podología", "Quiropraxia", "Reposos médicos", "Sesión educativa", "Servicios sociales", "Terapia de lenguaje (Logopedia)", "Terapia del dolor", "Terapia ocupacional", "Tipiaje", "Trabajo social"];
+const especialidades = ["Alergología", "Cardiología", "Cirugía general", "Dermatología", "Fisiatría", "Foniatría", "Gastroenterología", "Geriatría", "Ginecología y obstetricia", "Infectología", "Medicina familiar", "Medicina general", "Medicina interna", "Medicina ocupacional", "Nefrología", "Neumología", "Neurología", "Nutrición", "Odontología", "Oftalmología", "Oncología", "Optometría", "Pediatría", "Psicología", "Psiquiatría", "Reumatología", "Traumatología", "Urología"];
+const servicios = ["Actividades recreativas", "Afiliación", "Agudeza visual", "Aplicación de flúor", "Asesoría legal", "Bienestar social", "Captación odontológica", "Captación quirúrgica general", "Captación quirúrgica oftalmológica", "Charlas odontológicas", "Citología", "Control de glicemia", "Control de talla y peso", "Desparasitación", "Despistaje de glicemia capilar", "Despistaje HTA", "Ecografía", "Electrocardiograma", "Espirometría", "Farmacia", "Fisioterapia", "Fonoaudiología", "Gerontología", "Ingeniería biomédica", "Inmunización", "Laboratorio", "Liberación de hipoteca", "Masoterapia", "Peluquería y barbería", "Podología", "Quiropraxia", "Reposos médicos", "Sesión educativa", "Servicios sociales", "Terapia de lenguaje (Logopedia)", "Terapia del dolor", "Terapia ocupacional", "Tipiaje", "Trabajo social"];
 const vacunas = ["Fiebre amarilla", "Pentavalente", "Polio IPV", "Polio oral", "Toxoide (tetánico/diftérico)", "Trivalente viral (SRP)"];
 const quirurgica = ["Bocio hiperfuncionante", "Colectomía", "Enfermedad hemorroidal", "Esterilización", "Fibromatosis", "Fimosis", "Hernia abdominal", "Hernia epigástrica", "Hernia escrotal", "Hernia inguinal", "Hernia umbilical", "Hidrocele", "Histerectomía", "Lipomas", "Litiasis vesicular (Colecistectomía)", "Lunares", "Miomatosis uterina", "Nevus", "Nódulos mamarios simples", "Paridad satisfecha", "Prolapso", "Quiste (TU)", "Quiste de epidídimo", "Quiste sebáceo", "Quiste tirogloso", "Quistes sebáceos", "Tumores ováricos", "Varicocele", "Vasectomía", "Verrugas"];
 const pediatrica = ["Criptorquidias", "Fimosis", "Hernia epigástrica", "Hernia inguinal", "Hernia umbilical", "Hidrocele", "Quiste tirogloso", "Varicocele"];
@@ -14078,7 +14080,8 @@ function realSubmitForm() {
         "Sede Administrativa",
         "Gerencia de CRDT",
         "CIFAP",
-        "C.E.I.A. Dr. Manuel Montero"
+        "C.E.I.A. Dr. Manuel Montero",
+        "Fondo Editorial"
     ];
 
     // 1. CARGAMOS LOS DATOS SEGÚN EL TIPO DE SOLICITUD
