@@ -8286,8 +8286,8 @@ designerName: "" // Solo para diseñadores
 };
 
 // Arrays para tipos de cirugía y servicios
-const especialidades = ["Alergología", "Cardiología", "Cirugía general", "Dermatología", "Fisiatría", "Foniatría", "Gastroenterología", "Geriatría", "Ginecología y obstetricia", "Infectología", "Medicina familiar", "Medicina general", "Medicina interna", "Medicina ocupacional", "Nefrología", "Neumología", "Neurología", "Nutrición", "Odontología", "Oftalmología", "Oncología", "Optometría", "Pediatría", "Psicología", "Psiquiatría", "Reumatología", "Traumatología", "Urología"];
-const servicios = ["Actividades recreativas", "Afiliación", "Agudeza visual", "Aplicación de flúor", "Asesoría legal", "Bienestar social", "Captación odontológica", "Captación quirúrgica general", "Captación quirúrgica oftalmológica", "Charlas odontológicas", "Citología", "Control de glicemia", "Control de talla y peso", "Desparasitación", "Despistaje de glicemia capilar", "Despistaje HTA", "Ecografía", "Electrocardiograma", "Espirometría", "Farmacia", "Fisioterapia", "Fonoaudiología", "Gerontología", "Ingeniería biomédica", "Inmunización", "Laboratorio", "Liberación de hipoteca", "Masoterapia", "Peluquería y barbería", "Podología", "Quiropraxia", "Reposos médicos", "Sesión educativa", "Servicios sociales", "Terapia de lenguaje (Logopedia)", "Terapia del dolor", "Terapia ocupacional", "Tipiaje", "Trabajo social"];
+const especialidades = ["Alergología", "Cardiología", "Cirugía general", "Dermatología", "Fisiatría", "Foniatría", "Gastroenterología", "Geriatría", "Ginecología y obstetricia", "Infectología", "Medicina familiar", "Medicina General", "Medicina interna", "Medicina ocupacional", "Nefrología", "Neumología", "Neurología", "Nutrición", "Odontología", "Oftalmología", "Oncología", "Optometría", "Pediatría", "Psicología", "Psiquiatría", "Reumatología", "Traumatología", "Urología"];
+const servicios = ["Actividades recreativas", "Afiliación", "Agudeza visual", "Aplicación de flúor", "Asesoría legal", "Bienestar social", "Captación odontológica", "Captación quirúrgica general", "Captación quirúrgica oftalmológica", "Charlas odontológicas", "Citología", "Control de glicemia", "Control de talla y peso", "Desparasitación", "Despistaje de glicemia capilar", "Despistaje HTA", "Ecografía", "Electrocardiograma", "Espirometría", "Farmacia", "Fisioterapia", "Fonoaudiología", "Gerontología", "Ingeniería biomédica", "Inmunización", "Laboratorio", "Liberación de hipoteca", "Masoterapia", "Peluquería y barbería", "Podología", "Psicopedagogía", "Quiropraxia", "Reposos médicos", "Sesión educativa", "Servicios sociales", "Terapia de lenguaje (Logopedia)", "Terapia del dolor", "Terapia ocupacional", "Tipiaje", "Trabajo social"];
 const vacunas = ["Fiebre amarilla", "Pentavalente", "Polio IPV", "Polio oral", "Toxoide (tetánico/diftérico)", "Trivalente viral (SRP)"];
 const quirurgica = ["Bocio hiperfuncionante", "Colectomía", "Enfermedad hemorroidal", "Esterilización", "Fibromatosis", "Fimosis", "Hernia abdominal", "Hernia epigástrica", "Hernia escrotal", "Hernia inguinal", "Hernia umbilical", "Hidrocele", "Histerectomía", "Lipomas", "Litiasis vesicular (Colecistectomía)", "Lunares", "Miomatosis uterina", "Nevus", "Nódulos mamarios simples", "Paridad satisfecha", "Prolapso", "Quiste (TU)", "Quiste de epidídimo", "Quiste sebáceo", "Quiste tirogloso", "Quistes sebáceos", "Tumores ováricos", "Varicocele", "Vasectomía", "Verrugas"];
 const pediatrica = ["Criptorquidias", "Fimosis", "Hernia epigástrica", "Hernia inguinal", "Hernia umbilical", "Hidrocele", "Quiste tirogloso", "Varicocele"];
@@ -10283,9 +10283,39 @@ function panelVerArte() {
 }
 async function panelEnviarTelegram() {
     if (!selectedRequestId || !selectedRequestData?.ArteFinal) return;
-    if(!confirm("¿Enviar el arte de " + selectedRequestId + " a Telegram?")) return;
-    
-    // Mostrar progreso en el panel en lugar de loadingOverlay
+
+    // ✅ MODAL DE CONFIRMACIÓN CON SWEETALERT2 (reemplaza confirm() nativo)
+    const confirmResult = await Swal.fire({
+        title: '✈️ Enviar Arte a Telegram',
+        html: `
+            <div style="text-align: left; font-size: 0.95rem; background: #f8f9fa; color: #212529; padding: 15px; border-radius: 8px; border-left: 4px solid #0799b6;">
+                <p style="margin: 8px 0; color: #212529;"><b style="color: #0799b6;">🆔 ID:</b> ${selectedRequestId}</p>
+                <p style="margin: 8px 0; color: #212529;"><b style="color: #0799b6;">📎 Archivo:</b> ${selectedRequestData.ArteFinal.split('/').pop() || 'Arte final'}</p>
+                <p style="margin: 8px 0; color: #212529;"><b style="color: #0799b6;">✈️ Destino:</b> Telegram (alta calidad)</p>
+            </div>
+            <p style="margin-top: 15px; color: #666; font-size: 0.9rem;">¿Confirmas que deseas enviar el arte a Telegram?</p>
+        `,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: '✈️ Sí, Enviar a Telegram',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#0799b6',
+        cancelButtonColor: '#6c757d',
+        reverseButtons: true,
+        focusCancel: true
+    });
+
+    if (!confirmResult.isConfirmed) return;
+
+    // Mostrar loading mientras se envía
+    Swal.fire({
+        title: 'Enviando a Telegram...',
+        html: 'Transmitiendo archivo en alta calidad',
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading()
+    });
+
+    // Mostrar progreso en el panel también
     const panelStatus = document.getElementById('selectedRequestContent');
     const originalContent = panelStatus ? panelStatus.innerHTML : '';
     if (panelStatus) {
@@ -10296,20 +10326,33 @@ async function panelEnviarTelegram() {
             </div>
         `;
     }
-    
+
     try {
         const params = new URLSearchParams();
         params.append("action", "sendTelegramArte");
         params.append("id", selectedRequestId);
         const res = await fetch(SCRIPT_URL, { method: 'POST', body: params });
         const data = await res.json();
+
         if(data.success) {
-            openModal("✈️ Telegram", "¡Enviado a Telegram en alta calidad!", "📲");
+            Swal.fire({
+                title: '¡Enviado a Telegram!',
+                html: `El arte fue transmitido en <b>alta calidad</b> exitosamente.`,
+                icon: 'success',
+                confirmButtonColor: '#28a745',
+                timer: 3000,
+                timerProgressBar: true
+            });
         } else {
             throw new Error(data.error);
         }
     } catch (e) {
-        openModal("❌ Error", e.message, "💥");
+        Swal.fire({
+            title: 'Error al enviar',
+            html: `<b style="color: #e74c3c;">${e.message}</b><br><br>Verifica la conexión con Telegram.`,
+            icon: 'error',
+            confirmButtonColor: '#e74c3c'
+        });
     } finally {
         // Restaurar contenido original del panel
         if (panelStatus && originalContent) {
@@ -10322,10 +10365,46 @@ async function panelEnviarCorreo() {
     // Verificar que haya correo electrónico disponible
     const correoUsuario = selectedRequestData.Correo;
     if (!correoUsuario || !correoUsuario.includes('@')) {
-        openModal("", "La solicitud no tiene un correo electrónico válido para enviar el archivo.", "");
+        Swal.fire({
+            title: 'Correo no válido',
+            text: 'La solicitud no tiene un correo electrónico válido para enviar el archivo.',
+            icon: 'warning',
+            confirmButtonColor: '#fb8500'
+        });
         return;
     }
-    if(!confirm("¿Enviar el arte de " + selectedRequestId + " por correo electrónico a " + correoUsuario + "?")) return;
+
+    // ✅ MODAL DE CONFIRMACIÓN CON SWEETALERT2 (reemplaza confirm() nativo)
+    const confirmResult = await Swal.fire({
+        title: '📧 Enviar Arte por Correo',
+        html: `
+            <div style="text-align: left; font-size: 0.95rem; background: #f8f9fa; color: #212529; padding: 15px; border-radius: 8px; border-left: 4px solid #219ebc;">
+                <p style="margin: 8px 0; color: #212529;"><b style="color: #219ebc;">🆔 ID:</b> ${selectedRequestId}</p>
+                <p style="margin: 8px 0; color: #212529;"><b style="color: #219ebc;">✉️ Destinatario:</b> ${correoUsuario}</p>
+                <p style="margin: 8px 0; color: #212529;"><b style="color: #219ebc;">📎 Archivo:</b> ${selectedRequestData.ArteFinal.split('/').pop() || 'Arte final'}</p>
+            </div>
+            <p style="margin-top: 15px; color: #666; font-size: 0.9rem;">¿Confirmas que deseas enviar el arte a este correo?</p>
+        `,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: '📧 Sí, Enviar Correo',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#219ebc',
+        cancelButtonColor: '#6c757d',
+        reverseButtons: true,
+        focusCancel: true
+    });
+
+    if (!confirmResult.isConfirmed) return;
+
+    // Mostrar loading mientras se envía
+    Swal.fire({
+        title: 'Enviando correo...',
+        html: 'Verificando envío en bandeja de salida',
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading()
+    });
+
     // Obtener el botón y guardar su estado original
     const btnCorreo = document.getElementById('admin-email-btn');
     const textoOriginal = btnCorreo.innerHTML;
@@ -10333,6 +10412,7 @@ async function panelEnviarCorreo() {
     btnCorreo.disabled = true;
     btnCorreo.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando...';
     btnCorreo.style.background = 'linear-gradient(to right, #ffa500, #ff8c00)';
+
     try {
         const params = new URLSearchParams();
         params.append("action", "sendEmailArte");
@@ -10341,18 +10421,35 @@ async function panelEnviarCorreo() {
         params.append("username", userCredentials.username);
         const res = await fetch(SCRIPT_URL, { method: 'POST', body: params });
         const data = await res.json();
+
         if(data.success) {
-            showToast(` Correo enviado a ${correoUsuario}`, "success", 3000);
+            Swal.fire({
+                title: '¡Correo Enviado!',
+                html: `El arte fue <b>verificado y enviado</b> exitosamente a:<br><code style="background: #f0f0f0; color: #212529; padding: 4px 8px; border-radius: 4px; font-weight: 600;">${correoUsuario}</code>`,
+                icon: 'success',
+                confirmButtonColor: '#28a745',
+                timer: 3000,
+                timerProgressBar: true
+            });
+
             // Mantener el botón bloqueado y mostrar "Archivo enviado"
             btnCorreo.innerHTML = '📧 Archivo enviado';
             btnCorreo.style.background = 'linear-gradient(to right, #2d6a4f, #1a5435)';
-            btnCorreo.title = `Arte enviado a ${correoUsuario}`;
+            btnCorreo.title = `Arte enviado y verificado a ${correoUsuario}`;
             // No restaurar el botón - permanece bloqueado
         } else {
-            throw new Error(data.error);
+            // Mostrar error específico del backend
+            const errorMsg = data.error || "Error desconocido al enviar correo";
+            throw new Error(errorMsg);
         }
     } catch (e) {
-        showToast("", "error", 5000);
+        Swal.fire({
+            title: 'Error al enviar',
+            html: `<b style="color: #e74c3c;">${e.message}</b><br><br>Verifica que los permisos de Gmail estén configurados correctamente.`,
+            icon: 'error',
+            confirmButtonColor: '#e74c3c'
+        });
+
         // Solo restaurar el botón si hubo error
         btnCorreo.disabled = false;
         btnCorreo.innerHTML = textoOriginal;
