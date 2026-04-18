@@ -7875,16 +7875,30 @@ function arrancarTablaHibrida() {
                 // ✅ FIX CRÍTICO: No procesar RTDB para usuarios básicos
                 // Los usuarios básicos usan cargarDatosUsuarioRegular() que carga desde GAS filtrado por unidad
                 if (window.usuarioRegular && window.usuarioRegular.rol === 'Usuario Básico') {
-                    // No hacer nada - los datos ya fueron cargados por cargarDatosUsuarioRegular()
-                    if (!window.tablaHibridaIniciada) {
-                        window.tablaHibridaIniciada = true;
-                        resolve();
+                    if (!window.tablaHibridaIniciada) { 
+                        window.tablaHibridaIniciada = true; 
+                        resolve(); 
                     }
                     return;
                 }
                 
-                const vivas = snapshot.val() ? Object.values(snapshot.val()) : [];
+                // Mapear los datos de RTDB asegurando que tengan su ID
+                let vivas = snapshot.val() ? Object.entries(snapshot.val()).map(([id, data]) => ({id, ...data})) : [];
                 
+                // 🔴 LÓGICA DE AUTO-SANACIÓN (Caza-fantasmas)
+                // Creamos un Set con los IDs que GAS ya tiene registrados como FINALIZADOS/RECHAZADAS
+                const idsHistoricos = new Set(listaHistoricaGAS.map(h => h.id));
+                
+                vivas = vivas.filter(viva => {
+                    if (idsHistoricos.has(viva.id)) {
+                        // 👻 FANTASMA DETECTADO: Está en RTDB pero GAS dice que ya finalizó.
+                        console.log(`👻 Fantasma detectado y purgado de RTDB: ${viva.id}`);
+                        window.remove(window.ref(window.dbRT, 'solicitudes_vivas/' + viva.id)).catch(e => console.warn(e));
+                        return false; // Lo sacamos de la lista visual inmediatamente
+                    }
+                    return true;
+                });
+
                 // Evitar duplicados: Si está en RTDB (vivo), no mostrar la versión de GAS (placeholder)
                 const idsVivos = new Set(vivas.map(v => v.id));
                 let historicas = listaHistoricaGAS.filter(h => !idsVivos.has(h.id));
@@ -7893,61 +7907,45 @@ function arrancarTablaHibrida() {
                 
                 // ✅ ACTUALIZAR localData para que renderLocalTable() funcione correctamente
                 localData = total.sort((a, b) => {
-                    // Función para obtener timestamp en milisegundos
                     const getTimestampMs = (item) => {
-                        // Prioridad 1: TimestampRaw (formato numérico o Date)
                         if (item.TimestampRaw) {
-                            if (typeof item.TimestampRaw === 'number') {
-                                return item.TimestampRaw;
-                            }
+                            if (typeof item.TimestampRaw === 'number') return item.TimestampRaw;
                             if (typeof item.TimestampRaw === 'string') {
                                 const parsed = new Date(item.TimestampRaw).getTime();
                                 if (!isNaN(parsed)) return parsed;
                             }
                         }
-                        
-                        // Prioridad 2: Timestamp (formato de texto dd/MM/yyyy hh:mm a)
                         if (item.Timestamp) {
                             const parsed = new Date(item.Timestamp).getTime();
                             if (!isNaN(parsed)) return parsed;
                         }
-                        
-                        // Prioridad 3: ID numérico (REQ-1234567890)
                         if (item.id && item.id.startsWith("REQ-")) {
                             const idNum = parseInt(item.id.replace("REQ-", ""));
                             if (!isNaN(idNum)) return idNum;
                         }
-                        
-                        // Fallback: 0
                         return 0;
                     };
-                    
-                    // Ordenar descendente (más reciente primero)
                     return getTimestampMs(b) - getTimestampMs(a);
                 });
                 
-                // Renderizar con tu función de siempre
                 if (typeof renderLocalTable === 'function') {
                     renderLocalTable();
                 } else {
                     console.warn("renderLocalTable no disponible, datos no renderizados");
                 }
                 
-                // ✅ OPTIMIZACIÓN: Log solo cuando hay cambios significativos
                 const totalLength = total.length;
                 if (!window.ultimoTotalHibrido || window.ultimoTotalHibrido !== totalLength) {
                     console.log(`⚡ Tabla híbrida: ${vivas.length} vivas + ${historicas.length} históricas = ${totalLength} total`);
                     window.ultimoTotalHibrido = totalLength;
                 }
                 
-                // Resolver la promesa en la primera ejecución exitosa
                 if (!window.tablaHibridaIniciada) {
                     window.tablaHibridaIniciada = true;
                     resolve();
                 }
             }, (error) => {
                 console.error("❌ Error en tabla híbrida RTDB:", error);
-                // Fallback a Firestore si RTDB falla
                 initRealTimeTable();
                 reject(error);
             });
@@ -8500,227 +8498,90 @@ function updateSearchVisibility() {
         document.getElementById('idNotFoundModal').style.display = 'none';
     }
 }
-// ✅ MODIFICAR FUNCIÓN modStatus PARA DETECTAR FINALIZADA Y USAR PANEL
+// ✅ FUNCIÓN modStatus SIMPLIFICADA CON AUTO-SANACIÓN
 async function modStatus(id, st) {
-    console.log("🔄 === INICIANDO CAMBIO DE ESTADO ===");
-    console.log("  - ID:", id);
-    console.log("  - Nuevo estado:", st);
-    console.log("  - selectedRequestId:", selectedRequestId);
+    if (!id || !st) return;
     
-    if (!id || !st) {
-        console.error("❌ ID o estado inválido");
-        return;
-    }
+    const estatusGuardar = st.toUpperCase().trim();
+    const esFinalizacion = estatusGuardar === "FINALIZADA" || estatusGuardar === "RECHAZADA";
     
+    // 1. ACTUALIZACIÓN VISUAL INMEDIATA
     const pill = document.getElementById('pill-' + id);
-    // ✅ CORRECCIÓN: Si no se encuentra el pill, puede ser que la solicitud ya fue finalizada y movida
-    if (!pill) {
-        console.warn(`⚠️ No se encontró el pill para ID: ${id}. La solicitud puede haber sido finalizada y movida.`);
-        // Continuar con el proceso sin modificar el DOM, ya que el backend ya procesó
-        // Esto evita que falle el proceso de finalización
-    } else {
-        // Solo modificar el DOM si el elemento existe
-        const oldClass = pill.className;
-        const oldText = pill.innerText;
-        // ✅ PROCESAR NUEVO FORMATO: "FINALIZADA|dd/MM/yyyy HH:mm"
-        const cleanStatus = st.trim();
-        const newStatusClass = cleanStatus.toLowerCase().replace(/\s+/g, '');
-        
-        console.log("🎯 Elemento pill encontrado:", !!pill);
-        console.log("📝 Estado actual:", oldText);
-        console.log("🎨 Clase nueva:", `status-${newStatusClass}`);
-        
-        // ✅ Actualizamos a .status-circle y colocamos el texto acortado
+    const oldClass = pill ? pill.className : "";
+    const oldText = pill ? pill.innerText : "";
+    
+    if (pill) {
+        const newStatusClass = estatusGuardar.toLowerCase().replace(/\s+/g, '');
         pill.className = `status-circle status-${newStatusClass}`;
-        pill.innerText = getShortStatus(st);
-        pill.title = `Estado: ${st}`;
-        
-        console.log("✅ UI actualizada localmente");
+        pill.innerText = getShortStatus(estatusGuardar);
     }
     
+    // 2. ACTUALIZAR RTDB (Solo si no es finalización)
+    if (!esFinalizacion) {
+        cambiarEstadoRTDB(id, estatusGuardar, null);
+    }
+
     try {
-        // ✅ SI ES FINALIZADA Y NO HAY DISEÑADOR ASIGNADO, MOSTRAR ALERTA EN PANEL
-        // (Excepto para Nota de Prensa y Copy RRSS que no requieren diseñador)
-        if (st === "FINALIZADA") {
-            const item = localData.find(x => x.id == id);
-            const tipoSolicitud = item?.["Tipo de Solicitud"] || item?.["Solicitud"] || "";
-            const noRequiereDisenador = tipoSolicitud === "Nota de Prensa" || tipoSolicitud === "Copy RRSS";
-            
-            console.log(`🔄 Finalizar: ${id} | Tipo: ${tipoSolicitud} | Diseñador: ${item?.Disenador || 'Sin Asignar'} | Excepción: ${noRequiereDisenador}`);
-            
-            if (!item?.Disenador && !noRequiereDisenador) {
-                console.log("⚠️ No hay diseñador asignado, mostrando alerta");
-                // Abrir panel y mostrar mensaje
-                selectRequest(id);
-                openModal("⚠️ Atención", "Debes asignar un diseñador antes de finalizar la solicitud. Usa el panel lateral.", "👨‍🎨");
-                // Revertir cambio visual solo si el pill existe
-                if (pill) {
-                    pill.className = oldClass;
-                    pill.innerText = oldText;
-                }
-                return;
-            }
-            
-            if (noRequiereDisenador) {
-                console.log(`✅ Excepción: ${tipoSolicitud} no requiere diseñador`);
-            }
-        }
-        
-        console.log("📤 Enviando solicitud al backend...");
-        
-        // ✅ PREPARAR DATOS (sin actualizar RTDB aún para FINALIZADA)
-        const estatusGuardar = st.toUpperCase().trim();
-        const esFinalizacion = estatusGuardar === "FINALIZADA" || estatusGuardar === "RECHAZADA";
-        
-        // ✅ SOLO actualizar RTDB inmediatamente si NO es finalización
-        // Para finalización, esperamos confirmación de GAS primero (evita huérfanos)
-        if (!esFinalizacion) {
-            try {
-                cambiarEstadoRTDB(id, estatusGuardar, null);
-                console.log("🔥 Estatus actualizado en RTDB:", estatusGuardar);
-            } catch(fbErr) {
-                console.error("Error al actualizar estatus en RTDB:", fbErr);
-            }
-        } else {
-            console.log("⏳ Finalización detectada: Esperando confirmación de GAS antes de actualizar RTDB...");
-        }
-        
+        // 3. ENVIAR A GAS (Fuente de verdad)
         const params = new URLSearchParams();
         params.append("action", "updateStatus");
         params.append("id", id);
-        params.append("status", st.toUpperCase().trim());
+        params.append("status", estatusGuardar);
         params.append("username", userCredentials.username);
-        
-        // ✅ Agregar fecha de finalización si el estado es FINALIZADA o RECHAZADA
-        if (st.toUpperCase().trim() === "FINALIZADA" || st.toUpperCase().trim() === "RECHAZADA") {
-            const ahora = new Date();
-            const fechaFormateada = ahora.toLocaleString('es-VE', {
-                day: '2-digit',
-                month: '2-digit', 
-                year: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
-            });
-            params.append("fechaFinalizacion", fechaFormateada);
-            console.log("📅 Fecha de finalización enviada a GAS:", fechaFormateada);
-        }
         params.append("password", userCredentials.password);
-        
-        console.log("🔗 Parámetros enviados: [OCULTOS POR SEGURIDAD]");
-        
-        const response = await fetch(SCRIPT_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: params.toString()
-        });
-        
-        console.log("📥 Respuesta recibida");
-        
-        // ✅ VERIFICAR SI LA RESPUESTA ES JSON VÁLIDO
-        const text = await response.text();
-        console.log("📄 Texto de respuesta:", text);
-        
-        let data;
-        try {
-            data = JSON.parse(text);
-            console.log("✅ JSON parseado correctamente:", data);
-        } catch (e) {
-            console.error("❌ Error parseando JSON:", e);
-            console.error("Respuesta no válida del servidor:", text);
-            throw new Error("Respuesta inválida del servidor");
+
+        if (esFinalizacion) {
+            const ahora = new Date();
+            params.append("fechaFinalizacion", ahora.toLocaleString('es-VE', {
+                day: '2-digit', month: '2-digit', year: 'numeric',
+                hour: '2-digit', minute: '2-digit'
+            }));
         }
-        
+
+        const response = await fetch(SCRIPT_URL, { method: 'POST', body: params });
+        const data = await response.json();
+
         if (data.success) {
-            console.log("✅ Cambio de estado exitoso");
-            const item = localData.find(x => x.id == id);
-            if(item) {
-                item.Estatus = st.toUpperCase().trim();
-                console.log("📊 Datos locales actualizados");
-            }
-            
-            // ✅ CORRECCIÓN: Si es FINALIZADA o RECHAZADA, solo eliminar de RTDB y firebaseActiveData
-            // Las solicitudes finalizadas/rechazadas serán manejadas por GAS como placeholders
-            if (st.toUpperCase() === "FINALIZADA" || st.toUpperCase() === "RECHAZADA") {
-                try {
-                    // Remover de firebaseActiveData si existe
-                    firebaseActiveData = firebaseActiveData.filter(s => s.id !== id);
-                    console.log("✅ Solicitud removida de firebaseActiveData");
+            // 4. SI GAS CONFIRMA Y ES FINALIZACIÓN, ELIMINAR DE RTDB
+            if (esFinalizacion) {
+                // Disparamos el borrado. Si falla por red, no pasa nada, el "Caza-fantasmas" 
+                // lo eliminará la próxima vez que el sistema lea los datos.
+                window.remove(window.ref(window.dbRT, 'solicitudes_vivas/' + id)).catch(e => console.warn(e));
+                
+                // Actualizar la data local para marcarla como histórica
+                const itemIndex = localData.findIndex(x => x.id == id);
+                if (itemIndex > -1) {
+                    localData[itemIndex].Estatus = estatusGuardar;
+                    localData[itemIndex].isPlaceholder = true;
+                    localData[itemIndex].source = "gas";
                     
-                    // Reconstruir localData sin la solicitud finalizada
-                    mergeAndRenderData();
-                    
-                    // 🔥 FIX: GAS ya nos confirmó el éxito arriba en `data.success`. 
-                    // No necesitamos dudarlo. Eliminamos directamente de RTDB.
-                    console.log(`✅ Cambio a FINALIZADA confirmado por GAS. Procediendo a limpiar RTDB...`);
-                    
-                    const resultado = await limpiarSolicitudDeRTDB(id, 5);
-                    
-                    if (resultado.success) {
-                        console.log(`✅ Solicitud ${id} eliminada exitosamente de RTDB`);
-                        showToast(`🗑️ Solicitud archivada correctamente`, "success", 2000);
-                    } else if (resultado.queued) {
-                        console.warn(`⚠️ Solicitud ${id} agregada a cola de limpieza pendiente por conexión lenta`);
-                        showToast(`⏳ Solicitud en cola de limpieza (conexión lenta)`, "warning", 4000);
-                    } else {
-                        console.error(`❌ Error eliminando solicitud ${id} de RTDB:`, resultado.error);
-                    }
-                    
-                    console.log(`ℹ️ Solicitud ${id} finalizada. GAS manejará el historial.`);
-                } catch (error) {
-                    console.error(`❌ Error procesando finalización de solicitud ${id}:`, error);
-                    showToast(`⚠️ Error procesando finalización: ${error.message}`, "error", 3000);
+                    // La agregamos al historial local para que el Caza-fantasmas la reconozca
+                    listaHistoricaGAS.push(localData[itemIndex]);
                 }
+                
+                showToast(`✅ Solicitud ${estatusGuardar.toLowerCase()}`, "success", 2000);
+            } else {
+                const item = localData.find(x => x.id == id);
+                if(item) item.Estatus = estatusGuardar;
+                
+                const toastType = estatusGuardar === "PENDIENTE" ? "info" : 
+                                  estatusGuardar === "PROCESANDO" ? "warning" : "success";
+                showToast(`✅ Estado actualizado a ${estatusGuardar}`, toastType, 2000);
             }
-            
-            // ✅ CORRECCIÓN: Invalidar caché HTML de la página actual para forzar regeneración
+
             invalidateCurrentPageCache("cambio de estado");
-            
             renderLocalTable();
-            updatePaginationControls();
-            
-            // ✅ MOSTRAR TOAST DE ÉXITO SEGÚN EL ESTADO
-            let toastMessage = "";
-            let toastType = "success";
-            
-            switch(st.toUpperCase()) {
-                case "PENDIENTE":
-                    toastMessage = "⏳ Estado cambiado a PENDIENTE";
-                    toastType = "info";  // Azul para pendiente
-                    break;
-                case "PROCESANDO":
-                    toastMessage = "⚙️ Estado cambiado a PROCESANDO";
-                    toastType = "warning";  // Naranja para procesando
-                    break;
-                case "FINALIZADA":
-                    toastMessage = "✅ Estado cambiado a FINALIZADA";
-                    toastType = "success";  // Verde para finalizada
-                    break;
-                case "RECHAZADA":
-                    toastMessage = "❌ Estado cambiado a RECHAZADA";
-                    toastType = "error";
-                    break;
-                default:
-                    toastMessage = `🔄 Estado cambiado a ${st}`;
-                    toastType = "success";
-            }
-            
-            showToast(toastMessage, toastType, 2000);
-            
-            console.log("🔄 === FIN DE CAMBIO DE ESTADO ===");
         } else {
-            console.error("❌ Error del servidor:", data.error);
-            console.log("📊 Debug info del backend:", data.data?.debug || "No hay debug info");
-            throw new Error(data.error || "Error al actualizar estatus");
+            throw new Error(data.error);
         }
     } catch (e) {
-        // Revertir cambio visual solo si el pill existe
-        const pillElement = document.getElementById('pill-' + id);
-        if (pillElement && pillElement) {
-            pillElement.className = oldClass;
-            pillElement.innerText = oldText;
+        console.error("❌ Error:", e);
+        showToast("❌ Error de conexión: " + e.message, "error");
+        // Revertir UI
+        if (pill) {
+            pill.className = oldClass;
+            pill.innerText = oldText;
         }
-        console.error("Error completo:", e);
-        openModal("", "Error de conexión: " + e.message, "");
     }
 }
 // ✅ FUNCIÓN UNIFICADA DE CONTADORES - Interfaz única para todo el sistema
@@ -14481,52 +14342,18 @@ async function esperarPlaceholderGAS(docId, timeoutMs = 10000) {
     return false;
 }
 
-// ✅ FUNCIÓN PARA LIMPIAR SOLICITUD DE RTDB (CICLO DE VIDA) - CON RETRYS ROBUSTOS
-async function limpiarSolicitudDeRTDB(docId, maxRetries = 5) {
-    const registroRef = window.ref(window.dbRT, 'solicitudes_vivas/' + docId);
-    
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
-        try {
-            // Verificar conectividad antes de intentar
-            const isConnected = await verificarConectividadRTDB();
-            if (!isConnected) {
-                console.warn(`⚠️ Intento ${attempt}/${maxRetries}: Sin conectividad RTDB, esperando...`);
-                await delay(Math.min(1000 * Math.pow(2, attempt - 1), 10000)); // Backoff exponencial max 10s
-                continue;
-            }
-            
-            // Intentar eliminación
-            await window.remove(registroRef);
-            console.log(`🧹 Solicitud ${docId} eliminada de RTDB (intento ${attempt})`);
-            
-            // Verificar que realmente se eliminó
-            const existe = await verificarExistenciaRTDB(docId);
-            if (!existe) {
-                console.log(`✅ Verificado: Solicitud ${docId} ya no existe en RTDB`);
-                // Eliminar de cola de pendientes si estaba
-                eliminarDeColaLimpiezaPendiente(docId);
-                return { success: true, attempts: attempt };
-            } else {
-                console.warn(`⚠️ Solicitud ${docId} sigue existiendo después de remove, reintentando...`);
-            }
-        } catch (error) {
-            console.error(`❌ Error intento ${attempt}/${maxRetries} al limpiar RTDB (${docId}):`, error.message);
-            
-            // Si es el último intento, agregar a cola de limpieza pendiente
-            if (attempt === maxRetries) {
-                console.warn(`📝 Agregando ${docId} a cola de limpieza pendiente`);
-                agregarAColaLimpiezaPendiente(docId);
-                return { success: false, error: error.message, queued: true };
-            }
-            
-            // Esperar con backoff exponencial antes de reintentar
-            const delayMs = Math.min(1000 * Math.pow(2, attempt - 1), 10000);
-            console.log(`⏳ Esperando ${delayMs}ms antes de reintentar...`);
-            await delay(delayMs);
-        }
+// ✅ FUNCIÓN PARA LIMPIAR SOLICITUD DE RTDB - SIMPLIFICADA (Fire and Forget)
+// El 'Caza-fantasmas' en arrancarTablaHibrida() se encarga de limpiar fantasmas automáticamente
+async function limpiarSolicitudDeRTDB(docId) {
+    try {
+        const registroRef = window.ref(window.dbRT, 'solicitudes_vivas/' + docId);
+        await window.remove(registroRef);
+        console.log(`🗑️ Solicitud ${docId} eliminada de RTDB`);
+        return { success: true };
+    } catch (error) {
+        console.warn(`⚠️ No se pudo eliminar ${docId} de RTDB (el Caza-fantasmas lo limpiará luego):`, error.message);
+        return { success: false, error: error.message };
     }
-    
-    return { success: false, error: "Max retries exceeded", queued: true };
 }
 
 // ✅ FUNCIÓN AUXILIAR: Delay promisificado
@@ -14584,93 +14411,6 @@ async function verificarExistenciaRTDB(docId) {
         return true; // Asumimos que existe para ser conservadores
     }
 }
-
-// ✅ SISTEMA DE COLA DE LIMPIEZA PENDIENTE
-const COLA_LIMPIEZA_KEY = 'sira_cola_limpieza_rtdb';
-
-function agregarAColaLimpiezaPendiente(docId) {
-    try {
-        const cola = JSON.parse(localStorage.getItem(COLA_LIMPIEZA_KEY) || '[]');
-        if (!cola.includes(docId)) {
-            cola.push({ id: docId, timestamp: Date.now(), retries: 0 });
-            localStorage.setItem(COLA_LIMPIEZA_KEY, JSON.stringify(cola));
-            console.log(`📝 Solicitud ${docId} agregada a cola de limpieza pendiente`);
-        }
-    } catch (e) {
-        console.error("Error agregando a cola:", e);
-    }
-}
-
-function eliminarDeColaLimpiezaPendiente(docId) {
-    try {
-        const cola = JSON.parse(localStorage.getItem(COLA_LIMPIEZA_KEY) || '[]');
-        const nuevaCola = cola.filter(item => item.id !== docId);
-        localStorage.setItem(COLA_LIMPIEZA_KEY, JSON.stringify(nuevaCola));
-    } catch (e) {
-        console.error("Error eliminando de cola:", e);
-    }
-}
-
-// ✅ FUNCIÓN DE PROCESAMIENTO DE COLA PENDIENTE (ejecutar periódicamente)
-async function procesarColaLimpiezaPendiente() {
-    try {
-        const cola = JSON.parse(localStorage.getItem(COLA_LIMPIEZA_KEY) || '[]');
-        if (cola.length === 0) return;
-        
-        console.log(`🧹 Procesando cola de limpieza: ${cola.length} solicitudes pendientes`);
-        const nuevaCola = [];
-        
-        for (const item of cola) {
-            // Solo reintentar si no ha excedido los 10 intentos y no ha expirado (24 horas)
-            if (item.retries < 10 && (Date.now() - item.timestamp) < 24 * 60 * 60 * 1000) {
-                console.log(`🔍 Verificando placeholder para ${item.id} antes de limpiar...`);
-                
-                // ✅ PRIMERO verificar que GAS tiene el placeholder
-                const placeholderExiste = await esperarPlaceholderGAS(item.id, 8000);
-                
-                if (!placeholderExiste) {
-                    console.warn(`⚠️ Placeholder no encontrado para ${item.id}. Reintentando más tarde...`);
-                    item.retries++;
-                    nuevaCola.push(item);
-                    continue;
-                }
-                
-                console.log(`✅ Placeholder confirmado. Procediendo a limpiar ${item.id}...`);
-                
-                // ✅ Ahora sí intentar limpiar RTDB
-                const resultado = await limpiarSolicitudDeRTDB(item.id, 3);
-                
-                if (!resultado.success && !resultado.queued) {
-                    item.retries++;
-                    nuevaCola.push(item);
-                    console.warn(`⚠️ Limpieza falló para ${item.id}. Intento ${item.retries}/10`);
-                } else if (resultado.queued) {
-                    // Si se encoló por conectividad, mantener en cola sin incrementar retries
-                    nuevaCola.push(item);
-                    console.log(`⏳ ${item.id} en espera por conectividad...`);
-                } else {
-                    console.log(`✅ ${item.id} limpiado exitosamente de RTDB`);
-                }
-            } else {
-                console.log(`🗑️ Solicitud ${item.id} descartada de cola (máximos intentos alcanzados o expirada)`);
-            }
-        }
-        
-        localStorage.setItem(COLA_LIMPIEZA_KEY, JSON.stringify(nuevaCola));
-        
-        if (nuevaCola.length > 0) {
-            console.log(`⏳ Quedan ${nuevaCola.length} solicitudes en cola de limpieza`);
-        } else {
-            console.log(`✅ Cola de limpieza vaciada`);
-        }
-    } catch (e) {
-        console.error("Error procesando cola:", e);
-    }
-}
-
-// ✅ Iniciar procesamiento periódico de cola (cada 30 segundos)
-setInterval(procesarColaLimpiezaPendiente, 30000);
-console.log("🧹 Sistema de cola de limpieza RTDB inicializado (intervalo: 30s)");
 
 // ✅ FUNCIÓN PARA ACTUALIZAR ESTADO O DISEÑADOR
 function cambiarEstadoRTDB(docId, nuevoEstado, proDisenador) {
