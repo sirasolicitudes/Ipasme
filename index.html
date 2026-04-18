@@ -15950,7 +15950,7 @@ function processDesignerData(designerData, logPrefix = '') {
         console.warn(`${logPrefix} ⚠️ Datos de diseñadores inválidos:`, designerData);
         return [];
     }
-    
+
     // Si es un objeto con propiedades, convertir a array
     let dataArray = [];
     if (Array.isArray(designerData)) {
@@ -15964,7 +15964,7 @@ function processDesignerData(designerData, logPrefix = '') {
             }
         });
     }
-    
+
     // Estandarizar nombres y procesar datos
     const processedData = dataArray.map(item => {
         const standardName = standardizeDesignerName(item.name || '');
@@ -15975,8 +15975,7 @@ function processDesignerData(designerData, logPrefix = '') {
             color: designerColors[standardName] || '#666'
         };
     });
-    
-    console.log(`${logPrefix} ✅ Datos procesados:`, processedData);
+
     return processedData;
 }
 
@@ -16290,42 +16289,49 @@ function renderActiveStatsTab() {
 
     // Actualizar datos de diseñadores si existen
     if (statsData.porDisenador && Object.keys(statsData.porDisenador).length > 0) {
-        console.log("🔍 Datos de diseñadores recibidos del backend:", statsData.porDisenador);
-        console.log("🔍 Finalizadas por diseñador recibidos del backend:", statsData.finalizadasPorDisenador);
-        
         // ✅ CORREGIDO: Combinar ambos conjuntos de datos (totales + finalizadas)
         const combinedDesignerData = {};
         const designers = ['Bermina', 'Jorsy', 'Xamir', 'Fulan@'];
-        
+
         for (const designer of designers) {
-            combinedDesignerData[designer] = {
-                total: statsData.porDisenador[designer] || 0,
-                finalizadas: statsData.finalizadasPorDisenador[designer] || 0
-            };
+            // El backend puede enviar porDisenador de dos formas:
+            // 1. Como número simple: porDisenador["Bermina"] = 10
+            // 2. Como objeto: porDisenador["Bermina"] = {total: 10, finalizadas: 5}
+            const porDisenadorValor = statsData.porDisenador[designer];
+            let total, finalizadas;
+
+            if (typeof porDisenadorValor === 'object' && porDisenadorValor !== null) {
+                // Nueva estructura del backend: {total, finalizadas}
+                total = porDisenadorValor.total || 0;
+                finalizadas = porDisenadorValor.finalizadas || 0;
+            } else {
+                // Estructura antigua o con finalizadasPorDisenador separado
+                total = porDisenadorValor || 0;
+                finalizadas = statsData.finalizadasPorDisenador?.[designer] || 0;
+            }
+
+            combinedDesignerData[designer] = { total, finalizadas };
         }
-        
+
         // ✅ USAR FUNCIÓN UNIFICADA DE PROCESAMIENTO con datos combinados
         const processedDesigners = processDesignerData(combinedDesignerData, 'renderActiveStatsTab');
-        
+
         // Asegurar que siempre mostremos los 4 diseñadores fijos - FORMATO ESTÁNDAR
         const fixedDesigners = ['Bermina', 'Jorsy', 'Xamir', 'Fulan@'];
         const dataMap = new Map(processedDesigners.map(d => [d.name, d]));
-        
+
         const completeData = fixedDesigners.map(name => {
             const designerData = dataMap.get(name);
             return {
                 nombre: name,
-                // ✅ CAMBIADO: Priorizar finalizadas sobre total
                 finalizadas: designerData ? (designerData.finalizadas || 0) : 0,
                 total: designerData ? (designerData.total || 0) : 0,
                 color: designerColors[name] || '#666'
             };
         });
-        
-        console.log("✅ Array completo de diseñadores procesado:", completeData);
+
         updateDesignerPerformanceChart(completeData);
         updateDesignerPerformanceTable(completeData);
-        console.log("✅ Gráfico de diseñadores actualizado");
     } else {
         console.log("⚠️ No hay datos de diseñadores para mostrar");
         showEmptyChart('designerPerformanceChart', 'No hay datos de diseñadores');
@@ -16376,20 +16382,27 @@ function renderActiveStatsTab() {
         };
         
         // CORREGIDO: Asegurar que datosDisenadores se pasen correctamente con finalizadas reales
+        // Manejar ambas estructuras del backend: número simple u objeto {total, finalizadas}
         if (comparative.current && comparative.current.porDisenador) {
-            comparative.current.datosDisenadores = Object.entries(comparative.current.porDisenador).map(([name, value]) => ({
-                name: name, 
-                total: value || 0,  // ✅ CORREGIDO: value ya es el total directo
-                finalizadas: comparative.current.finalizadasPorDisenador?.[name] || 0  // ✅ Usar finalizadasPorDisenador
-            }));
+            comparative.current.datosDisenadores = Object.entries(comparative.current.porDisenador).map(([name, value]) => {
+                const isObject = typeof value === 'object' && value !== null;
+                return {
+                    name: name,
+                    total: isObject ? (value.total || 0) : (value || 0),
+                    finalizadas: isObject ? (value.finalizadas || 0) : (comparative.current.finalizadasPorDisenador?.[name] || 0)
+                };
+            });
         }
-        
+
         if (comparative.previous && comparative.previous.porDisenador) {
-            comparative.previous.datosDisenadores = Object.entries(comparative.previous.porDisenador).map(([name, value]) => ({
-                name: name, 
-                total: value || 0,  // ✅ CORREGIDO: value ya es el total directo
-                finalizadas: comparative.previous.finalizadasPorDisenador?.[name] || 0  // ✅ Usar finalizadasPorDisenador
-            }));
+            comparative.previous.datosDisenadores = Object.entries(comparative.previous.porDisenador).map(([name, value]) => {
+                const isObject = typeof value === 'object' && value !== null;
+                return {
+                    name: name,
+                    total: isObject ? (value.total || 0) : (value || 0),
+                    finalizadas: isObject ? (value.finalizadas || 0) : (comparative.previous.finalizadasPorDisenador?.[name] || 0)
+                };
+            });
         }
         
         renderComparativeStats(comparative);
