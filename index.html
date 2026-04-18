@@ -232,6 +232,16 @@ padding: 2px 8px; border-radius: 4px; font-size: 0.65rem; font-weight: 800; marg
 .row-correccion-nota-prensa .badge-new { background: white !important; color: #FF6B35 !important; border: 1px solid white !important; }
 .row-correccion-nota-prensa .badge-prioridad { background: white !important; color: #2d6a4f !important; border: 1px solid white !important; }
 .row-correccion-nota-prensa .status-badge { color: white !important; }
+
+/* ✅ ESTILOS PARA CHARLAS O SESIONES EDUCATIVAS - Degradado rojo */
+.row-charlas { background: linear-gradient(135deg, #c0392b 0%, #e74c3c 50%, #ec7063 100%) !important; color: white !important; border-left: 5px solid #c0392b !important; }
+.row-charlas td { color: white !important; font-weight: 600 !important; }
+.row-charlas *, .row-charlas td *, .row-charlas span, .row-charlas div, .row-charlas a, .row-charlas button, .row-charlas .status-badge, .row-charlas .priority-badge { color: white !important; }
+.row-charlas a:hover { color: #cccccc !important; }
+.row-charlas .badge-new { background: white !important; color: #c0392b !important; border: 1px solid white !important; }
+.row-charlas .badge-prioridad { background: white !important; color: #c0392b !important; border: 1px solid white !important; }
+.row-charlas .status-badge { color: white !important; }
+
 @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1;
 } }
 .stats-grid { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
@@ -242,6 +252,7 @@ padding: 8px; border-radius: 12px; text-align: center; color: white; font-weight
 }
 .st-proc { background: var(--amarillo); color: var(--azul-deep); }
 .st-fin { background: var(--verde); }
+.st-rech { background: var(--rojo); }
 /* ✅ ESTILOS PARA CONTADORES DE DISEÑADORES */
 .stat-bermina { background: var(--naranja); color: white; }
 .stat-jorsy { background: var(--azul-deep); color: white; }
@@ -4501,6 +4512,10 @@ Verifica que el ID sea correcto o limpia la búsqueda para ver todas las solicit
 <div class="card-btn certificado-btn" onclick="selectCat(this, 'certificado')" style="background: linear-gradient(135deg, var(--color-san-marino) 0%, var(--color-eden) 100%); color: white; border-color: var(--color-eden);">
     <span style="font-size: 1.2rem;">🏆</span> Certificado o<br>Reconocimiento
 </div>
+<!-- ✅ NUEVO: Botón Charlas o Sesiones Educativas - Degradado rojo -->
+<div class="card-btn charlas-btn" onclick="selectCat(this, 'charlas-educativas')" style="background: linear-gradient(135deg, #c0392b 0%, #e74c3c 50%, #ec7063 100%); color: white; border-color: #c0392b;">
+    <span style="font-size: 1.2rem;">🎓</span> Charlas o<br>Sesiones Educativas
+</div>
 <!-- ✅ NUEVO: Botón Textiles -->
 <div class="card-btn textiles-btn" onclick="selectCat(this, 'textiles')" style="background: linear-gradient(135deg, #8B4513 0%, #CD853F 100%); color: white; border-color: #8B4513;">
     <span style="font-size: 1.2rem;">🧵</span> Textiles
@@ -4609,6 +4624,43 @@ Esta solicitud se procesa de manera inmediata. La fecha está fijada al día act
 <div style="margin-bottom: 15px;">
 <label class="section-title">📝 4. Descripción del Certificado/Reconocimiento *</label>
 <textarea id="certificado-descripcion" class="modern-input" rows="4" style="width: 100%;" placeholder="Describa detalladamente el motivo, actividad o acto conmemorativo por el cual solicita este certificado o reconocimiento..."></textarea>
+</div>
+</div>
+</div>
+
+<!-- FORMULARIO: CHARLAS O SESIONES EDUCATIVAS -->
+<div id="form-charlas-educativas" class="form-type-section hidden">
+<div style="background: linear-gradient(135deg, #c0392b 0%, #e74c3c 50%, #ec7063 100%); border: 2px solid #c0392b; border-radius: 12px; padding: 15px; margin-bottom: 15px;">
+<div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+<span style="font-size: 1.5rem;">🎓</span>
+<span style="font-weight: 800; color: white; font-size: 0.95rem;">CHARLAS Y SESIONES EDUCATIVAS</span>
+</div>
+<p style="margin: 0; font-size: 0.85rem; color: white; line-height: 1.4;">
+Solicitud de diseño para charlas, talleres, cursos o sesiones educativas. Material visual profesional para capacitaciones y eventos de formación.
+</p>
+</div>
+<label class="section-title">🎓 3. SELECCIONE EL TIPO DE ACTIVIDAD *</label>
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+<div class="card-btn charlas-tipo-btn" data-tipo="Charla" onclick="selectTipoCharlaStatic(this, 'Charla')" style="background: linear-gradient(135deg, #c0392b 0%, #e74c3c 50%, #ec7063 100%); color: white; border-color: #c0392b; padding: 12px; text-align: center; font-weight: 600; border-radius: 12px; cursor: pointer; transition: all 0.3s ease; display: flex; align-items: center; justify-content: center; min-height: 50px;">
+<span style="font-size: 1.3rem; margin-right: 8px;">🗣️</span>
+<span style="font-size: 0.9rem; font-weight: 600;">Charla</span>
+</div>
+<div class="card-btn charlas-tipo-btn" data-tipo="Sesión Educativa" onclick="selectTipoCharlaStatic(this, 'Sesión Educativa')" style="background: linear-gradient(135deg, #c0392b 0%, #e74c3c 50%, #ec7063 100%); color: white; border-color: #c0392b; padding: 12px; text-align: center; font-weight: 600; border-radius: 12px; cursor: pointer; transition: all 0.3s ease; display: flex; align-items: center; justify-content: center; min-height: 50px;">
+<span style="font-size: 1.3rem; margin-right: 8px;">📚</span>
+<span style="font-size: 0.9rem; font-weight: 600;">Sesión Educativa</span>
+</div>
+</div>
+<div id="charlas-detalle" style="display: none;">
+<div style="background: #fdf2f2; border: 2px solid #c0392b; border-radius: 12px; padding: 15px; margin-bottom: 15px;">
+<label class="section-title" style="color: #922b21; font-size: 0.9rem;">✅ Tipo seleccionado: <span id="charlas-tipo-texto"></span></label>
+</div>
+<div style="margin-bottom: 15px;">
+<label class="section-title" id="charlas-nombre-label">📝 4. Nombre de la Actividad *</label>
+<input type="text" id="charlas-nombre" class="modern-input" style="width: 100%;" placeholder="Ejemplo: Taller de Primeros Auxilios, Charla sobre Higiene Bucal...">
+</div>
+<div style="margin-bottom: 15px;">
+<label class="section-title">👨‍🏫 5. Ponente(s) *</label>
+<textarea id="charlas-ponentes" class="modern-input" rows="3" style="width: 100%;" placeholder="Nombre y cargo/profesión de los ponentes o facilitadores.&#10;Ejemplo:&#10;- Dra. María González, Médico Cirujano&#10;- Lic. Carlos Pérez, Psicólogo"></textarea>
 </div>
 </div>
 </div>
@@ -4859,6 +4911,10 @@ line-height: 1.4;">
 <span class="stat-label">Finalizada</span>
 <span id="count-fin-admin" class="stat-val"><span class="skeleton"></span></span>
 </div>
+<div class="stat-card stat-mini st-rech">
+<span class="stat-label">Rechazada</span>
+<span id="count-rech-admin" class="stat-val"><span class="skeleton"></span></span>
+</div>
 </div>
 <!-- ✅ CONTADORES PARA USUARIOS REGULARES (SIN CAMBIOS) -->
 <div class="stats-grid" id="stats-panel">
@@ -4866,6 +4922,7 @@ line-height: 1.4;">
 <div class="stat-card st-pend"><span class="stat-label">Pendiente</span><span id="count-pend" class="stat-val"><span class="skeleton"></span></span></div>
 <div class="stat-card st-proc"><span class="stat-label">En Proceso</span><span id="count-proc" class="stat-val"><span class="skeleton"></span></span></div>
 <div class="stat-card st-fin"><span class="stat-label">Finalizada</span><span id="count-fin" class="stat-val"><span class="skeleton"></span></span></div>
+<div class="stat-card st-rech"><span class="stat-label">Rechazada</span><span id="count-rech" class="stat-val"><span class="skeleton"></span></span></div>
 </div>
 <!-- ✅ CONTADOR DE CORREOS (SOLO ADMIN) -->
 <div id="emailQuotaContainer" class="hidden" style="margin-bottom: 10px; padding: 8px 12px; background: linear-gradient(135deg, #fb8500 0%, #023e8a 100%); border-radius: 6px; color: white; box-shadow: 0 2px 8px rgba(251, 133, 0, 0.3);">
@@ -4972,6 +5029,10 @@ line-height: 1.4;">
         <div class="stat-card st-fin">
             <span class="stat-label">Finalizadas</span>
             <span id="stats-count-fin" class="stat-val" style="font-size: 2rem;"><span class="skeleton"></span></span>
+        </div>
+        <div class="stat-card st-rech">
+            <span class="stat-label">Rechazadas</span>
+            <span id="stats-count-rech" class="stat-val" style="font-size: 2rem;"><span class="skeleton"></span></span>
         </div>
     </div>
     <!-- Selector de Período -->
@@ -8038,18 +8099,20 @@ function mergeAndRenderData() {
 
 // Función auxiliar para calcular los contadores globales al vuelo en el frontend
 function calcularStatsRapidas(filas) {
-    let pend = 0, proc = 0, fin = 0;
+    let pend = 0, proc = 0, fin = 0, rech = 0;
     filas.forEach(f => {
         const estado = (f.Estatus || "").trim().toUpperCase();
         if (estado === "PENDIENTE") pend++;
         if (estado === "PROCESANDO") proc++;
         if (estado === "FINALIZADA") fin++;
+        if (estado === "RECHAZADA") rech++;
     });
     return {
         total: filas.length,
         pendiente: pend,
         procesando: proc,
-        finalizada: fin
+        finalizada: fin,
+        rechazada: rech
     };
 }
 
@@ -8598,7 +8661,8 @@ function updateCounters(stats) {
             total: stats.total || 0,
             pendiente: stats.pendiente || stats.pend || 0,
             procesando: stats.procesando || stats.proc || 0,
-            finalizada: stats.finalizada || stats.fin || 0
+            finalizada: stats.finalizada || stats.fin || 0,
+            rechazada: stats.rechazada || stats.rech || 0
         });
     } else {
         globalCountersSystem.updateFromBackend();
@@ -9258,13 +9322,14 @@ function renderLocalTable() {
       if (isPlaceholder) {
         rowClass = "row-placeholder"; // Fuerza el estilo gris/transparente
       } else if (esNueva) {
-        // ✅ TRATAMIENTO ESPECIAL PARA OBITUARIO, CERTIFICADO, TEXTILES, PENDÓN Y CORRECCIÓN NOTA DE PRENSA
+        // ✅ TRATAMIENTO ESPECIAL PARA OBITUARIO, CERTIFICADO, TEXTILES, PENDÓN, CORRECCIÓN NOTA DE PRENSA Y CHARLAS
         const esObituario = solicitudLimpia.toLowerCase().includes("obituario");
         const esCertificado = solicitudLimpia.toLowerCase().includes("certificado");
         const esTextiles = solicitudLimpia.toLowerCase().includes("textiles");
         const esPendon = solicitudLimpia.toLowerCase().includes("pendon") || solicitudLimpia.toLowerCase().includes("pendón");
         const esCorreccionNotaPrensa = solicitudLimpia.toLowerCase().includes("corrección") || solicitudLimpia.toLowerCase().includes("correccion") || solicitudLimpia.toLowerCase().includes("nota de prensa");
         const esCopyRRSS = solicitudLimpia.toLowerCase().includes("copy rrss");
+        const esCharlas = solicitudLimpia.toLowerCase().includes("charlas") || solicitudLimpia.toLowerCase().includes("sesiones educativas");
         
         if (esObituario) {
           rowClass = "row-obituario";
@@ -9278,6 +9343,8 @@ function renderLocalTable() {
           rowClass = "row-correccion-nota-prensa";
         } else if (esCopyRRSS) {
           rowClass = "row-copy-instagram";
+        } else if (esCharlas) {
+          rowClass = "row-charlas";
         } else {
           rowClass = "row-new";
         }
@@ -13037,16 +13104,17 @@ function selectCat(btn, tipo) {
         window.tipoPrendaSeleccionada = null;
         window.tipoPendonSeleccionado = null;
         window.tipoPublicacionSeleccionado = null;
+        window.tipoCharlaSeleccionado = null;
         
         // Limpiar selecciones visuales de botones estáticos
-        document.querySelectorAll('.certificado-tipo-btn, .textiles-tipo-btn, .pendon-tipo-btn, .correccion-tipo-btn, .instagram-tipo-btn').forEach(b => {
+        document.querySelectorAll('.certificado-tipo-btn, .textiles-tipo-btn, .pendon-tipo-btn, .correccion-tipo-btn, .instagram-tipo-btn, .charlas-tipo-btn').forEach(b => {
             b.classList.remove('selected');
             b.style.transform = 'scale(1)';
             b.style.boxShadow = 'none';
         });
         
         // Ocultar detalles de formularios estáticos
-        const detallesIds = ['certificado-detalle', 'textiles-detalle', 'pendon-detalle', 'correccion-detalle', 'instagram-detalle'];
+        const detallesIds = ['certificado-detalle', 'textiles-detalle', 'pendon-detalle', 'correccion-detalle', 'instagram-detalle', 'charlas-detalle'];
         detallesIds.forEach(id => {
             const el = document.getElementById(id);
             if (el) el.style.display = 'none';
@@ -13078,6 +13146,7 @@ function selectCat(btn, tipo) {
     const tipoNombres = {
         'obituario': 'Obituario',
         'certificado': 'Certificado o Reconocimiento',
+        'charlas-educativas': 'Charlas o Sesiones Educativas',
         'textiles': 'Textiles',
         'pendon': 'Pendón',
         'correccion-nota-prensa': 'Corrección Nota de Prensa',
@@ -13167,6 +13236,20 @@ function selectCat(btn, tipo) {
         document.getElementById('ubicacion-section').classList.add('hidden');
         document.getElementById('observaciones-section').classList.add('hidden');
         document.getElementById('soportes-section').classList.add('hidden');
+        
+    } else if (tipo === 'charlas-educativas') {
+        // Formulario charlas educativas: formulario estático
+        document.getElementById('form-charlas-educativas').classList.remove('hidden');
+        
+        // Mostrar fecha y hora completas para charlas (son eventos programados)
+        const fechaHoraSection = document.getElementById('fecha-hora-section');
+        if (fechaHoraSection) {
+            const horaDiv = fechaHoraSection.children[1];
+            if (horaDiv) horaDiv.style.display = 'block';
+            const fechaLabel = fechaHoraSection.querySelector('label.section-title');
+            if (fechaLabel) fechaLabel.innerText = "📅 Fecha y hora de la actividad *";
+        }
+        // Ubicación, observaciones y soportes se mantienen visibles para este tipo
         
     } else if (tipo === 'textiles') {
         // Formulario textiles: formulario estático
@@ -13508,6 +13591,41 @@ function selectTipoPendonStatic(btn, tipoPendon) {
     window.tipoPendonSeleccionado = tipoPendon;
 }
 
+function selectTipoCharlaStatic(btn, tipoCharla) {
+    // Limpiar selección anterior
+    document.querySelectorAll('.charlas-tipo-btn').forEach(b => {
+        b.classList.remove('selected');
+        b.style.transform = 'scale(1)';
+        b.style.boxShadow = 'none';
+    });
+    
+    // Seleccionar el botón actual con animación
+    btn.classList.add('selected');
+    btn.style.transform = 'scale(1.05)';
+    btn.style.boxShadow = '0 8px 25px rgba(192, 57, 43, 0.4)';
+    
+    // Mostrar sección de detalle
+    const detalleDiv = document.getElementById('charlas-detalle');
+    const tipoTextoSpan = document.getElementById('charlas-tipo-texto');
+    const nombreLabel = document.getElementById('charlas-nombre-label');
+    
+    if (detalleDiv && tipoTextoSpan) {
+        detalleDiv.style.display = 'block';
+        tipoTextoSpan.innerText = tipoCharla;
+    }
+    
+    // Actualizar el label según el tipo seleccionado
+    if (nombreLabel) {
+        if (tipoCharla === 'Charla') {
+            nombreLabel.innerText = '📝 4. Nombre de la Charla *';
+        } else {
+            nombreLabel.innerText = '📝 4. Nombre de la Sesión Educativa *';
+        }
+    }
+    
+    window.tipoCharlaSeleccionado = tipoCharla;
+}
+
 function selectTipoPublicacionStatic(btn, tipoPublicacion) {
     // Limpiar selección anterior
     document.querySelectorAll('.correccion-tipo-btn').forEach(b => {
@@ -13711,6 +13829,23 @@ if (catType === 'obituario') {
         isValid: () => document.getElementById('textiles-descripcion')?.value.trim() !== '',
         label: 'Detalles de la solicitud de textiles'
     });
+} else if (catType === 'charlas-educativas') {
+    // ✅ VALIDACIÓN ESPECIAL PARA CHARLAS EDUCATIVAS
+    fieldsInOrder.push({
+        id: 'form-charlas-educativas',
+        isValid: () => !!window.tipoCharlaSeleccionado,
+        label: 'Tipo de Actividad (Charla o Sesión Educativa)'
+    });
+    fieldsInOrder.push({
+        id: 'charlas-nombre',
+        isValid: () => document.getElementById('charlas-nombre')?.value.trim() !== '',
+        label: 'Nombre de la actividad'
+    });
+    fieldsInOrder.push({
+        id: 'charlas-ponentes',
+        isValid: () => document.getElementById('charlas-ponentes')?.value.trim() !== '',
+        label: 'Ponente(s)'
+    });
 } else if (catType === 'pendon') {
     // ✅ VALIDACIÓN ESPECIAL PARA PENDÓN
     fieldsInOrder.push({
@@ -13891,6 +14026,17 @@ if (catType === 'obituario') {
     html += `<p><b>👕 Prenda seleccionada:</b> ${window.tipoPrendaSeleccionada || 'No seleccionada'}</p>`;
     const descripcion = document.getElementById('textiles-descripcion')?.value.trim();
     if (descripcion) html += `<p><b>📝 Descripción:</b> ${descripcion}</p>`;
+} else if (catType === 'charlas-educativas') {
+    html += `<p><b>🎓 Tipo:</b> ${window.tipoCharlaSeleccionado || 'No seleccionado'}</p>`;
+    const nombreCharla = document.getElementById('charlas-nombre')?.value.trim();
+    if (nombreCharla) html += `<p><b>📝 Nombre:</b> ${nombreCharla}</p>`;
+    const ponentes = document.getElementById('charlas-ponentes')?.value.trim();
+    if (ponentes) html += `<p><b>👨‍🏫 Ponente(s):</b> ${ponentes}</p>`;
+    const fecha = document.getElementById('fecha')?.value;
+    const hora = document.getElementById('hora')?.value;
+    const ampm = document.querySelector('.btn-time.selected')?.innerText || 'a. m.';
+    if (fecha) html += `<p><b>📅 Fecha:</b> ${fecha}</p>`;
+    if (hora) html += `<p><b>⏰ Hora:</b> ${hora} ${ampm}</p>`;
 } else if (catType === 'pendon') {
     html += `<p><b>🚩 Tamaño del pendón:</b> ${window.tipoPendonSeleccionado || 'No seleccionado'}</p>`;
     // Mostrar medidas si se seleccionó "Otros tamaños"
@@ -14125,6 +14271,37 @@ function realSubmitForm() {
         params.append("Direccion", "");
         params.append("Hora", "N/A");
         params.append("Observaciones", "");
+        params.append("Fecha", fecha);
+
+    } else if (catType === 'charlas-educativas') {
+        const tipoCharla = window.tipoCharlaSeleccionado || '';
+        const nombreCharla = document.getElementById('charlas-nombre')?.value.trim() || '';
+        const ponentes = document.getElementById('charlas-ponentes')?.value.trim() || '';
+        const fecha = document.getElementById('fecha').value;
+        const hora = document.getElementById('hora')?.value || '';
+        const ampm = document.querySelector('.btn-time.selected')?.innerText || 'a. m.';
+        const horaCompleta = hora ? `${hora} ${ampm}` : '';
+        const direccion = document.getElementById('direccion')?.value.trim() || '';
+        const observaciones = document.getElementById('observaciones')?.value.trim() || '';
+        
+        let datosCharlas = "";
+        datosCharlas += "Tipo de Solicitud: Charlas o Sesiones Educativas\n";
+        if (tipoCharla) datosCharlas += "• Tipo: " + tipoCharla + "\n";
+        if (nombreCharla) datosCharlas += "• Nombre: " + nombreCharla + "\n";
+        if (ponentes) datosCharlas += "• Ponente(s): " + ponentes + "\n";
+        // Nota: La hora NO se incluye aquí porque ya se guarda en la columna I (Hora) separadamente
+        
+        let unidadFinal = selectedUnidad.trim();
+        if (!EXCEPCIONES_SIN_UMI.includes(unidadFinal)) {
+            unidadFinal = "U.M.I. " + unidadFinal;
+        }
+        params.append("Unidad", unidadFinal);
+        params.append("Solicitud", catName);
+        params.append("Otros", datosCharlas);
+        params.append("Servicios", "");
+        params.append("Direccion", direccion);
+        params.append("Hora", horaCompleta || "N/A");
+        params.append("Observaciones", observaciones);
         params.append("Fecha", fecha);
 
     } else if (catType === 'pendon') {
@@ -15815,6 +15992,7 @@ let globalCounters = {
     pendiente: 0,
     procesando: 0,
     finalizada: 0,
+    rechazada: 0,
     loaded: false,
     lastUpdate: 0
 };
@@ -15861,20 +16039,22 @@ let globalCountersSystem = {
         const backendStats = await this.fetchRealData();
         
         if (backendStats) {
-            const hasChanged = 
+            const hasChanged =
                 globalCounters.total !== backendStats.total ||
                 globalCounters.pendiente !== backendStats.pendiente ||
                 globalCounters.procesando !== backendStats.procesando ||
-                globalCounters.finalizada !== backendStats.finalizada;
-            
+                globalCounters.finalizada !== backendStats.finalizada ||
+                globalCounters.rechazada !== backendStats.rechazada;
+
             if (hasChanged) {
                 globalCounters.total = backendStats.total || 0;
                 globalCounters.pendiente = backendStats.pendiente || 0;
                 globalCounters.procesando = backendStats.procesando || 0;
                 globalCounters.finalizada = backendStats.finalizada || 0;
+                globalCounters.rechazada = backendStats.rechazada || 0;
                 globalCounters.loaded = true;
                 globalCounters.lastUpdate = Date.now();
-                
+
                 // Actualizar UI de contadores globales
                 this.updateUI();
             }
@@ -15884,21 +16064,23 @@ let globalCountersSystem = {
     // Actualizar contadores globales solo cuando cambian los datos reales (mantener compatibilidad)
     updateFromRealData: function(realTimeStats) {
         if (!realTimeStats) return;
-        
-        const hasChanged = 
+
+        const hasChanged =
             globalCounters.total !== realTimeStats.total ||
             globalCounters.pendiente !== realTimeStats.pendiente ||
             globalCounters.procesando !== realTimeStats.procesando ||
-            globalCounters.finalizada !== realTimeStats.finalizada;
-        
+            globalCounters.finalizada !== realTimeStats.finalizada ||
+            globalCounters.rechazada !== realTimeStats.rechazada;
+
         if (hasChanged) {
             globalCounters.total = realTimeStats.total || 0;
             globalCounters.pendiente = realTimeStats.pendiente || 0;
             globalCounters.procesando = realTimeStats.procesando || 0;
             globalCounters.finalizada = realTimeStats.finalizada || 0;
+            globalCounters.rechazada = realTimeStats.rechazada || 0;
             globalCounters.loaded = true;
             globalCounters.lastUpdate = Date.now();
-            
+
             // Actualizar UI de contadores globales
             this.updateUI();
         }
@@ -15911,18 +16093,21 @@ let globalCountersSystem = {
         const pendEl = document.getElementById('stats-count-pend');
         const procEl = document.getElementById('stats-count-proc');
         const finEl = document.getElementById('stats-count-fin');
+        const rechEl = document.getElementById('stats-count-rech');
 
         // ✅ ACTUALIZAR CONTADORES DE SOLICITUDES (count-*)
         const solTotalEl = document.getElementById('count-total');
         const solPendEl = document.getElementById('count-pend');
         const solProcEl = document.getElementById('count-proc');
         const solFinEl = document.getElementById('count-fin');
+        const solRechEl = document.getElementById('count-rech');
 
         // ✅ ACTUALIZAR CONTADORES ADMIN DE SOLICITUDES (count-*-admin)
         const adminTotalEl = document.getElementById('count-total-admin');
         const adminPendEl = document.getElementById('count-pend-admin');
         const adminProcEl = document.getElementById('count-proc-admin');
         const adminFinEl = document.getElementById('count-fin-admin');
+        const adminRechEl = document.getElementById('count-rech-admin');
 
         if (globalCounters.loaded) {
             // ✅ ACTUALIZAR TODOS LOS CONTADORES CON LOS MISMOS VALORES
@@ -15930,7 +16115,8 @@ let globalCountersSystem = {
                 total: globalCounters.total,
                 pendiente: globalCounters.pendiente,
                 procesando: globalCounters.procesando,
-                finalizada: globalCounters.finalizada
+                finalizada: globalCounters.finalizada,
+                rechazada: globalCounters.rechazada
             };
 
             // Estadísticas
@@ -15938,22 +16124,25 @@ let globalCountersSystem = {
             if (pendEl) pendEl.innerText = values.pendiente;
             if (procEl) procEl.innerText = values.procesando;
             if (finEl) finEl.innerText = values.finalizada;
+            if (rechEl) rechEl.innerText = values.rechazada;
 
             // Solicitudes
             if (solTotalEl) solTotalEl.innerText = values.total;
             if (solPendEl) solPendEl.innerText = values.pendiente;
             if (solProcEl) solProcEl.innerText = values.procesando;
             if (solFinEl) solFinEl.innerText = values.finalizada;
+            if (solRechEl) solRechEl.innerText = values.rechazada;
 
             // Admin
             if (adminTotalEl) adminTotalEl.innerText = values.total;
             if (adminPendEl) adminPendEl.innerText = values.pendiente;
             if (adminProcEl) adminProcEl.innerText = values.procesando;
             if (adminFinEl) adminFinEl.innerText = values.finalizada;
+            if (adminRechEl) adminRechEl.innerText = values.rechazada;
 
         } else {
             // Mostrar skeletons en todos los elementos si no están cargados
-            const allElements = [totalEl, pendEl, procEl, finEl, solTotalEl, solPendEl, solProcEl, solFinEl, adminTotalEl, adminPendEl, adminProcEl, adminFinEl];
+            const allElements = [totalEl, pendEl, procEl, finEl, rechEl, solTotalEl, solPendEl, solProcEl, solFinEl, solRechEl, adminTotalEl, adminPendEl, adminProcEl, adminFinEl, adminRechEl];
             allElements.forEach(el => {
                 if (el && (!el.innerText || el.innerText === '0' || el.innerText.includes('skeleton'))) {
                     el.innerHTML = '<span class="skeleton"></span>';
@@ -15973,12 +16162,14 @@ let globalCountersSystem = {
             const pendEl = document.getElementById('stats-count-pend');
             const procEl = document.getElementById('stats-count-proc');
             const finEl = document.getElementById('stats-count-fin');
+            const rechEl = document.getElementById('stats-count-rech');
 
             // Actualizar siempre con los datos disponibles
             if (totalEl) totalEl.innerText = globalCounters.total || 0;
             if (pendEl) pendEl.innerText = globalCounters.pendiente || 0;
             if (procEl) procEl.innerText = globalCounters.procesando || 0;
             if (finEl) finEl.innerText = globalCounters.finalizada || 0;
+            if (rechEl) rechEl.innerText = globalCounters.rechazada || 0;
         }
     },
     
