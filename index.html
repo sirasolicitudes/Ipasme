@@ -4074,7 +4074,7 @@ min-width: 100%;
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js";
   // Importamos Auth
-  import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-auth.js";
+  import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-auth.js";
   // ✅ Agregamos onSnapshot, orderBy, limit, persistencia, getDocs, deleteDoc y writeBatch a la importación de firestore
   import { getFirestore, collection, query, where, getCountFromServer, doc, setDoc, getDoc, updateDoc, onSnapshot, orderBy, limit, enableIndexedDbPersistence, getDocs, deleteDoc, writeBatch, runTransaction } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js";
   // ✅ Importar Realtime Database para optimización de ancho de banda
@@ -4107,6 +4107,42 @@ min-width: 100%;
       console.warn("⚠️ El navegador no soporta persistencia local.");
     } else {
       console.warn("⚠️ Error al activar persistencia:", err);
+    }
+  });
+
+  // ✅ LISTENER CRÍTICO: Detectar cuando la sesión de Firebase expira
+  // Esto maneja los errores 403 en securetoken.googleapis.com
+  onAuthStateChanged(auth, (user) => {
+    if (!user) {
+      // Usuario no autenticado o sesión expirada
+      console.warn("🔴 Sesión de Firebase expirada o inválida detectada por onAuthStateChanged");
+      
+      // Verificar si había una sesión activa en localStorage
+      const hadSession = localStorage.getItem('isLoggedIn') === 'true' || 
+                        localStorage.getItem('userSession') || 
+                        localStorage.getItem('currentUser');
+      
+      if (hadSession) {
+        console.warn("🚫 Sesión previa detectada pero Firebase rechazó la autenticación. Forzando logout...");
+        
+        // Limpiar localStorage
+        localStorage.removeItem('isLoggedIn');
+        localStorage.removeItem('userSession');
+        localStorage.removeItem('currentUser');
+        localStorage.removeItem('userType');
+        
+        // Mostrar toast de error
+        if (typeof showToast === 'function') {
+          showToast("🔴 Sesión expirada. Por favor, inicia sesión nuevamente.", "error", 5000);
+        }
+        
+        // Forzar recarga a login después de breve delay
+        setTimeout(() => {
+          window.location.reload();
+        }, 3000);
+      }
+    } else {
+      console.log("🟢 Estado de autenticación válido confirmado:", user.email);
     }
   });
 
@@ -7549,7 +7585,33 @@ async function sincronizacionForzadaRTDB() {
         showToast("✅ Datos sincronizados", "success", 2000);
     } catch (error) {
         console.error("❌ Error en sincronización forzada:", error);
-        showToast("⚠️ Error sincronizando: " + error.message, "error", 4000);
+        
+        // ✅ DETECTAR ERRORES DE AUTENTICACIÓN ESPECÍFICAMENTE
+        const errorMessage = error.message || error.toString();
+        const isAuthError = errorMessage.includes('403') || 
+                           errorMessage.includes('permission_denied') ||
+                           errorMessage.includes('authentication') ||
+                           errorMessage.includes('unauthenticated') ||
+                           errorMessage.includes('token') ||
+                           errorMessage.includes('auth');
+        
+        if (isAuthError) {
+            console.error("🔴 Error de autenticación detectado. La sesión ha expirado.");
+            showToast("🔴 Sesión expirada. Recarga la página para iniciar sesión nuevamente.", "error", 8000);
+            
+            // Actualizar indicador a estado desconectado
+            rtdbConnectivity.isConnected = false;
+            actualizarIndicadorConectividad();
+            
+            // Limpiar sesión local para forzar re-login
+            setTimeout(() => {
+                localStorage.removeItem('isLoggedIn');
+                localStorage.removeItem('userSession');
+                localStorage.removeItem('currentUser');
+            }, 1000);
+        } else {
+            showToast("⚠️ Error sincronizando: " + error.message, "error", 4000);
+        }
     } finally {
         rtdbConnectivity.isSyncing = false;
     }
@@ -14544,6 +14606,14 @@ async function verificarConectividadRTDB(timeoutMs = 8000) {
         // ✅ PASO 1: Verificar si el navegador reporta conexión a internet
         if (typeof navigator !== 'undefined' && !navigator.onLine) {
             console.warn("📡 Navegador reporta sin conexión a internet (navigator.onLine = false)");
+            return false;
+        }
+        
+        // ✅ PASO 1.5: Verificar si hay un usuario autenticado en Firebase Auth
+        // Esto detecta temprano problemas de sesión expirada (errores 403)
+        const currentUser = window.auth?.currentUser;
+        if (!currentUser) {
+            console.warn("🔴 No hay usuario autenticado en Firebase Auth. Posible sesión expirada.");
             return false;
         }
         
