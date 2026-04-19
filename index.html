@@ -1261,17 +1261,6 @@ padding: 12px; border-radius: 15px; font-weight: 800; width: 100%; margin-top: 2
     overflow: hidden !important;
 }
 
-#modalAlert .modal-content::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255, 215, 0, 0.1), transparent);
-    animation: adminModalShimmer 3s infinite;
-}
-
 #modalAlert #modalIcon {
     /* Sin gradiente por defecto - color original del emoji */
     animation: adminIconPulse 2s infinite !important;
@@ -1411,11 +1400,6 @@ padding: 12px; border-radius: 15px; font-weight: 800; width: 100%; margin-top: 2
     }
 }
 
-@keyframes adminModalShimmer {
-    0% { left: -100%; }
-    50% { left: 100%; }
-    100% { left: -100%; }
-}
 
 @keyframes adminIconPulse {
     0%, 100% {
@@ -2210,23 +2194,6 @@ width: 100%;
 text-align: center;
 box-shadow: 0 25px 50px rgba(0,0,0,0.3);
 }
-.modal-content::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 100%;
-    height: 4px;
-    background: linear-gradient(90deg, transparent, rgba(7, 153, 182, 0.8), transparent);
-    animation: modalShimmer 3s ease-in-out infinite;
-    z-index: 10;
-    border-radius: 30px 30px 0 0;
-}
-@keyframes modalShimmer {
-    0% { left: -100%; }
-    50% { left: 100%; }
-    100% { left: -100%; }
-}
 .modal-btn {
 padding: 10px;
 font-size: 0.95rem;
@@ -2802,6 +2769,7 @@ animation: badgePulse 2s infinite;
 .btn-email { background-color: #ea4335; }
 .btn-view { background-color: var(--color-bondi); }
 .btn-attach { background-color: var(--azul-deep); }
+.btn-copy { background-color: #17a2b8; } /* Cyan/teal for copy action */
 .btn-pill {
   display: flex;
   align-items: center;
@@ -4319,6 +4287,9 @@ onclick="showLogin()">🔓 ACCESO ADMINISTRADOR</button>
     <button id="admin-email-btn" class="btn-admin-action btn-email" onclick="panelEnviarCorreo()" disabled>
         <span>📧</span> Correo
     </button>
+    <button id="admin-copytext-btn" class="btn-admin-action btn-copy" onclick="panelCopiarTexto()" disabled>
+        <span>📋</span> Extraer información
+    </button>
 </div>
 </div>
 <!-- Acciones Especiales (Solo Admin) -->
@@ -4446,6 +4417,47 @@ Verifica que el ID sea correcto o limpia la búsqueda para ver todas las solicit
 <div style="display: flex; justify-content: center; gap: 15px;">
 <button class="modal-btn" style="background: var(--gris); color: var(--azul-deep);" onclick="closeIdNotFoundModal()">CERRAR</button>
 <button class="modal-btn" style="background: #fb8500; color: white;" onclick="clearSearch()">LIMPIAR BÚSQUEDA</button>
+</div>
+</div>
+</div>
+
+<!-- ✅ MODAL PARA EXTRAER INFORMACIÓN DE SOLICITUD (FORMATO EMAIL) -->
+<div class="modal-overlay" id="copyTextModal" style="display: none;">
+<div class="modal-content" style="max-width: 600px; padding: 25px;">
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+<h2 style="font-weight: 800; color: var(--azul-deep); margin: 0;">📋 Información de Solicitud</h2>
+<button onclick="closeCopyTextModal()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #666;">×</button>
+</div>
+
+<!-- Warning banner for photo supports -->
+<div id="photoWarningBanner" style="display: none; background: #fff3cd; border: 1px solid #ffc107; border-radius: 8px; padding: 12px; margin-bottom: 15px;">
+<div style="display: flex; align-items: center; gap: 10px;">
+<span style="font-size: 1.5rem;">📸</span>
+<div>
+<div style="font-weight: 700; color: #856404;">⚠️ Solicitud con Soportes Fotográficos</div>
+<div style="font-size: 0.9rem; color: #856404;">Esta solicitud tiene soportes adjuntos. Debes buscarlos en el correo electrónico original.</div>
+</div>
+</div>
+</div>
+
+<!-- Text content area (HTML preview) -->
+<div style="background: #f5f5f5; border: 1px solid #dee2e6; border-radius: 8px; padding: 15px; margin-bottom: 20px; max-height: 450px; overflow-y: auto;">
+<div id="copyTextContent" style="background: #ffffff; border-radius: 6px; overflow: hidden;"></div>
+</div>
+
+<!-- Action buttons -->
+<div style="display: flex; gap: 12px; justify-content: center;">
+<button class="modal-btn" style="background: var(--turquesa); color: white; display: flex; align-items: center; gap: 8px;" onclick="copyTextToClipboard()">
+<i class="fas fa-copy"></i> Copiar al Portapapeles
+</button>
+<button class="modal-btn" style="background: var(--gris); color: var(--azul-deep);" onclick="closeCopyTextModal()">
+Cerrar
+</button>
+</div>
+
+<!-- Copy success message -->
+<div id="copySuccessMsg" style="display: none; margin-top: 15px; padding: 10px; background: #d4edda; border: 1px solid #c3e6cb; border-radius: 6px; text-align: center; color: #155724;">
+✅ Texto copiado exitosamente al portapapeles
 </div>
 </div>
 </div>
@@ -10076,6 +10088,8 @@ function enablePanelButtons() {
     document.getElementById('admin-view-btn').disabled = !selectedRequestData?.ArteFinal;
     document.getElementById('admin-telegram-btn').disabled = !selectedRequestData?.ArteFinal;
     // ✅ El botón de correo se maneja en updatePanelContent() para validar el asterisco
+    // ✅ Botón de copiar texto - disponible para Admin y Diseñador
+    document.getElementById('admin-copytext-btn').disabled = false;
     // Botones especiales de Admin
     if (isAdmin) {
         document.getElementById('btnEliminar').disabled = false;
@@ -10446,6 +10460,221 @@ async function panelEnviarCorreo() {
         btnCorreo.style.background = '';
     }
 }
+
+// ✅ FUNCIÓN PARA MOSTRAR TEXTO DE SOLICITUD EN FORMATO EMAIL (COPIAR)
+async function panelCopiarTexto() {
+    if (!selectedRequestId) {
+        showToast("Selecciona una solicitud primero", "warning");
+        return;
+    }
+
+    // Show loading
+    Swal.fire({
+        title: 'Cargando datos...',
+        html: 'Obteniendo información completa de la solicitud',
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading()
+    });
+
+    try {
+        // Get full data from backend
+        const params = new URLSearchParams();
+        params.append("action", "getRequestData");
+        params.append("id", selectedRequestId);
+        params.append("username", userCredentials.username);
+        params.append("password", userCredentials.password);
+
+        const res = await fetch(SCRIPT_URL, { method: 'POST', body: params });
+        const data = await res.json();
+
+        Swal.close();
+
+        if (!data.success) {
+            showToast(data.error || "Error al obtener datos", "error");
+            return;
+        }
+
+        // Format the text like an email
+        const requestData = data.data;
+        const formattedHTML = formatRequestAsEmail(requestData);
+
+        // Show the modal with HTML content
+        document.getElementById('copyTextContent').innerHTML = formattedHTML;
+
+        // Show/hide photo warning banner (for non-HTML display)
+        const photoBanner = document.getElementById('photoWarningBanner');
+        const hasPhotos = requestData.Soportes && requestData.Soportes.toString().trim() !== '' && requestData.Soportes.toString() !== '0' && requestData.Soportes.toString() !== 'NO';
+        photoBanner.style.display = hasPhotos ? 'block' : 'none';
+
+        // Show the modal
+        document.getElementById('copyTextModal').style.display = 'flex';
+        document.getElementById('copySuccessMsg').style.display = 'none';
+
+        // Store the HTML for copying
+        window.currentEmailHTML = formattedHTML;
+
+    } catch (e) {
+        Swal.close();
+        console.error("Error cargando datos:", e);
+        showToast("Error al cargar datos de la solicitud", "error");
+    }
+}
+
+// ✅ FUNCIÓN PARA FORMATEAR SOLICITUD COMO EMAIL (MISMO FORMATO QUE EL CORREO)
+function formatRequestAsEmail(data) {
+    const solicitud = (data.Solicitud || '').toUpperCase();
+    const solUpper = solicitud;
+
+    // 1. DEFINIR TEMÁTICA VISUAL SEGÚN EL TIPO DE SOLICITUD (igual que el backend)
+    let theme = { bg: "#023047", accent: "#219ebc", icon: "&#128203;" }; // Default
+
+    if (solUpper.includes("OBITUARIO")) {
+        theme = { bg: "#2c3e50", accent: "#7f8c8d", icon: "&#9904;" };
+    } else if (solUpper.includes("CERTIFICADO") || solUpper.includes("RECONOCIMIENTO")) {
+        theme = { bg: "#114c5f", accent: "#0799b6", icon: "&#127942;" };
+    } else if (solUpper.includes("TEXTILES")) {
+        theme = { bg: "#8B4513", accent: "#CD853F", icon: "&#129525;" };
+    } else if (solUpper.includes("PENDÓN") || solUpper.includes("PENDON")) {
+        theme = { bg: "#6B4EE6", accent: "#9B7BFF", icon: "&#128681;" };
+    } else if (solUpper.includes("CORRECCIÓN") || solUpper.includes("CORRECCION") || solUpper.includes("NOTA DE PRENSA")) {
+        theme = { bg: "#2d6a4f", accent: "#52b788", icon: "&#128240;" };
+    } else if (solUpper.includes("CHARLAS") || solUpper.includes("SESIONES EDUCATIVAS")) {
+        theme = { bg: "#c0392b", accent: "#e74c3c", icon: "&#127891;" };
+    }
+
+    // 2. FUNCIÓN AUXILIAR PARA RENDERIZAR CAMPOS (igual que el backend)
+    function renderField(label, value) {
+        if (!value || value === "N/A" || value === "Ninguno" || value.trim() === "") return "";
+        // Convertir saltos de línea a <br>
+        const formattedValue = value.replace(/\n/g, "<br>");
+        return `<div style="margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid #f1f5f9;">
+<b style="color: ${theme.accent}; font-size: 14px; display: block; margin-bottom: 4px;">${label}</b>
+<div style="font-size: 14px; line-height: 1.6; color: #333;">${formattedValue}</div>
+</div>`;
+    }
+
+    // 3. CONSTRUIR EL HTML (igual que el backend)
+    let html = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Solicitud SIRA 3.0</title>
+</head>
+<body style="margin: 0; padding: 20px; background-color: #f5f5f5;">
+<div style="font-family: Arial, sans-serif; color: #333; max-width: 550px; margin: auto; border: 1px solid #edf2f4; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.05); background: #ffffff;">`;
+
+    // Cabecera Dinámica (Color e Icono)
+    html += `<div style="background: ${theme.bg}; padding: 20px; text-align: center;">
+<h2 style="color: #ffffff; margin: 0; font-size: 18px; letter-spacing: 1px;">${theme.icon} SOLICITUD: ${data.id || 'N/A'}</h2>
+</div>`;
+
+    html += `<div style="padding: 25px; background: #ffffff;">`;
+
+    // Información Principal
+    html += renderField("Unidad Solicitante", data.Unidad);
+    html += renderField("Tipo de Solicitud", data.Solicitud);
+
+    // Detalles: Separar el procesamiento de "Especiales" de las Regulares
+    if (solUpper.match(/OBITUARIO|CERTIFICADO|RECONOCIMIENTO|TEXTILES|PENDÓN|PENDON|CORRECCIÓN|CORRECCION|NOTA DE PRENSA|CHARLAS|SESIONES EDUCATIVAS|OTROS/)) {
+        html += renderField("Detalles del Requerimiento", data.Otros);
+    } else {
+        // Contar items para determinar singular o plural
+        const countDetalle = data.Detalle ? (data.Detalle.match(/•/g) || []).length : 0;
+        const countServicios = data.Servicios ? (data.Servicios.match(/•/g) || []).length : 0;
+
+        let tituloDetalle = countDetalle === 1 ? "Especialidad" : "Especialidades";
+        if (solUpper.includes("VACUNACIÓN")) tituloDetalle = countDetalle === 1 ? "Vacuna" : "Esquema de vacunas";
+        else if (solUpper.includes("QUIRÚRGICA")) tituloDetalle = countDetalle === 1 ? "Patología" : "Patologías";
+        else if (solUpper.includes("ESCUELA")) tituloDetalle = countDetalle === 1 ? "Especialidad médica" : "Especialidades médicas";
+
+        const tituloServicios = countServicios === 1 ? "Servicio adicional" : "Servicios adicionales";
+
+        html += renderField(tituloDetalle, data.Detalle);
+        html += renderField(tituloServicios, data.Servicios);
+    }
+
+    // Logística (Fecha, Hora, Dirección)
+    const labelFecha = solUpper.match(/TEXTILES|PENDÓN|PENDON|CORRECCIÓN|CORRECCION|NOTA DE PRENSA/) ? "Fecha límite de Entrega" : "Fecha de Actividad";
+    html += renderField(labelFecha, data.Fecha);
+    html += renderField("Hora de inicio", data.Hora);
+    html += renderField("Dirección / Institución", data.Direccion);
+
+    // Contacto de la solicitud
+    const telValido = data.Telefono ? data.Telefono : "Sin teléfono";
+    const emailValido = data.Correo && data.Correo.includes('@') ? data.Correo : "Sin correo válido";
+    html += renderField("Contacto", telValido + " | " + emailValido);
+
+    // Caja de Observaciones (Solo si el usuario escribió algo)
+    if (data.Observaciones && data.Observaciones.trim() !== "") {
+        html += `<div style="margin-top: 15px; padding: 15px; background: #fdf2e9; border-radius: 8px; border-left: 4px solid #fb8500;">
+<b style="color: #fb8500; font-size: 14px; display: block; margin-bottom: 6px;">Observaciones</b>
+<div style="font-size: 14px; color: #5d4600; line-height: 1.5;">${data.Observaciones.replace(/\n/g, "<br>")}</div>
+</div>`;
+    }
+
+    html += `</div></div>`;
+
+    // 4. VALIDACIÓN DE ENVÍO (advertencia de soportes fotográficos)
+    if (data.Soportes && data.Soportes.toString().trim() !== '' && data.Soportes.toString() !== '0' && data.Soportes.toString() !== 'NO') {
+        html += `<div style="margin-top: 15px; padding: 15px; background: #fff3cd; border: 1px solid #ffc107; border-radius: 8px;">
+<b style="color: #856404; font-size: 14px; display: block; margin-bottom: 6px;">⚠️ Soportes Fotográficos Adjuntos</b>
+<div style="font-size: 14px; color: #856404; line-height: 1.5;">
+Esta solicitud tiene <b>${data.Soportes}</b> fotográficos adjuntos. Busca los archivos en el correo electrónico original enviado a la bandeja de entrada.
+</div>
+</div>`;
+    }
+
+    html += `</body>
+</html>`;
+
+    return html;
+}
+
+// ✅ FUNCIÓN PARA CERRAR MODAL DE COPIAR TEXTO
+function closeCopyTextModal() {
+    document.getElementById('copyTextModal').style.display = 'none';
+    document.getElementById('copySuccessMsg').style.display = 'none';
+}
+
+// ✅ FUNCIÓN PARA COPIAR TEXTO AL PORTAPAPELES
+async function copyTextToClipboard() {
+    // Use the stored HTML if available, otherwise fallback to textContent
+    const htmlContent = window.currentEmailHTML || document.getElementById('copyTextContent').innerHTML;
+
+    try {
+        // Try to copy as HTML using Clipboard API with text/html type
+        if (navigator.clipboard.write) {
+            // Modern browsers: copy as HTML
+            const blob = new Blob([htmlContent], { type: 'text/html' });
+            const item = new ClipboardItem({ 'text/html': blob, 'text/plain': new Blob([htmlContent], { type: 'text/plain' }) });
+            await navigator.clipboard.write([item]);
+        } else {
+            // Fallback: copy as plain text
+            await navigator.clipboard.writeText(htmlContent);
+        }
+
+        document.getElementById('copySuccessMsg').style.display = 'block';
+
+        // Hide success message after 3 seconds
+        setTimeout(() => {
+            document.getElementById('copySuccessMsg').style.display = 'none';
+        }, 3000);
+    } catch (err) {
+        console.error('Error al copiar:', err);
+        // Fallback: try plain text
+        try {
+            await navigator.clipboard.writeText(htmlContent);
+            document.getElementById('copySuccessMsg').style.display = 'block';
+            setTimeout(() => {
+                document.getElementById('copySuccessMsg').style.display = 'none';
+            }, 3000);
+        } catch (err2) {
+            showToast("Error al copiar al portapapeles", "error");
+        }
+    }
+}
+
 function panelEliminar() {
     if (!isAdmin || !selectedRequestId) {
         return;
