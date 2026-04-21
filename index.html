@@ -10584,7 +10584,7 @@ function formatRequestAsEmail(data) {
         const countServicios = data.Servicios ? (data.Servicios.match(/•/g) || []).length : 0;
 
         let tituloDetalle = countDetalle === 1 ? "Especialidad" : "Especialidades";
-        if (solUpper.includes("VACUNACIÓN")) tituloDetalle = countDetalle === 1 ? "Vacuna" : "Esquema de vacunas";
+        if (solUpper.includes("INMUNIZACIÓN")) tituloDetalle = countDetalle === 1 ? "Vacuna" : "Esquema de vacunas";
         else if (solUpper.includes("QUIRÚRGICA")) tituloDetalle = countDetalle === 1 ? "Patología" : "Patologías";
         else if (solUpper.includes("ESCUELA")) tituloDetalle = countDetalle === 1 ? "Especialidad médica" : "Especialidades médicas";
 
