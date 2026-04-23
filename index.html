@@ -5033,7 +5033,7 @@ line-height: 1.4;">
 <tr>
 <th>ID SOLICITUD</th>
 <th>FECHA EVENTO</th>
-<th>UNIDAD SOLICITANTE</th>
+<th>SOLICITANTE</th>
 <th>TIPO SOLICITUD</th>
 <th style="text-align:center">SOPORTES</th>
 <th>ESTATUS</th>
@@ -7009,7 +7009,7 @@ const UNIDADES_IPASME_RAW = {
 "Región Oriental": [
 "Anaco", "Barcelona", "Cantaura", "El Tigre",
 "Isidora Agnes, Ciudad Bolívar", "Guasipati",
-"Profa. Mirelva Martínez, San Félix", "Upata", "Maturín",
+"Profª Mirelva Martínez, San Félix", "Upata", "Maturín",
 "Punta de Mata", "Cumaná", "Cumanacoa", "Carúpano",
 "Güiria", "Tucupita", "Casacoima", "La Asunción",
 "Puerto Ayacucho"
@@ -7937,7 +7937,7 @@ function mostrarToastCambiosRTDB(cambios) {
 // ✅ NUEVA FUNCIÓN: Exclusiva para cargar solicitudes de la unidad del usuario regular
 async function cargarDatosUsuarioRegular(page = 1) {
     try {
-        // 🎯 FIX CRÍTICO: Normalizar la unidad al formato que usa GAS (con prefijo U.M.I.)
+        // 🎯 FIX CRÍTICO: Normalizar la unidad al formato que usa GAS (con prefijo Unidad Médica)
         const EXCEPCIONES_SIN_UMI = [
             "C.N.E.D. Dr. Julio de Armas",
             "Centro de Salud para El Buen Vivir Dr. Salvador Allende",
@@ -7951,9 +7951,9 @@ async function cargarDatosUsuarioRegular(page = 1) {
         ];
         
         let unidadFiltro = window.usuarioRegular.unidad;
-        // Si la unidad no tiene prefijo U.M.I. y no es excepción, agregarlo
-        if (unidadFiltro && !unidadFiltro.startsWith("U.M.I.") && !EXCEPCIONES_SIN_UMI.includes(unidadFiltro)) {
-            unidadFiltro = "U.M.I. " + unidadFiltro;
+        // Si la unidad no tiene prefijo Unidad Médica y no es excepción, agregarlo
+        if (unidadFiltro && !unidadFiltro.startsWith("Unidad Médica") && !EXCEPCIONES_SIN_UMI.includes(unidadFiltro)) {
+            unidadFiltro = "Unidad Médica " + unidadFiltro;
         }
         
         console.log("🔧 Unidad original:", window.usuarioRegular.unidad, "→ Normalizada:", unidadFiltro);
@@ -8421,7 +8421,7 @@ designerName: "" // Solo para diseñadores
 };
 
 // Arrays para tipos de cirugía y servicios
-const especialidades = ["Alergología", "Cardiología", "Cirugía general", "Dermatología", "Fisiatría", "Foniatría", "Gastroenterología", "Geriatría", "Ginecología y obstetricia", "Infectología", "Medicina familiar", "Medicina General", "Medicina interna", "Medicina ocupacional", "Nefrología", "Neumología", "Neurología", "Nutrición", "Odontología", "Oftalmología", "Oncología", "Optometría", "Pediatría", "Psicología", "Psiquiatría", "Reumatología", "Traumatología", "Urología"];
+const especialidades = ["Alergología", "Cardiología", "Cirugía general", "Dermatología", "Fisiatría", "Foniatría", "Gastroenterología", "Geriatría", "Ginecología y Obstetricia", "Infectología", "Medicina Familiar", "Medicina General", "Medicina Interna", "Medicina Ocupacional", "Nefrología", "Neumología", "Neurología", "Nutrición", "Odontología", "Oftalmología", "Oncología", "Optometría", "Pediatría", "Psicología", "Psiquiatría", "Reumatología", "Traumatología", "Urología"];
 const servicios = ["Actividades recreativas", "Afiliación", "Agudeza visual", "Aplicación de flúor", "Asesoría legal", "Bienestar social", "Captación odontológica", "Captación quirúrgica general", "Captación quirúrgica oftalmológica", "Charlas odontológicas", "Citología", "Control de glicemia", "Control de talla y peso", "Desparasitación", "Despistaje de glicemia capilar", "Despistaje HTA", "Ecografía", "Electrocardiograma", "Espirometría", "Farmacia", "Fisioterapia", "Fonoaudiología", "Gerontología", "Ingeniería biomédica", "Inmunización", "Laboratorio", "Liberación de hipoteca", "Masoterapia", "Peluquería y barbería", "Podología", "Psicopedagogía", "Quiropraxia", "Reposos médicos", "Sesión educativa", "Servicios sociales", "Terapia de lenguaje (Logopedia)", "Terapia del dolor", "Terapia ocupacional", "Tipiaje", "Trabajo social"];
 const vacunas = ["Fiebre amarilla", "Pentavalente", "Polio IPV", "Polio oral", "Toxoide (tetánico/diftérico)", "Trivalente viral (SRP)"];
 const quirurgica = ["Bocio hiperfuncionante", "Colectomía", "Enfermedad hemorroidal", "Esterilización", "Fibromatosis", "Fimosis", "Hernia abdominal", "Hernia epigástrica", "Hernia escrotal", "Hernia inguinal", "Hernia umbilical", "Hidrocele", "Histerectomía", "Lipomas", "Litiasis vesicular (Colecistectomía)", "Lunares", "Miomatosis uterina", "Nevus", "Nódulos mamarios simples", "Paridad satisfecha", "Prolapso", "Quiste (TU)", "Quiste de epidídimo", "Quiste sebáceo", "Quiste tirogloso", "Quistes sebáceos", "Tumores ováricos", "Varicocele", "Vasectomía", "Verrugas"];
@@ -9620,7 +9620,7 @@ function updateTableHeaders() {
   } else {
     if(thId) thId.innerHTML = 'ID SOLICITUD';
     if(thFechaEvento) thFechaEvento.innerHTML = '🗓️ FECHA EVENTO';
-    if(thUnidad) thUnidad.innerHTML = 'UNIDAD SOLICITANTE';
+    if(thUnidad) thUnidad.innerHTML = 'SOLICITANTE';
     if(thSolicitud) thSolicitud.innerHTML = 'TIPO SOLICITUD';
     
     if (isAdmin) {
@@ -10572,7 +10572,7 @@ function formatRequestAsEmail(data) {
     html += `<div style="padding: 25px; background: #ffffff;">`;
 
     // Información Principal
-    html += renderField("Unidad Solicitante", data.Unidad);
+    html += renderField("Solicitante", data.Unidad);
     html += renderField("Tipo de Solicitud", data.Solicitud);
 
     // Detalles: Separar el procesamiento de "Especiales" de las Regulares
@@ -14497,7 +14497,7 @@ function realSubmitForm() {
         
         let unidadFinal = selectedUnidad.trim();
         if (!EXCEPCIONES_SIN_UMI.includes(unidadFinal)) {
-            unidadFinal = "U.M.I. " + unidadFinal;
+            unidadFinal = "Unidad Médica " + unidadFinal;
         }
         params.append("Unidad", unidadFinal);
         params.append("Solicitud", catName);
@@ -14530,7 +14530,7 @@ function realSubmitForm() {
         
         let unidadFinal = selectedUnidad.trim();
         if (!EXCEPCIONES_SIN_UMI.includes(unidadFinal)) {
-            unidadFinal = "U.M.I. " + unidadFinal;
+            unidadFinal = "Unidad Médica " + unidadFinal;
         }
         params.append("Unidad", unidadFinal);
         params.append("Solicitud", catName);
@@ -14553,7 +14553,7 @@ function realSubmitForm() {
         
         let unidadFinal = selectedUnidad.trim();
         if (!EXCEPCIONES_SIN_UMI.includes(unidadFinal)) {
-            unidadFinal = "U.M.I. " + unidadFinal;
+            unidadFinal = "Unidad Médica " + unidadFinal;
         }
         params.append("Unidad", unidadFinal);
         params.append("Solicitud", catName);
@@ -14584,7 +14584,7 @@ function realSubmitForm() {
         
         let unidadFinal = selectedUnidad.trim();
         if (!EXCEPCIONES_SIN_UMI.includes(unidadFinal)) {
-            unidadFinal = "U.M.I. " + unidadFinal;
+            unidadFinal = "Unidad Médica " + unidadFinal;
         }
         params.append("Unidad", unidadFinal);
         params.append("Solicitud", catName);
@@ -14609,7 +14609,7 @@ function realSubmitForm() {
         
         let unidadFinal = selectedUnidad.trim();
         if (!EXCEPCIONES_SIN_UMI.includes(unidadFinal)) {
-            unidadFinal = "U.M.I. " + unidadFinal;
+            unidadFinal = "Unidad Médica " + unidadFinal;
         }
         params.append("Unidad", unidadFinal);
         params.append("Solicitud", catName);
@@ -14631,7 +14631,7 @@ function realSubmitForm() {
         
         let unidadFinal = selectedUnidad.trim();
         if (!EXCEPCIONES_SIN_UMI.includes(unidadFinal)) {
-            unidadFinal = "U.M.I. " + unidadFinal;
+            unidadFinal = "Unidad Médica " + unidadFinal;
         }
         params.append("Unidad", unidadFinal);
         params.append("Solicitud", catName);
@@ -14651,7 +14651,7 @@ function realSubmitForm() {
         
         let unidadFinal = selectedUnidad.trim();
         if (!EXCEPCIONES_SIN_UMI.includes(unidadFinal)) {
-            unidadFinal = "U.M.I. " + unidadFinal;
+            unidadFinal = "Unidad Médica " + unidadFinal;
         }
         params.append("Unidad", unidadFinal);
         params.append("Solicitud", catName);
@@ -14667,7 +14667,7 @@ function realSubmitForm() {
         // Solicitudes Estándar
         let unidadFinal = selectedUnidad.trim();
         if (!EXCEPCIONES_SIN_UMI.includes(unidadFinal)) {
-            unidadFinal = "U.M.I. " + unidadFinal;
+            unidadFinal = "Unidad Médica " + unidadFinal;
         }
         params.append("Unidad", unidadFinal);
         params.append("Solicitud", catName);
@@ -17924,8 +17924,12 @@ function updateDetailedStats(stats) {
                 // Extraer nombre y conteo: "• 1. U.M.I. Casacoima (8 solicitudes)"
                 const match = line.match(/•\s*\d+\.\s*([^\(]+)\s*\((\d+)\s*solicitudes\)/);
                 if (match) {
-                    const name = match[1].trim();
+                    let name = match[1].trim();
                     const count = match[2];
+                    
+                    // ✅ Quitar prefijo "Unidad Médica" o "U.M.I." para que no se corte el nombre
+                    name = name.replace(/^(Unidad Médica|U\.M\.I\.)\s+/i, '');
+                    
                     return `
                         <li class="stat-card-item">
                             <span class="stat-card-label" title="${name}">${name}</span>
