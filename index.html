@@ -10540,6 +10540,8 @@ function formatRequestAsEmail(data) {
         theme = { bg: "#2d6a4f", accent: "#52b788", icon: "&#128240;" };
     } else if (solUpper.includes("CHARLAS") || solUpper.includes("SESIONES EDUCATIVAS")) {
         theme = { bg: "#c0392b", accent: "#e74c3c", icon: "&#127891;" };
+    } else if (solUpper.includes("COPY RRSS")) {
+        theme = { bg: "#00b4d8", accent: "#90e0ef", icon: "&#128247;" };
     }
 
     // 2. FUNCIÓN AUXILIAR PARA RENDERIZAR CAMPOS (igual que el backend)
@@ -10576,7 +10578,7 @@ function formatRequestAsEmail(data) {
     html += renderField("Tipo de Solicitud", data.Solicitud);
 
     // Detalles: Separar el procesamiento de "Especiales" de las Regulares
-    if (solUpper.match(/OBITUARIO|CERTIFICADO|RECONOCIMIENTO|TEXTILES|PENDÓN|PENDON|CORRECCIÓN|CORRECCION|NOTA DE PRENSA|CHARLAS|SESIONES EDUCATIVAS|OTROS/)) {
+    if (solUpper.match(/OBITUARIO|CERTIFICADO|RECONOCIMIENTO|TEXTILES|PENDÓN|PENDON|CORRECCIÓN|CORRECCION|NOTA DE PRENSA|CHARLAS|SESIONES EDUCATIVAS|COPY RRSS|OTROS/)) {
         html += renderField("Detalles del Requerimiento", data.Otros);
     } else {
         // Contar items para determinar singular o plural
@@ -10596,7 +10598,7 @@ function formatRequestAsEmail(data) {
 
     // Logística (Fecha, Hora, Dirección)
     const labelFecha = solUpper.match(/TEXTILES|PENDÓN|PENDON|CORRECCIÓN|CORRECCION|NOTA DE PRENSA/) ? "Fecha límite de Entrega" : "Fecha de Actividad";
-    html += renderField(labelFecha, data.Fecha);
+    html += renderField(labelFecha, extraerFecha(data.Fecha));
     html += renderField("Hora de inicio", data.Hora);
     html += renderField("Dirección / Institución", data.Direccion);
 
@@ -14137,6 +14139,17 @@ if (catType === 'obituario') {
         isValid: () => document.getElementById('charlas-ponentes')?.value.trim() !== '',
         label: 'Ponente(s)'
     });
+    // ✅ INSTITUCIÓN Y DIRECCIÓN OBLIGATORIAS PARA CHARLAS
+    fieldsInOrder.push({
+        id: 'institucion',
+        isValid: () => document.getElementById('institucion')?.value.trim() !== '',
+        label: 'Institución donde se realizará la actividad'
+    });
+    fieldsInOrder.push({
+        id: 'direccion-exacta',
+        isValid: () => document.getElementById('direccion-exacta')?.value.trim() !== '',
+        label: 'Dirección exacta de la actividad'
+    });
 } else if (catType === 'pendon') {
     // ✅ VALIDACIÓN ESPECIAL PARA PENDÓN
     fieldsInOrder.push({
@@ -14328,6 +14341,12 @@ if (catType === 'obituario') {
     const ampm = document.querySelector('.btn-time.selected')?.innerText || 'a. m.';
     if (fecha) html += `<p><b>📅 Fecha:</b> ${fecha}</p>`;
     if (hora) html += `<p><b>⏰ Hora:</b> ${hora} ${ampm}</p>`;
+    // ✅ INSTITUCIÓN Y DIRECCIÓN PARA CHARLAS
+    const institucion = document.getElementById('institucion')?.value.trim();
+    const direccion = document.getElementById('direccion-exacta')?.value.trim();
+    if (institucion || direccion) {
+        html += `<p><b>🧭 Ubicación:</b> ${[institucion, direccion].filter(x => x).join(', ')}</p>`;
+    }
 } else if (catType === 'pendon') {
     html += `<p><b>🚩 Tamaño del pendón:</b> ${window.tipoPendonSeleccionado || 'No seleccionado'}</p>`;
     // Mostrar medidas si se seleccionó "Otros tamaños"
@@ -14572,7 +14591,9 @@ function realSubmitForm() {
         const hora = document.getElementById('hora')?.value || '';
         const ampm = document.querySelector('.btn-time.selected')?.innerText || 'a. m.';
         const horaCompleta = hora ? `${hora} ${ampm}` : '';
-        const direccion = document.getElementById('direccion')?.value.trim() || '';
+        const institucion = document.getElementById('institucion')?.value.trim() || '';
+        const direccionExacta = document.getElementById('direccion-exacta')?.value.trim() || '';
+        const direccionCompleta = [institucion, direccionExacta].filter(part => part).join(", ");
         const observaciones = document.getElementById('observaciones')?.value.trim() || '';
         
         let datosCharlas = "";
@@ -14590,7 +14611,7 @@ function realSubmitForm() {
         params.append("Solicitud", catName);
         params.append("Otros", datosCharlas);
         params.append("Servicios", "");
-        params.append("Direccion", direccion);
+        params.append("Direccion", direccionCompleta);
         params.append("Hora", horaCompleta || "N/A");
         params.append("Observaciones", observaciones);
         params.append("Fecha", fecha);
