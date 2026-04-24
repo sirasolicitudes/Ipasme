@@ -18743,6 +18743,18 @@ updateStatsTabVisibility();  // ✅ AGREGAR
     function cerrarProgramador() {
         document.getElementById('modal-programador-banners').style.display = 'none';
         archivosParaSubir = [];
+
+        // ✅ RESETEAR BOTÓN al cerrar para evitar que quede atascado en "Guardando..."
+        const btn = document.getElementById('btn-subir-todo');
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-cloud-upload-alt"></i> GUARDAR PROGRAMACIÓN';
+            btn.style.display = 'none'; // Ocultar hasta que haya imágenes nuevas
+        }
+
+        // Limpiar la lista visual de archivos
+        const previewDiv = document.getElementById('preview-masivo');
+        if (previewDiv) previewDiv.innerHTML = '';
     }
 
     // Previsualizar los archivos seleccionados con sus selectores de fecha
@@ -18758,7 +18770,10 @@ updateStatsTabVisibility();  // ✅ AGREGAR
             return;
         }
 
+        // ✅ RESETEAR BOTÓN al seleccionar nuevas imágenes
         btnSubir.style.display = "block";
+        btnSubir.disabled = false;
+        btnSubir.innerHTML = '<i class="fas fa-cloud-upload-alt"></i> GUARDAR PROGRAMACIÓN';
 
         archivosParaSubir.forEach((file, index) => {
             const item = document.createElement('div');
@@ -18851,6 +18866,13 @@ updateStatsTabVisibility();  // ✅ AGREGAR
             showToast("Error al subir algunos archivos", "error");
             btn.disabled = false;
             btn.innerHTML = '<i class="fas fa-cloud-upload-alt"></i> REINTENTAR';
+        } finally {
+            // ✅ Asegurar que el botón se resetee siempre (por si acaso)
+            if (archivosParaSubir.length === 0) {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-cloud-upload-alt"></i> GUARDAR PROGRAMACIÓN';
+                btn.style.display = 'none';
+            }
         }
     }
 </script>
