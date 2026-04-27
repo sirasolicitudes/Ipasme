@@ -9453,7 +9453,7 @@ function renderLocalTable() {
 
     const icon = (s.Soportes && s.Soportes.includes("SÍ"))
       ? `<span style="color: var(--verde); font-size: 1.2rem;">📷</span>`
-      : (solicitudLimpia.toLowerCase().includes("copy rrss") ? s.id : `<span style="color: var(--rojo); font-size: 1.2rem;">❌</span>`);
+      : (isRegularUser && solicitudLimpia.toLowerCase().includes("copy rrss") ? s.id : `<span style="color: var(--rojo); font-size: 1.2rem;">❌</span>`);
 
     // El campo Timestamp ya viene formateado desde el backend
     let fechaSolicitudFormat = "";
