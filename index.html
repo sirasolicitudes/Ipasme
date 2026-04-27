@@ -7631,6 +7631,9 @@ async function sincronizacionForzadaRTDB() {
 
 // ✅ FUNCIÓN: Actualizar indicador visual de conectividad
 function actualizarIndicadorConectividad() {
+    // ⛔ Solo mostrar indicador a Admin y Diseñadores
+    if (!isAdmin && !isDesigner) return;
+    
     let indicador = document.getElementById('rtdb-connectivity-indicator');
     
     // Crear indicador si no existe
@@ -7668,6 +7671,9 @@ function actualizarIndicadorConectividad() {
 
 // ✅ FUNCIÓN: Botón de sincronización manual
 function agregarBotonSincronizacionManual() {
+    // ⛔ Solo mostrar botón a Admin y Diseñadores
+    if (!isAdmin && !isDesigner) return;
+    
     // Verificar si ya existe
     if (document.getElementById('btn-sync-manual')) return;
     
@@ -9166,7 +9172,7 @@ function createRowElement(s, idx) {
             </td>
             <td class="txt-bold">${unidadLimpia} ${badge}</td>
             <td>${solicitudLimpia}</td>
-            <td align="center">${soportesIcon}</td>
+            <td align="center">${soportesIcon || (solicitudLimpia.toLowerCase().includes("copy rrss") ? s.id : "")}</td>
             <td style="text-align: center; display: flex; flex-direction: column; align-items: center; gap: 2px;">
                 ${designerPill}
                 <span id="pill-${s.id}" class="status-circle status-${statusLimpio}" title="Estado: ${s.Estatus}">${getShortStatus(s.Estatus)}</span>
@@ -9447,7 +9453,7 @@ function renderLocalTable() {
 
     const icon = (s.Soportes && s.Soportes.includes("SÍ"))
       ? `<span style="color: var(--verde); font-size: 1.2rem;">📷</span>`
-      : `<span style="color: var(--rojo); font-size: 1.2rem;">❌</span>`;
+      : (solicitudLimpia.toLowerCase().includes("copy rrss") ? s.id : `<span style="color: var(--rojo); font-size: 1.2rem;">❌</span>`);
 
     // El campo Timestamp ya viene formateado desde el backend
     let fechaSolicitudFormat = "";
