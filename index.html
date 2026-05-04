@@ -6067,9 +6067,15 @@
                     // La ruta ahora es anónima: presencias/sess_9283kjs
                     const userPresenceRef = window.ref(window.dbRT, 'presencias/' + sessionId);
                     
+                    // Determinar el rol del usuario (códigos cortos para privacidad)
+                    let userRole = 'UB'; // Usuario Básico
+                    if (isAdmin) userRole = 'AD'; // Admin
+                    else if (isDesigner) userRole = 'DG'; // Diseñador
+                    
                     window.set(userPresenceRef, {
                         u: codUnidad,  // Código corto de unidad (ej: "SA", "UM1")
-                        t: Date.now()  // Timestamp
+                        t: Date.now(),  // Timestamp
+                        r: userRole  // Rol: admin, diseñador, o Usuario Básico
                     });
                     
                     // Si se va el internet o cierra la pestaña de golpe, Firebase lo borra solo
@@ -13264,7 +13270,13 @@
                 let activeUsersCount = 0;
                 
                 if (snapshot.exists()) {
-                    activeUsersCount = Object.keys(snapshot.val()).length;
+                    const presencias = snapshot.val();
+                    // Contar solo usuarios regulares (sin rol definido o con rol 'UB')
+                    for (const data of Object.values(presencias)) {
+                        if (!data.r || data.r === 'UB') {
+                            activeUsersCount++;
+                        }
+                    }
                 }
                 
                 // Modal moderno usando SweetAlert2
@@ -13299,7 +13311,34 @@
         showToast("🛠️ Aplicando modo de mantenimiento...", "info", 1000);
         
         try {
-            // 1. Escribir en RTDB (Esto expulsa a todos los usuarios en milisegundos gracias al listener)
+            // ✅ SI SE ACTIVA MANTENIMIENTO: Limpiar presencias de usuarios regulares primero
+            if (nuevoEstado) {
+                const presenciasRef = window.ref(window.dbRT, 'presencias');
+                const snapshot = await window.get(presenciasRef);
+                
+                if (snapshot.exists()) {
+                    const presencias = snapshot.val();
+                    const eliminaciones = [];
+                    
+                    // Recorrer todas las presencias y eliminar las de usuarios regulares
+                    for (const [sessionId, data] of Object.entries(presencias)) {
+                        // Si no tiene rol definido (usuario antiguo) o es Usuario Básico (UB), eliminar
+                        // Preservar: AD = Admin, DG = Diseñador
+                        if (!data.r || data.r === 'UB') {
+                            const sessionRef = window.ref(window.dbRT, 'presencias/' + sessionId);
+                            eliminaciones.push(window.set(sessionRef, null));
+                        }
+                    }
+                    
+                    // Esperar a que todas las eliminaciones se completen
+                    if (eliminaciones.length > 0) {
+                        await Promise.all(eliminaciones);
+                        console.log(`✅ Se eliminaron ${eliminaciones.length} presencias de usuarios regulares`);
+                    }
+                }
+            }
+            
+            // 1. Escribir en RTDB (Esto expulsa a los usuarios restantes con el listener)
             await window.set(window.ref(window.dbRT, 'configuracion/mantenimiento'), nuevoEstado);
 
             // 2. Guardar en GAS para mantener la persistencia antigua del sistema
