@@ -7168,21 +7168,56 @@
             if (inactiveTime >= LOGOUT_INACTIVITY_TIMEOUT) {
                 console.log('🔴 Inactividad detectada (15 min). Cerrando sesión...');
                 
-                // Mostrar mensaje antes de cerrar sesión
-                if (typeof showToast === 'function') {
-                    showToast('🔒 Sesión cerrada por inactividad (15 min sin actividad)', 'warning', 5000);
-                }
-                
-                // Pequeño delay para que el usuario vea el mensaje
-                setTimeout(() => {
-                    logout();
-                    // Refrescar la página después del logout
-                    setTimeout(() => {
-                        window.location.reload();
-                    }, 500);
-                }, 1000);
+                // ✅ MOSTRAR MODAL VISTOSO DE CIERRE
+                showInactivityLogoutModal();
             }
         }
+    }
+
+    // ✅ MOSTRAR MODAL DE CIERRE POR INACTIVIDAD CON CONTADOR
+    function showInactivityLogoutModal() {
+        const modal = document.getElementById('inactivityLogoutModal');
+        const countdownEl = document.getElementById('logoutCountdown');
+        const progressBar = document.getElementById('logoutProgressBar');
+        
+        if (!modal) {
+            // Fallback si no existe el modal
+            logout();
+            window.location.reload();
+            return;
+        }
+        
+        // Mostrar modal
+        modal.style.display = 'flex';
+        
+        let countdown = 3;
+        countdownEl.textContent = countdown;
+        
+        // Animar barra de progreso (3 segundos)
+        if (progressBar) {
+            progressBar.style.width = '100%';
+            setTimeout(() => {
+                progressBar.style.width = '0%';
+            }, 100);
+        }
+        
+        // Contador regresivo visible
+        const countdownInterval = setInterval(() => {
+            countdown--;
+            countdownEl.textContent = countdown;
+            
+            if (countdown <= 0) {
+                clearInterval(countdownInterval);
+            }
+        }, 1000);
+        
+        // Ejecutar logout y recargar después de 3 segundos
+        setTimeout(() => {
+            logout();
+            setTimeout(() => {
+                window.location.reload();
+            }, 500);
+        }, 3000);
     }
 
     // Iniciar el sistema de monitoreo de inactividad para logout
@@ -19840,5 +19875,41 @@
             </div>
         </div>
     </div>
+
+    <!-- ✅ MODAL DE CIERRE POR INACTIVIDAD - Más vistoso -->
+    <div id="inactivityLogoutModal" class="modal-overlay" style="display: none; background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(8px);">
+        <div class="modal-content" style="max-width: 500px; text-align: center; padding: 40px 30px; border: 3px solid var(--rojo); animation: modalPulse 2s infinite;">
+            <div style="font-size: 80px; margin-bottom: 20px; animation: shake 0.5s ease-in-out infinite alternate;">🔒</div>
+            <h2 style="font-weight: 800; font-size: 1.8rem; color: var(--rojo); margin: 0 0 15px 0;">Sesión Cerrada</h2>
+            <div style="font-size: 1.1rem; color: var(--azul-deep); font-weight: 600; margin-bottom: 25px;">
+                Tu sesión fue cerrada por inactividad
+            </div>
+            <div style="background: linear-gradient(135deg, #fff5f5 0%, #ffe0e0 100%); border: 2px solid var(--rojo); border-radius: 15px; padding: 20px; margin-bottom: 25px;">
+                <div style="font-size: 0.9rem; color: #666; margin-bottom: 10px;">Tiempo sin actividad:</div>
+                <div style="font-size: 1.5rem; font-weight: 800; color: var(--rojo);">15 minutos</div>
+            </div>
+            <div style="font-size: 1rem; color: var(--azul-medio); margin-bottom: 20px;">
+                🔄 Recargando página en <span id="logoutCountdown" style="font-weight: 800; color: var(--rojo); font-size: 1.3rem;">3</span> segundos...
+            </div>
+            <div style="width: 100%; height: 6px; background: #e0e0e0; border-radius: 3px; overflow: hidden; margin-top: 20px;">
+                <div id="logoutProgressBar" style="height: 100%; width: 100%; background: linear-gradient(90deg, var(--rojo) 0%, #ff6b6b 100%); border-radius: 3px; transition: width 1s linear;"></div>
+            </div>
+            <p style="font-size: 0.85rem; color: #888; margin-top: 20px; font-style: italic;">
+                Esto asegura que siempre tengas la última versión del sistema
+            </p>
+        </div>
+    </div>
+
+    <style>
+        @keyframes modalPulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(231, 76, 60, 0.4); }
+            50% { box-shadow: 0 0 0 20px rgba(231, 76, 60, 0); }
+        }
+        @keyframes shake {
+            0% { transform: rotate(-5deg); }
+            100% { transform: rotate(5deg); }
+        }
+    </style>
+
     </body>
     </html>
