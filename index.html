@@ -6135,6 +6135,9 @@
                 
                 showToast(`✅ ¡Bienvenido! Has iniciado sesión desde la unidad <strong>${userData.unidad}</strong>`, "success", 4000);
                 
+                // ✅ INICIAR SISTEMA DE CIERRE POR INACTIVIDAD (solo usuarios regulares)
+                startLogoutInactivityMonitor();
+                
                 // Pre-llenar formulario si existe
                 if (typeof prellenarFormularioConUsuario === 'function') {
                     prellenarFormularioConUsuario(userData);
@@ -7142,6 +7145,82 @@
     let catName = "";
     let localData = [];
     let isMaintActive = false;
+
+    // ✅ SISTEMA DE CIERRE POR INACTIVIDAD - Solo para Usuarios Regulares
+    const LOGOUT_INACTIVITY_TIMEOUT = 15 * 60 * 1000; // 15 minutos en milisegundos
+    let logoutInactivityTimer = null;
+    let logoutLastActivityTime = Date.now();
+
+    // Función para reiniciar el timer de inactividad de logout
+    function resetLogoutInactivityTimer() {
+        // Solo para usuarios regulares (no admin ni diseñadores)
+        if (!isAdmin && !isDesigner && window.usuarioRegular) {
+            logoutLastActivityTime = Date.now();
+        }
+    }
+
+    // Función para verificar inactividad y cerrar sesión
+    function checkLogoutInactivity() {
+        // Solo para usuarios regulares (no admin ni diseñadores)
+        if (!isAdmin && !isDesigner && window.usuarioRegular) {
+            const inactiveTime = Date.now() - logoutLastActivityTime;
+            
+            if (inactiveTime >= LOGOUT_INACTIVITY_TIMEOUT) {
+                console.log('🔴 Inactividad detectada (15 min). Cerrando sesión...');
+                
+                // Mostrar mensaje antes de cerrar sesión
+                if (typeof showToast === 'function') {
+                    showToast('🔒 Sesión cerrada por inactividad (15 min sin actividad)', 'warning', 5000);
+                }
+                
+                // Pequeño delay para que el usuario vea el mensaje
+                setTimeout(() => {
+                    logout();
+                    // Refrescar la página después del logout
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 500);
+                }, 1000);
+            }
+        }
+    }
+
+    // Iniciar el sistema de monitoreo de inactividad para logout
+    function startLogoutInactivityMonitor() {
+        // Solo para usuarios regulares
+        if (!isAdmin && !isDesigner && window.usuarioRegular) {
+            // Detener timer anterior si existe
+            if (logoutInactivityTimer) {
+                clearInterval(logoutInactivityTimer);
+            }
+            
+            // Establecer tiempo inicial
+            logoutLastActivityTime = Date.now();
+            
+            // Verificar cada minuto
+            logoutInactivityTimer = setInterval(checkLogoutInactivity, 60000);
+            
+            console.log('⏱️ Sistema de inactividad iniciado (15 min máximo para usuarios regulares)');
+        }
+    }
+
+    // Detener el monitoreo de inactividad para logout
+    function stopLogoutInactivityMonitor() {
+        if (logoutInactivityTimer) {
+            clearInterval(logoutInactivityTimer);
+            logoutInactivityTimer = null;
+            console.log('⏱️ Sistema de inactividad detenido');
+        }
+    }
+
+    // Event listeners para detectar actividad del usuario (solo para sistema de logout)
+    const LOGOUT_INACTIVITY_EVENTS = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click', 'keydown'];
+    
+    LOGOUT_INACTIVITY_EVENTS.forEach(eventName => {
+        document.addEventListener(eventName, () => {
+            resetLogoutInactivityTimer();
+        }, true);
+    });
 
     // ✅ VARIABLES GLOBALES PARA SISTEMA HÍBRIDO
     let listaHistoricaGAS = []; // Se llena con handleReadAction (finalizadas)
@@ -12768,6 +12847,9 @@
         window.isAdmin = false;
         window.isDesigner = false;
         window.usuarioRegular = null; // ✅ Limpiar usuario regular
+        
+        // ✅ DETENER SISTEMA DE CIERRE POR INACTIVIDAD
+        stopLogoutInactivityMonitor();
         
         // 2. Limpiar credenciales y memoria
         userCredentials = { 
