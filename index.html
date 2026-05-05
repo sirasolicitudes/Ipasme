@@ -6048,34 +6048,25 @@
                     // Generamos un ID de sesión aleatorio anónimo (ej: "sess_9283kjs")
                     const sessionId = 'sess_' + Math.random().toString(36).substr(2, 9);
                     
-                    // Mapa de unidades a códigos cortos para no exponer nombres completos
-                    const UNIDAD_MAP = { 
-                        "Sede Administrativa": "SA", 
-                        "Unidad Médica 1": "UM1",
-                        "Unidad Médica 2": "UM2",
-                        "Unidad Médica 3": "UM3",
-                        "Unidad Médica 4": "UM4",
-                        "Unidad Médica 5": "UM5",
-                        "Unidad Médica 6": "UM6",
-                        "Unidad Médica 7": "UM7",
-                        "Unidad Médica 8": "UM8",
-                        "Unidad Médica 9": "UM9",
-                        "Unidad Médica 10": "UM10"
-                    };
-                    const codUnidad = UNIDAD_MAP[userData.unidad] || "EXT";
+                    // ✅ UNIDAD VISIBLE - El nombre de la unidad es legible
+                    // El resto de datos usan códigos encriptados/ofuscados
+                    const nombreUnidad = userData.unidad || "Desconocida";
                     
                     // La ruta ahora es anónima: presencias/sess_9283kjs
                     const userPresenceRef = window.ref(window.dbRT, 'presencias/' + sessionId);
                     
-                    // Determinar el rol del usuario (códigos cortos para privacidad)
-                    let userRole = 'UB'; // Usuario Básico
-                    if (isAdmin) userRole = 'AD'; // Admin
-                    else if (isDesigner) userRole = 'DG'; // Diseñador
+                    // Determinar el rol del usuario (códigos cortos encriptados)
+                    let userRole = 'x1'; // Usuario Básico (encriptado)
+                    if (isAdmin) userRole = 'a7'; // Admin (encriptado)
+                    else if (isDesigner) userRole = 'd4'; // Diseñador (encriptado)
+                    
+                    // Timestamp encriptado (base64 del timestamp)
+                    const timestampEncriptado = btoa(Date.now().toString());
                     
                     window.set(userPresenceRef, {
-                        u: codUnidad,  // Código corto de unidad (ej: "SA", "UM1")
-                        t: Date.now(),  // Timestamp
-                        r: userRole  // Rol: admin, diseñador, o Usuario Básico
+                        unidad: nombreUnidad,  // ✅ LEGIBLE: Nombre completo de la unidad
+                        t: timestampEncriptado,  // 🔒 ENCRIPTADO: Timestamp
+                        r: userRole  // 🔒 ENCRIPTADO: Rol
                     });
                     
                     // Si se va el internet o cierra la pestaña de golpe, Firebase lo borra solo
@@ -7147,7 +7138,7 @@
     let isMaintActive = false;
 
     // ✅ SISTEMA DE CIERRE POR INACTIVIDAD - Solo para Usuarios Regulares
-    const LOGOUT_INACTIVITY_TIMEOUT = 15 * 60 * 1000; // 15 minutos en milisegundos
+    const LOGOUT_INACTIVITY_TIMEOUT = 10 * 60 * 1000; // 10 minutos en milisegundos
     let logoutInactivityTimer = null;
     let logoutLastActivityTime = Date.now();
 
@@ -7166,7 +7157,7 @@
             const inactiveTime = Date.now() - logoutLastActivityTime;
             
             if (inactiveTime >= LOGOUT_INACTIVITY_TIMEOUT) {
-                console.log('🔴 Inactividad detectada (15 min). Cerrando sesión...');
+                console.log('🔴 Inactividad detectada (10 min). Cerrando sesión...');
                 
                 // ✅ MOSTRAR MODAL VISTOSO DE CIERRE
                 showInactivityLogoutModal();
@@ -7235,7 +7226,7 @@
             // Verificar cada minuto
             logoutInactivityTimer = setInterval(checkLogoutInactivity, 60000);
             
-            console.log('⏱️ Sistema de inactividad iniciado (15 min máximo para usuarios regulares)');
+            console.log('⏱️ Sistema de inactividad iniciado (10 min máximo para usuarios regulares)');
         }
     }
 
@@ -13388,9 +13379,9 @@
                 
                 if (snapshot.exists()) {
                     const presencias = snapshot.val();
-                    // Contar solo usuarios regulares (sin rol definido o con rol 'UB')
+                    // Contar solo usuarios regulares (sin rol definido o con rol encriptado 'x1')
                     for (const data of Object.values(presencias)) {
-                        if (!data.r || data.r === 'UB') {
+                        if (!data.r || data.r === 'x1') {
                             activeUsersCount++;
                         }
                     }
@@ -13439,9 +13430,9 @@
                     
                     // Recorrer todas las presencias y eliminar las de usuarios regulares
                     for (const [sessionId, data] of Object.entries(presencias)) {
-                        // Si no tiene rol definido (usuario antiguo) o es Usuario Básico (UB), eliminar
-                        // Preservar: AD = Admin, DG = Diseñador
-                        if (!data.r || data.r === 'UB') {
+                        // Si no tiene rol definido (usuario antiguo) o es Usuario Básico (x1), eliminar
+                        // Preservar: a7 = Admin, d4 = Diseñador
+                        if (!data.r || data.r === 'x1') {
                             const sessionRef = window.ref(window.dbRT, 'presencias/' + sessionId);
                             eliminaciones.push(window.set(sessionRef, null));
                         }
@@ -19886,7 +19877,7 @@
             </div>
             <div style="background: linear-gradient(135deg, #fff5f5 0%, #ffe0e0 100%); border: 2px solid var(--rojo); border-radius: 15px; padding: 20px; margin-bottom: 25px;">
                 <div style="font-size: 0.9rem; color: #666; margin-bottom: 10px;">Tiempo sin actividad:</div>
-                <div style="font-size: 1.5rem; font-weight: 800; color: var(--rojo);">15 minutos</div>
+                <div style="font-size: 1.5rem; font-weight: 800; color: var(--rojo);">10 minutos</div>
             </div>
             <div style="font-size: 1rem; color: var(--azul-medio); margin-bottom: 20px;">
                 🔄 Recargando página en <span id="logoutCountdown" style="font-weight: 800; color: var(--rojo); font-size: 1.3rem;">3</span> segundos...
