@@ -14103,6 +14103,13 @@
             document.getElementById('observaciones-section').classList.add('hidden');
             document.getElementById('soportes-section').classList.add('hidden');
             
+            // ✅ Limpiar cualquier foto seleccionada previamente (no permitidas para Copy RRSS)
+            const fotoInput = document.getElementById('input-fotos');
+            if (fotoInput) {
+                fotoInput.value = ''; // Limpiar archivos seleccionados
+                console.log("🧹 Input de fotos limpiado para Copy RRSS");
+            }
+            
         } else if (tipo === 'otros') {
             // Formulario otros: formulario estático
             document.getElementById('form-otros').classList.remove('hidden');
@@ -15558,6 +15565,12 @@
 
     // ✅ FUNCIÓN PARA PREPARAR FOTOS ANTES DEL PUENTE
     async function prepararFotosParaPuente(formData) {
+        // ⚠️ VALIDACIÓN: Copy RRSS no debe tener fotos
+        if (catType === 'copy-rrss') {
+            console.log("⚠️ Tipo Copy RRSS detectado. Ignorando fotos (no permitidas para este tipo).");
+            return; // No procesar fotos para Copy RRSS
+        }
+        
         const fotoInput = document.getElementById('input-fotos');
         if (fotoInput && fotoInput.files.length > 0) {
             showToast("📸 Preparando fotos para el correo...", "info", 1000);
