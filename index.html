@@ -8113,11 +8113,17 @@
             if (solicitudAnterior) {
                 // Comparar campos clave
                 if (solicitudAnterior.Estatus !== solicitudNueva.Estatus) {
+                    // Extraer quién hizo el cambio del formato "ESTADO|fecha|usuario" si existe
+                    const partesEstatus = solicitudNueva.Estatus.split("|");
+                    const modificadoPor = partesEstatus[2] ? partesEstatus[2].trim() : null;
+                    
                     cambios.cambiosDeEstado.push({
                         id: id,
                         solicitud: solicitudNueva,
                         estadoAnterior: solicitudAnterior.Estatus,
-                        estadoNuevo: solicitudNueva.Estatus
+                        estadoNuevo: solicitudNueva.Estatus,
+                        modificadoPor: modificadoPor,
+                        disenador: solicitudNueva.Disenador || modificadoPor || "Sistema"
                     });
                     cambios.hayCambios = true;
                     
@@ -8170,7 +8176,8 @@
                 mensaje += `Solicitud ${cambio.id} fue FINALIZADA`;
                 tipoToast = "success";
             } else if (estadoNuevo === "PROCESANDO") {
-                mensaje += `Solicitud ${cambio.id} está en PROCESAMIENTO`;
+                const disenador = cambio.disenador || cambio.modificadoPor || "Diseñador";
+                mensaje += `⚙️ ${disenador} adjunto arte - PROCESANDO Solicitud ${cambio.id}`;
                 tipoToast = "warning";
             } else {
                 mensaje += `Solicitud ${cambio.id} cambió a ${estadoNuevo}`;
@@ -11926,6 +11933,7 @@
             <div class="toast-icon">${iconToShow}</div>
             <div class="toast-message">${message}</div>
             <button class="toast-close" onclick="this.parentElement.remove()">×</button>
+            <div class="toast-progress-bar"><div class="toast-progress-fill"></div></div>
         `;
         
         // Calcular posición vertical basada en toast existentes
@@ -11998,6 +12006,38 @@
             closeEl.style.transform = 'scale(1)';
         };
         
+        // ✅ ESTILOS PARA LA BARRA DE PROGRESO (color del toast pero más oscuro)
+        const progressBar = toast.querySelector('.toast-progress-bar');
+        const progressFill = toast.querySelector('.toast-progress-fill');
+        
+        // Colores más oscuros para la barra de progreso según el tipo
+        const progressColors = {
+            success: '#1b4a35', // Verde más oscuro
+            error:   '#9e1c27', // Rojo más oscuro
+            warning: '#c45a00', // Naranja más oscuro
+            info:    '#156a7d'  // Azul más oscuro
+        };
+        const progressColor = progressColors[type] || progressColors.info;
+        
+        Object.assign(progressBar.style, {
+            position: 'absolute',
+            bottom: '0',
+            left: '0',
+            right: '0',
+            height: '4px',
+            background: 'rgba(0,0,0,0.2)',
+            borderRadius: '0 0 12px 12px',
+            overflow: 'hidden'
+        });
+        
+        Object.assign(progressFill.style, {
+            height: '100%',
+            width: '100%',
+            background: progressColor,
+            transformOrigin: 'left',
+            animation: `toastProgress ${duration}ms linear forwards`
+        });
+        
         // Agregar al DOM
         document.body.appendChild(toast);
         
@@ -12038,8 +12078,16 @@
             from { transform: translateX(0); opacity: 1; }
             to { transform: translateX(100%); opacity: 0; }
         }
+        @keyframes toastProgress {
+            from { transform: scaleX(1); }
+            to { transform: scaleX(0); }
+        }
         .toast-notification:hover {
             transform: scale(1.02) !important;
+        }
+        .toast-notification {
+            position: relative;
+            overflow: hidden;
         }
     `;
     document.head.appendChild(toastStyles);
