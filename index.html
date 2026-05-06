@@ -6047,12 +6047,28 @@
                 if (userData.rol === 'Usuario Básico') {
                     try {
                         if (window.dbRT) {
+                            const nombreUnidad = userData.unidad || "Desconocida";
+                            
+                            // ✅ VERIFICAR Y ELIMINAR SESIÓN PREVIA DE ESTA UNIDAD
+                            // Esto evita duplicados cuando el usuario refresca o abre múltiples pestañas
+                            const sessionStorageKey = 'sira_session_id_' + nombreUnidad.replace(/\s+/g, '_');
+                            const previousSessionId = localStorage.getItem(sessionStorageKey);
+                            
+                            if (previousSessionId) {
+                                try {
+                                    const prevRef = window.ref(window.dbRT, 'presencias/' + previousSessionId);
+                                    await window.remove(prevRef);
+                                    console.log('🗑️ Sesión previa eliminada:', previousSessionId);
+                                } catch (e) {
+                                    console.log('ℹ️ No se pudo eliminar sesión previa (probablemente ya expiró):', e.message);
+                                }
+                            }
+                            
                             // Generamos un ID de sesión aleatorio anónimo (ej: "sess_9283kjs")
                             const sessionId = 'sess_' + Math.random().toString(36).substr(2, 9);
                             
-                            // ✅ FORMATO COMPATIBLE CON REGLAS RTDB: campos 'u' y 't'
-                            // u = Nombre completo de la unidad (legible)
-                            const nombreUnidad = userData.unidad || "Desconocida";
+                            // Guardar el nuevo sessionId en localStorage para esta unidad
+                            localStorage.setItem(sessionStorageKey, sessionId);
                             
                             console.log('📝 Registrando presencia:', { u: nombreUnidad, t: Date.now(), sessionId });
                             
@@ -12963,6 +12979,14 @@
             window.remove(window.currentUserPresenceRef);
             window.currentUserPresenceRef = null;
             window.currentSessionId = null; // Limpiar ID de sesión
+        }
+        
+        // ✅ LIMPIAR SESSION DEL LOCALSTORAGE
+        const unidad = userCredentials?.unidad || window.usuarioRegular?.unidad;
+        if (unidad) {
+            const sessionStorageKey = 'sira_session_id_' + unidad.replace(/\s+/g, '_');
+            localStorage.removeItem(sessionStorageKey);
+            console.log('🗑️ Session key removida del localStorage:', sessionStorageKey);
         }
 
         // ✅ DETENER LISTENER DE RTDB AL HACER LOGOUT
