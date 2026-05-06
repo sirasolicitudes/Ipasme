@@ -5380,7 +5380,7 @@
     <script>
     // === CONFIGURACIÓN DE SCRIPT URL ===
     // ✅ VERSIÓN DE DESARROLLO - URL actualizada del sistema con CORS fix
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyT8cYXtorErKPf9XToe8Zd-gWNDSJVfypFiqezK0TdS8KWW895n8az0zYh_wf3YfXOvQ/exec";
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwl_JB43EBtdDi3uJTwoTJPHAItGvaUll1_NNNEB_OroKbyKAe4x-5lgsE4X4bxyUOkVw/exec";
     // const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbypTMlgxEJqGCBkLyTkkZ_8h1zuN9QmIfU2uGG82YvrbuIWyCzNZEHrL4MoxtLV31C6TQ/exec"; // Producción
 
     // ✅ MODO MOCK - Descomentar para desarrollo local sin conexión
@@ -11780,8 +11780,8 @@
     setupFieldErrorRemoval();
     // ✅ INICIALIZAR MODAL DE BIENVENIDA
     initializeWelcomeModal();
-    // ✅ INICIAR SISTEMA HÍBRIDO OPTIMIZADO CON RTDB
-    arrancarTablaHibrida();
+    // ✅ INICIAR SISTEMA HÍBRIDO OPTIMIZADO CON RTDB (solo después del login)
+    // Nota: El sistema híbrido se inicia automáticamente después del login exitoso
     // ✅ INICIAR SISTEMA DE DETECCIÓN DE INACTIVIDAD - Ahorro de Cuotas
     setupActivityListeners();
     resetInactivityTimer();
