@@ -13421,9 +13421,19 @@
             document.getElementById('progressBar').style.width = '100%';
             document.getElementById('progressPercent').innerText = '100%';
             
+            // ✅ DETERMINAR MENSAJE SEGÚN RESPUESTA DEL BACKEND (corrección o arte nuevo)
+            const esCorreccion = uploadData?.data?.esCorreccion || uploadData?.esCorreccion || false;
+            const numeroCorreccion = uploadData?.data?.numeroCorreccion || uploadData?.numeroCorreccion || 0;
+            const designerName = userCredentials.displayName || userCredentials.username || "Diseñador";
+            const idSolicitud = document.getElementById('currentReqId')?.value || id;
+            
+            const mensajeToast = esCorreccion 
+                ? `✏️ ${designerName} adjuntó corrección a la solicitud ${idSolicitud}`
+                : `🎨 ${designerName} adjuntó arte a la solicitud ${idSolicitud}`;
+            
             setTimeout(() => {
                 closeModal();
-                showToast("🎨 Arte subido correctamente", "success", 2500, () => {
+                showToast(mensajeToast, "success", 2500, () => {
                     invalidatePageCache();
                     // ✅ updateTable() eliminado - Firebase onSnapshot maneja actualizaciones automáticamente
                     // Los cambios aparecerán instantáneamente cuando Firebase notifique al frontend
@@ -13436,14 +13446,17 @@
             console.warn('⚠️ Error en uploadArte (ignorado):', error);
             // ❌ NO LANZAR ERROR - CONTINUAR COMO SI FUERA EXITOSO
             
-            // MOSTRAR ÉXITO DE TODAS FORMAS
+            // MOSTRAR ÉXITO DE TODAS FORMAS (con mensaje genérico ya que no tenemos datos del backend)
+            const designerName = userCredentials.displayName || userCredentials.username || "Diseñador";
+            const idSolicitud = document.getElementById('currentReqId')?.value || id;
+            
             document.getElementById('progressStatus').innerText = '✅ ¡Completado!';
             document.getElementById('progressBar').style.width = '100%';
             document.getElementById('progressPercent').innerText = '100%';
             
             setTimeout(() => {
                 closeModal();
-                showToast("🎨 Arte subido correctamente", "success", 2500, () => {
+                showToast(`🎨 ${designerName} adjuntó arte a la solicitud ${idSolicitud}`, "success", 2500, () => {
                     invalidatePageCache();
                     // ✅ updateTable() eliminado - Firebase onSnapshot maneja actualizaciones automáticamente
                     // Los cambios aparecerán instantáneamente cuando Firebase notifique al frontend
@@ -16509,6 +16522,15 @@
                 // No fallar la operación completa si el backend falla
             }
 
+            // ✅ DETERMINAR MENSAJE SEGÚN RESPUESTA DEL BACKEND (corrección o arte nuevo)
+            const esCorreccion = completeData?.data?.esCorreccion || completeData?.esCorreccion || false;
+            const numeroCorreccion = completeData?.data?.numeroCorreccion || completeData?.numeroCorreccion || 0;
+            const designerName = userCredentials.displayName || userCredentials.username || "Diseñador";
+            
+            const mensajeToast = esCorreccion 
+                ? `✏️ ${designerName} adjuntó corrección a la solicitud ${id}`
+                : `🎨 ${designerName} adjuntó arte a la solicitud ${id}`;
+            
             // Éxito completo
             document.getElementById('progressStatus').innerText = '✅ ¡Subida completada!';
             document.getElementById('progressBar').style.width = '100%';
@@ -16516,7 +16538,7 @@
             
             setTimeout(() => {
                 closeModal();
-                showToast("🎨 Arte subido exitosamente (modo rápido)", "success", 2500, () => {
+                showToast(mensajeToast, "success", 2500, () => {
                     invalidatePageCache();
                 });
                 document.getElementById('arteFile').value = '';
