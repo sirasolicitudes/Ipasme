@@ -6043,36 +6043,42 @@
                 
                 saveSession(userCredentials);
                 
-                // ✅ NUEVO: Registrar presencia en tiempo real para usuarios básicos (ALIAS POR SESIÓN)
+                // ✅ NUEVO: Registrar presencia en tiempo real SOLO PARA USUARIOS BÁSICOS
                 if (userData.rol === 'Usuario Básico') {
-                    // Generamos un ID de sesión aleatorio anónimo (ej: "sess_9283kjs")
-                    const sessionId = 'sess_' + Math.random().toString(36).substr(2, 9);
-                    
-                    // ✅ UNIDAD VISIBLE - El nombre de la unidad es legible
-                    // El resto de datos usan códigos encriptados/ofuscados
-                    const nombreUnidad = userData.unidad || "Desconocida";
-                    
-                    // La ruta ahora es anónima: presencias/sess_9283kjs
-                    const userPresenceRef = window.ref(window.dbRT, 'presencias/' + sessionId);
-                    
-                    // Determinar el rol del usuario (códigos cortos encriptados)
-                    let userRole = 'x1'; // Usuario Básico (encriptado)
-                    if (isAdmin) userRole = 'a7'; // Admin (encriptado)
-                    else if (isDesigner) userRole = 'd4'; // Diseñador (encriptado)
-                    
-                    // Timestamp encriptado (base64 del timestamp)
-                    const timestampEncriptado = btoa(Date.now().toString());
-                    
-                    window.set(userPresenceRef, {
-                        unidad: nombreUnidad,  // ✅ LEGIBLE: Nombre completo de la unidad
-                        t: timestampEncriptado,  // 🔒 ENCRIPTADO: Timestamp
-                        r: userRole  // 🔒 ENCRIPTADO: Rol
-                    });
-                    
-                    // Si se va el internet o cierra la pestaña de golpe, Firebase lo borra solo
-                    window.onDisconnect(userPresenceRef).remove();
-                    window.currentUserPresenceRef = userPresenceRef; // Guardar referencia para el logout manual
-                    window.currentSessionId = sessionId; // Guardar ID de sesión para referencia
+                    try {
+                        if (window.dbRT) {
+                            // Generamos un ID de sesión aleatorio anónimo (ej: "sess_9283kjs")
+                            const sessionId = 'sess_' + Math.random().toString(36).substr(2, 9);
+                            
+                            // ✅ FORMATO COMPATIBLE CON REGLAS RTDB: campos 'u' y 't'
+                            // u = Nombre completo de la unidad (legible)
+                            const nombreUnidad = userData.unidad || "Desconocida";
+                            
+                            console.log('📝 Registrando presencia:', { u: nombreUnidad, t: Date.now(), sessionId });
+                            
+                            // La ruta es anónima: presencias/sess_9283kjs
+                            const userPresenceRef = window.ref(window.dbRT, 'presencias/' + sessionId);
+                            
+                            // ✅ FORMATO EXACTO QUE ESPERAN LAS REGLAS RTDB
+                            await window.set(userPresenceRef, {
+                                u: nombreUnidad,   // ✅ Nombre completo de la unidad (legible)
+                                t: Date.now()      // Timestamp numérico
+                            });
+                            
+                            console.log('✅ Presencia registrada en RTDB');
+                            
+                            // Si se va el internet o cierra la pestaña, Firebase lo borra solo
+                            window.onDisconnect(userPresenceRef).remove();
+                            window.currentUserPresenceRef = userPresenceRef;
+                            window.currentSessionId = sessionId;
+                        } else {
+                            console.warn('⚠️ RTDB no disponible, no se registró presencia');
+                        }
+                    } catch (presenceError) {
+                        console.error('❌ Error registrando presencia:', presenceError);
+                    }
+                } else {
+                    console.log('ℹ️ No se registra presencia para', userData.rol, '(solo Usuarios Básicos)');
                 }
                 
                 showToast(`✅ Bienvenid@, ${userData.nombre}`, "success");
@@ -13379,12 +13385,9 @@
                 
                 if (snapshot.exists()) {
                     const presencias = snapshot.val();
-                    // Contar solo usuarios regulares (sin rol definido o con rol encriptado 'x1')
-                    for (const data of Object.values(presencias)) {
-                        if (!data.r || data.r === 'x1') {
-                            activeUsersCount++;
-                        }
-                    }
+                    // ✅ TODAS las presencias son de usuarios básicos (solo ellos registran presencia)
+                    // Contamos todas las sesiones activas
+                    activeUsersCount = Object.keys(presencias).length;
                 }
                 
                 // Modal moderno usando SweetAlert2
@@ -13428,14 +13431,10 @@
                     const presencias = snapshot.val();
                     const eliminaciones = [];
                     
-                    // Recorrer todas las presencias y eliminar las de usuarios regulares
-                    for (const [sessionId, data] of Object.entries(presencias)) {
-                        // Si no tiene rol definido (usuario antiguo) o es Usuario Básico (x1), eliminar
-                        // Preservar: a7 = Admin, d4 = Diseñador
-                        if (!data.r || data.r === 'x1') {
-                            const sessionRef = window.ref(window.dbRT, 'presencias/' + sessionId);
-                            eliminaciones.push(window.set(sessionRef, null));
-                        }
+                    // ✅ TODAS las presencias son de usuarios básicos - las eliminamos todas
+                    for (const sessionId of Object.keys(presencias)) {
+                        const sessionRef = window.ref(window.dbRT, 'presencias/' + sessionId);
+                        eliminaciones.push(window.set(sessionRef, null));
                     }
                     
                     // Esperar a que todas las eliminaciones se completen
