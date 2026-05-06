@@ -7257,6 +7257,7 @@
     // ✅ VARIABLES GLOBALES PARA SISTEMA HÍBRIDO
     let listaHistoricaGAS = []; // Se llena con handleReadAction (finalizadas)
     let firebaseActiveData = []; // Se llena desde RTDB (activas)
+    let recentlyFinalizedRequests = new Map(); // Trackea solicitudes recién finalizadas para mostrar toast correcto
 
     // ✅ FUNCIÓN UTILITY: Estandarizar formato de hora con a. m. / p. m.
     function formatearHoraEstandar(hora, ampm) {
@@ -7895,26 +7896,51 @@
         
         const btn = document.createElement('button');
         btn.id = 'btn-sync-manual';
-        btn.innerHTML = '🔄';
+        btn.innerHTML = `
+            <div style="
+                width: 20px;
+                height: 20px;
+                border-radius: 50%;
+                background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                box-shadow: 0 1px 3px rgba(220, 53, 69, 0.4);
+                flex-shrink: 0;
+            ">
+                <svg style="
+                    width: 12px;
+                    height: 12px;
+                    color: #e3f2fd;
+                " viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="23 4 23 10 17 10"></polyline>
+                    <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+                </svg>
+            </div>
+            <span style="
+                white-space: nowrap;
+                font-weight: 600;
+            ">Sincronizar</span>
+        `;
         btn.title = 'Sincronizar ahora';
         btn.style.cssText = `
             position: fixed;
-            bottom: 10px;
-            right: 100px;
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
+            bottom: 42px;
+            right: 10px;
+            padding: 6px 12px;
+            border-radius: 20px;
             border: none;
-            background: var(--rojo, #dc3545);
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
             color: white;
-            font-size: 18px;
+            font-size: 12px;
+            font-weight: 600;
             cursor: pointer;
             z-index: 9999;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-            transition: transform 0.2s, background 0.2s;
+            box-shadow: 0 2px 8px rgba(40, 167, 69, 0.4);
+            transition: all 0.3s ease;
             display: flex;
             align-items: center;
-            justify-content: center;
+            gap: 6px;
         `;
         
         btn.addEventListener('mouseenter', () => {
@@ -8094,6 +8120,26 @@
                         estadoNuevo: solicitudNueva.Estatus
                     });
                     cambios.hayCambios = true;
+                    
+                    // ✅ TRACKING: Si la solicitud fue finalizada, guardar en Map para detectar cuando desaparezca del snapshot
+                    const estadoNuevoUpper = (solicitudNueva.Estatus || "").trim().toUpperCase();
+                    if (estadoNuevoUpper === "FINALIZADA") {
+                        // Extraer quién finalizó del formato "FINALIZADA|fecha|usuario"
+                        const partesEstatus = solicitudNueva.Estatus.split("|");
+                        const finalizadoPor = partesEstatus[2] ? partesEstatus[2].trim() : "Admin";
+                        
+                        recentlyFinalizedRequests.set(id, {
+                            id: id,
+                            finalizadoPor: finalizadoPor,
+                            timestamp: Date.now(),
+                            servicio: solicitudNueva["Servicio/Producto"] || "Solicitud"
+                        });
+                        
+                        // Limpiar el Map después de 30 segundos para evitar memoria infinita
+                        setTimeout(() => {
+                            recentlyFinalizedRequests.delete(id);
+                        }, 30000);
+                    }
                 } else if (solicitudAnterior.Diseñador !== solicitudNueva.Diseñador) {
                     cambios.solicitudesModificadas.push({
                         id: id,
@@ -8135,8 +8181,18 @@
             tipoToast = "success";
         } else if (cambios.solicitudesEliminadas.length > 0) {
             const eliminada = cambios.solicitudesEliminadas[0];
-            mensaje += `Solicitud ${eliminada.id} fue eliminada`;
-            tipoToast = "error";
+            
+            // ✅ VERIFICAR: Si la solicitud fue recientemente finalizada, mostrar mensaje correcto
+            const finalizedInfo = recentlyFinalizedRequests.get(eliminada.id);
+            if (finalizedInfo) {
+                mensaje += `✅ Solicitud ${eliminada.id} FINALIZADA por ${finalizedInfo.finalizadoPor}`;
+                tipoToast = "success";
+                // Limpiar del tracking ya que mostramos el mensaje
+                recentlyFinalizedRequests.delete(eliminada.id);
+            } else {
+                mensaje += `Solicitud ${eliminada.id} fue eliminada`;
+                tipoToast = "error";
+            }
         } else if (cambios.solicitudesModificadas.length > 0) {
             const modificada = cambios.solicitudesModificadas[0];
             mensaje += `Solicitud ${modificada.id}: ${modificada.tipo} actualizado`;
