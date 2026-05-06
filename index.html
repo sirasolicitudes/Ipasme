@@ -16517,6 +16517,8 @@
             // PASO 5: Completar subida en backend (eliminar anterior, guardar en Sheet, enviar Telegram)
             document.getElementById('progressStatus').innerText = '📨 Finalizando registro...';
             
+            let completeData = null; // ✅ DECLARAR FUERA DEL BLOQUE TRY
+            
             try {
                 const completeParams = new URLSearchParams();
                 completeParams.append("action", "completeUpload");
@@ -16534,7 +16536,7 @@
                     body: completeParams,
                     cache: 'no-store'
                 });
-                const completeData = await completeRes.json();
+                completeData = await completeRes.json(); // ✅ ASIGNAR SIN RE-DECLARAR
                 
                 if (completeData.success) {
                     console.log("✅ [uploadArteOptimizado] Subida completada en backend");
