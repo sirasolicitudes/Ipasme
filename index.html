@@ -251,6 +251,41 @@
     .row-charlas .badge-prioridad { background: white !important; color: #c0392b !important; border: 1px solid white !important; }
     .row-charlas .status-badge { color: white !important; }
 
+    /* ✅ ESTILOS PARA ACTIVIDADES DEPORTIVAS - Azul y Verde */
+    .row-deportivas { background: linear-gradient(135deg, #005f73 0%, #0a9396 50%, #94d2bd 100%) !important; color: white !important; border-left: 5px solid #005f73 !important; }
+    .row-deportivas td { color: white !important; font-weight: 600 !important; }
+    .row-deportivas *, .row-deportivas td *, .row-deportivas span, .row-deportivas div, .row-deportivas a, .row-deportivas button, .row-deportivas .status-badge, .row-deportivas .priority-badge { color: white !important; }
+    .row-deportivas a:hover { color: #cccccc !important; }
+    .row-deportivas .badge-new { background: white !important; color: #005f73 !important; border: 1px solid white !important; }
+    .row-deportivas .status-badge { color: white !important; }
+
+    .deportivas-btn {
+        background: linear-gradient(135deg, #005f73 0%, #0a9396 100%) !important;
+        color: white !important;
+        border-color: #005f73 !important;
+        position: relative;
+        overflow: hidden;
+    }
+    .deportivas-btn::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+        animation: none;
+    }
+    .deportivas-btn.selected::before {
+        animation: shimmer 3s infinite;
+    }
+    .deportivas-btn.selected {
+        background: linear-gradient(135deg, #0a9396 0%, #005f73 100%) !important;
+        box-shadow: 0 0 20px rgba(10, 147, 150, 0.5) !important;
+        border-color: #94d2bd !important;
+        transform: scale(0.98);
+    }
+
     @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1;
     } }
     .stats-grid { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
@@ -4622,6 +4657,10 @@
     <div class="card-btn charlas-btn" onclick="selectCat(this, 'charlas-educativas')" style="background: linear-gradient(135deg, #c0392b 0%, #e74c3c 50%, #ec7063 100%); color: white; border-color: #c0392b;">
         <span style="font-size: 1.2rem;">🎓</span> Actividades de<br>Aprendizaje
     </div>
+    
+    <div class="card-btn deportivas-btn" onclick="selectCat(this, 'deportivas')">
+        <span style="font-size: 1.2rem;">⚽</span> Actividades<br>Deportivas
+    </div>
     <!-- ✅ NUEVO: Botón Textiles -->
     <div class="card-btn textiles-btn" onclick="selectCat(this, 'textiles')" style="background: linear-gradient(135deg, #8B4513 0%, #CD853F 100%); color: white; border-color: #8B4513;">
         <span style="font-size: 1.2rem;">🧵</span> Textiles
@@ -4798,6 +4837,27 @@
     <textarea id="charlas-ponentes" class="modern-input" rows="3" style="width: 100%;" placeholder="Nombre y cargo/profesión de los ponentes o facilitadores.&#10;Ejemplo:&#10;- Dra. María González, Médico Cirujano&#10;- Lic. Carlos Pérez, Psicólogo"></textarea>
     </div>
     </div>
+    </div>
+
+    <!-- FORMULARIO: ACTIVIDADES DEPORTIVAS -->
+    <div id="form-deportivas" class="form-type-section hidden">
+        <div style="background: linear-gradient(135deg, #005f73 0%, #0a9396 100%); border: 2px solid #005f73; border-radius: 12px; padding: 15px; margin-bottom: 15px;">
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+                <span style="font-size: 1.5rem;">⚽</span>
+                <span style="font-weight: 800; color: white; font-size: 0.95rem;">ACTIVIDADES DEPORTIVAS</span>
+            </div>
+            <p style="margin: 0; font-size: 0.85rem; color: white; line-height: 1.4;">
+                Solicitud de diseño para eventos deportivos, torneos, competencias y actividades recreativas afines.
+            </p>
+        </div>
+        <div style="margin-bottom: 15px;">
+            <label class="section-title">🏆 3. Nombre de la Actividad *</label>
+            <input type="text" id="deportivas-nombre" class="modern-input" style="width: 100%;" placeholder="Ejemplo: Torneo de Voleibol, Caminata 5K, etc.">
+        </div>
+        <div style="margin-bottom: 15px;">
+            <label class="section-title">📝 4. Detalles de la actividad *</label>
+            <textarea id="deportivas-detalles" class="modern-input" rows="4" style="width: 100%;" placeholder="Describa participantes, categorías, premiaciones u otros detalles relevantes..."></textarea>
+        </div>
     </div>
 
     <!-- FORMULARIO: TEXTILES -->
@@ -9706,6 +9766,7 @@
             const esCorreccionNotaPrensa = solicitudLimpia.toLowerCase().includes("corrección") || solicitudLimpia.toLowerCase().includes("correccion") || solicitudLimpia.toLowerCase().includes("nota de prensa");
             const esCopyRRSS = solicitudLimpia.toLowerCase().includes("copy rrss");
             const esCharlas = solicitudLimpia.toLowerCase().includes("charlas") || solicitudLimpia.toLowerCase().includes("sesiones educativas") || solicitudLimpia.toLowerCase().includes("actividades aprendizaje") || solicitudLimpia.toLowerCase().includes("aprendizaje");
+            const esDeportivas = solicitudLimpia.toLowerCase().includes("deportivas");
 
             if (esObituario) {
             rowClass = "row-obituario";
@@ -9723,6 +9784,8 @@
             rowClass = "row-copy-instagram";
             } else if (esCharlas) {
             rowClass = "row-charlas";
+            } else if (esDeportivas) {
+            rowClass = "row-deportivas";
             } else {
             rowClass = "row-new";
             }
@@ -10887,7 +10950,7 @@
     html += renderField("Tipo de Solicitud", data.Solicitud);
 
     // Detalles: Separar el procesamiento de "Especiales" de las Regulares
-    if (solUpper.match(/OBITUARIO|CERTIFICADO|RECONOCIMIENTO|TEXTILES|PENDÓN|PENDON|CORRECCIÓN|CORRECCION|NOTA DE PRENSA|CHARLAS|SESIONES EDUCATIVAS|ACTIVIDADES APRENDIZAJE|APRENDIZAJE|TALLER|CURSO|EFEMÉRIDE|EFEMERIDE|OTROS/)) {
+    if (solUpper.match(/OBITUARIO|CERTIFICADO|RECONOCIMIENTO|TEXTILES|PENDÓN|PENDON|CORRECCIÓN|CORRECCION|NOTA DE PRENSA|CHARLAS|SESIONES EDUCATIVAS|ACTIVIDADES APRENDIZAJE|APRENDIZAJE|COPY RRSS|ACTIVIDADES DEPORTIVAS|DEPORTIVA|TALLER|CURSO|EFEMÉRIDE|EFEMERIDE|OTROS/)) {
         html += renderField("Detalles del Requerimiento", data.Otros);
     } else {
         // Contar items para determinar singular o plural
@@ -14146,6 +14209,7 @@
             'efemerides': 'Efemérides',
             'certificado': 'Certificado o Reconocimiento',
             'charlas-educativas': 'Actividades de Aprendizaje',
+            'deportivas': 'Actividades Deportivas',
             'textiles': 'Textiles',
             'pendon': 'Pendón',
             'correccion-nota-prensa': 'Corrección Nota de Prensa',
@@ -14358,6 +14422,10 @@
                 console.log("🧹 Input de fotos limpiado para Copy RRSS");
             }
             
+        } else if (tipo === 'deportivas') {
+            // Formulario actividades deportivas: formulario estático
+            document.getElementById('form-deportivas').classList.remove('hidden');
+            // Nota: fecha/hora, ubicación, contacto y soportes se mantienen visibles por defecto
         } else if (tipo === 'otros') {
             // Formulario otros: formulario estático
             document.getElementById('form-otros').classList.remove('hidden');
@@ -14907,6 +14975,18 @@
             isValid: () => document.getElementById('direccion-exacta')?.value.trim() !== '',
             label: 'Dirección exacta de la actividad'
         });
+    } else if (catType === 'deportivas') {
+        // ✅ VALIDACIÓN ESPECIAL PARA DEPORTIVAS
+        fieldsInOrder.push({
+            id: 'deportivas-nombre',
+            isValid: () => document.getElementById('deportivas-nombre')?.value.trim() !== '',
+            label: 'Nombre de la Actividad'
+        });
+        fieldsInOrder.push({
+            id: 'deportivas-detalles',
+            isValid: () => document.getElementById('deportivas-detalles')?.value.trim() !== '',
+            label: 'Detalles de la actividad'
+        });
     } else if (catType === 'pendon') {
         // ✅ VALIDACIÓN ESPECIAL PARA PENDÓN
         fieldsInOrder.push({
@@ -15110,6 +15190,11 @@
         if (institucion || direccion) {
             html += `<p><b>🧭 Ubicación:</b> ${[institucion, direccion].filter(x => x).join(', ')}</p>`;
         }
+    } else if (catType === 'deportivas') {
+        const nombreAct = document.getElementById('deportivas-nombre')?.value.trim();
+        if (nombreAct) html += `<p><b>🏆 Actividad:</b> ${nombreAct}</p>`;
+        const detallesAct = document.getElementById('deportivas-detalles')?.value.trim();
+        if (detallesAct) html += `<p><b>📝 Detalles:</b> ${detallesAct}</p>`;
     } else if (catType === 'pendon') {
         html += `<p><b>🚩 Tamaño del pendón:</b> ${window.tipoPendonSeleccionado || 'No seleccionado'}</p>`;
         // Mostrar medidas si se seleccionó "Otros tamaños"
@@ -15395,6 +15480,35 @@
             params.append("Unidad", unidadFinal);
             params.append("Solicitud", catName);
             params.append("Otros", datosCharlas);
+            params.append("Servicios", "");
+            params.append("Direccion", direccionCompleta);
+            params.append("Hora", horaCompleta || "N/A");
+            params.append("Observaciones", observaciones);
+            params.append("Fecha", fecha);
+
+        } else if (catType === 'deportivas') {
+            const nombreAct = document.getElementById('deportivas-nombre')?.value.trim() || '';
+            const detallesAct = document.getElementById('deportivas-detalles')?.value.trim() || '';
+            const fecha = document.getElementById('fecha').value;
+            const hora = document.getElementById('hora')?.value || '';
+            const ampm = document.querySelector('.btn-time.selected')?.innerText || 'a. m.';
+            const horaCompleta = hora ? `${hora} ${ampm}` : '';
+            const institucion = document.getElementById('institucion')?.value.trim() || '';
+            const direccionExacta = document.getElementById('direccion-exacta')?.value.trim() || '';
+            const direccionCompleta = [institucion, direccionExacta].filter(part => part).join(", ");
+            const observaciones = document.getElementById('observaciones')?.value.trim() || '';
+            
+            let datosDeportivos = "Tipo de Solicitud: Actividades Deportivas\n";
+            if (nombreAct) datosDeportivos += "• Actividad: " + nombreAct + "\n";
+            if (detallesAct) datosDeportivos += "• Detalles: " + detallesAct + "\n";
+            
+            let unidadFinal = selectedUnidad.trim();
+            if (!EXCEPCIONES_SIN_UMI.includes(unidadFinal)) {
+                unidadFinal = "Unidad Médica " + unidadFinal;
+            }
+            params.append("Unidad", unidadFinal);
+            params.append("Solicitud", catName);
+            params.append("Otros", datosDeportivos);
             params.append("Servicios", "");
             params.append("Direccion", direccionCompleta);
             params.append("Hora", horaCompleta || "N/A");
