@@ -4500,16 +4500,16 @@
         <p style="font-size: 0.75rem; color: rgba(255, 255, 255, 0.9); margin: 0 0 8px 0; font-weight: 600;">⚡ Modo de Subida:</p>
         <div style="display: flex; gap: 8px; flex-wrap: wrap;">
             <button type="button" id="modeRapido" class="upload-mode-btn active" onclick="selectUploadMode('rapido')" style="flex: 1; min-width: 120px; padding: 8px 12px; border: 2px solid transparent; border-radius: 8px; background: linear-gradient(135deg, #00b894 0%, #00a085 100%); color: white; font-size: 0.75rem; font-weight: 600; cursor: pointer; transition: all 0.3s ease;">
-                🚀 Rápido<br><span style="font-size: 0.65rem; font-weight: 400; opacity: 0.9;">Hasta 15MB · Reintentos auto</span>
+                🚀 Rápido<br><span style="font-size: 0.65rem; font-weight: 400; opacity: 0.9;">Hasta 20MB · Reintentos auto</span>
             </button>
             <button type="button" id="modeClasico" class="upload-mode-btn" onclick="selectUploadMode('clasico')" style="flex: 1; min-width: 120px; padding: 8px 12px; border: 2px solid transparent; border-radius: 8px; background: rgba(255,255,255,0.15); color: rgba(255,255,255,0.8); font-size: 0.75rem; font-weight: 600; cursor: pointer; transition: all 0.3s ease;">
-                🐢 Clásico<br><span style="font-size: 0.65rem; font-weight: 400; opacity: 0.9;">Hasta 15MB · Compatible</span>
+                🐢 Clásico<br><span style="font-size: 0.65rem; font-weight: 400; opacity: 0.9;">Hasta 20MB · Compatible</span>
             </button>
         </div>
-        <p id="modeDescription" style="font-size: 0.7rem; color: rgba(255, 255, 255, 0.7); margin: 8px 0 0 0; font-style: italic;">✅ <strong>Modo recomendado.</strong> Subida directa a Google Drive con reintentos automáticos. Ideal para conexiones lentas o inestables (hasta 15MB). Soporta presentaciones PowerPoint.</p>
+        <p id="modeDescription" style="font-size: 0.7rem; color: rgba(255, 255, 255, 0.7); margin: 8px 0 0 0; font-style: italic;">✅ <strong>Modo recomendado.</strong> Subida directa a Google Drive con reintentos automáticos. Ideal para conexiones lentas o inestables (hasta 20MB para videos MP4, 15MB para otros). Soporta presentaciones PowerPoint y videos.</p>
     </div>
-    <input type="file" id="arteFile" class="modern-input" accept=".jpg,.jpeg,.png,.pdf,.zip,.ppt,.pptx,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation" style="font-size: 0.8rem;">
-    <p id="fileSizeLimit" style="font-size: 0.7rem; color: rgba(255, 255, 255, 0.8); margin-top: 5px; font-weight: 500;">📏 Máximo 15MB (Formatos: JPG, PNG, PDF, ZIP, PPT, PPTX)</p>
+    <input type="file" id="arteFile" class="modern-input" accept=".jpg,.jpeg,.png,.pdf,.zip,.ppt,.pptx,.mp4,video/mp4,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation" style="font-size: 0.8rem;">
+    <p id="fileSizeLimit" style="font-size: 0.7rem; color: rgba(255, 255, 255, 0.8); margin-top: 5px; font-weight: 500;">📏 Máximo 15MB (Formatos: JPG, PNG, PDF, ZIP, PPT, PPTX) | 🎬 Máximo 20MB (Formatos: MP4)</p>
     
     <div id="correctionTypeSelector" class="hidden" style="margin-top: 15px; margin-bottom: 15px; background: rgba(251, 133, 0, 0.1); padding: 12px; border-radius: 10px; border: 1px solid rgba(251, 133, 0, 0.3);">
         <p style="font-size: 0.8rem; color: #fb8500; margin: 0 0 8px 0; font-weight: 700;">🔄 Tipo de Corrección:</p>
@@ -4773,7 +4773,7 @@
 
     <!-- FORMULARIO: OBITUARIO -->
     <div id="form-obituario" class="form-type-section hidden">
-    <div style="grid-column: 1 / -1; background: #fff3e0; border: 2px solid #fb8500; border-radius: 12px; padding: 15px; margin-bottom: 15px;">
+    <div style="grid-column: 1 / -1; background: #fff3e0; border: 2px solid #fb8500; border-radius: 12px; padding: 15px; margin-top: 15px; margin-bottom: 15px;">
     <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
     <span style="font-size: 1.5rem;">⚠️</span>
     <span style="font-weight: 800; color: #5d4600; font-size: 0.95rem;">SOLICITUD PRIORITARIA</span>
@@ -4810,7 +4810,7 @@
 
     <!-- FORMULARIO: EFEMÉRIDES -->
     <div id="form-efemerides" class="form-type-section hidden">
-    <div style="grid-column: 1 / -1; background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%); border: 2px solid #e67e22; border-radius: 12px; padding: 15px; margin-bottom: 15px;">
+    <div style="grid-column: 1 / -1; background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%); border: 2px solid #e67e22; border-radius: 12px; padding: 15px; margin-top: 15px; margin-bottom: 15px;">
     <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
     <span style="font-size: 1.5rem;">📅</span>
     <span style="font-weight: 800; color: #d35400; font-size: 0.95rem;">SOLICITUD DE EFEMÉRIDE</span>
@@ -4855,7 +4855,7 @@
 
     <!-- FORMULARIO: ACTIVIDADES DE APRENDIZAJE -->
     <div id="form-charlas-educativas" class="form-type-section hidden">
-    <div style="background: linear-gradient(135deg, #c0392b 0%, #e74c3c 50%, #ec7063 100%); border: 2px solid #c0392b; border-radius: 12px; padding: 15px; margin-bottom: 15px;">
+    <div style="background: linear-gradient(135deg, #c0392b 0%, #e74c3c 50%, #ec7063 100%); border: 2px solid #c0392b; border-radius: 12px; padding: 15px; margin-top: 15px; margin-bottom: 15px;">
     <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
     <span style="font-size: 1.5rem;">🎓</span>
     <span style="font-weight: 800; color: white; font-size: 0.95rem;">ACTIVIDADES DE APRENDIZAJE</span>
@@ -4900,7 +4900,7 @@
 
     <!-- FORMULARIO: ACTIVIDADES DEPORTIVAS -->
     <div id="form-deportivas" class="form-type-section hidden">
-        <div style="background: linear-gradient(135deg, #005f73 0%, #0a9396 100%); border: 2px solid #005f73; border-radius: 12px; padding: 15px; margin-bottom: 15px;">
+        <div style="background: linear-gradient(135deg, #005f73 0%, #0a9396 100%); border: 2px solid #005f73; border-radius: 12px; padding: 15px; margin-top: 15px; margin-bottom: 15px;">
             <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
                 <span style="font-size: 1.5rem;">⚽</span>
                 <span style="font-weight: 800; color: white; font-size: 0.95rem;">ACTIVIDADES DEPORTIVAS</span>
@@ -4935,7 +4935,7 @@
     <div style="background: #f5f0e8; border: 2px solid #8B4513; border-radius: 12px; padding: 15px; margin-bottom: 15px;">
     <label class="section-title" style="color: #5a3a1a; font-size: 0.9rem;">✅ Prenda seleccionada: <span id="textiles-tipo-texto"></span></label>
     </div>
-    <div style="background: #fff3e0; border: 2px solid #fb8500; border-radius: 12px; padding: 15px; margin-bottom: 15px;">
+    <div style="background: #fff3e0; border: 2px solid #fb8500; border-radius: 12px; padding: 15px; margin-top: 15px; margin-bottom: 15px;">
     <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
     <span style="font-size: 1.5rem;">⚠️</span>
     <span style="font-weight: 800; color: #5d4600; font-size: 0.95rem;">ADVERTENCIA IMPORTANTE</span>
@@ -4953,7 +4953,7 @@
 
     <!-- FORMULARIO: PENDÓN -->
     <div id="form-pendon" class="form-type-section hidden">
-    <div style="background: #fff3e0; border: 2px solid #fb8500; border-radius: 12px; padding: 15px; margin-bottom: 15px;">
+    <div style="background: #fff3e0; border: 2px solid #fb8500; border-radius: 12px; padding: 15px; margin-top: 15px; margin-bottom: 15px;">
     <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
     <span style="font-size: 1.5rem;">⚠️</span>
     <span style="font-weight: 800; color: #5d4600; font-size: 0.95rem;">ADVERTENCIA IMPORTANTE</span>
@@ -4990,7 +4990,7 @@
 
     <!-- FORMULARIO: CORRECCIÓN DE DISEÑO -->
     <div id="form-correccion-diseno" class="form-type-section hidden">
-    <div style="background: linear-gradient(135deg, #0033cc 0%, #111111 100%); border: 2px solid #0033cc; border-radius: 12px; padding: 15px; margin-bottom: 15px;">
+    <div style="background: linear-gradient(135deg, #0033cc 0%, #111111 100%); border: 2px solid #0033cc; border-radius: 12px; padding: 15px; margin-top: 15px; margin-bottom: 15px;">
         <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
             <span style="font-size: 1.5rem;">🖌️</span>
             <span style="font-weight: 800; color: white; font-size: 0.95rem;">CORRECCIÓN DE DISEÑO</span>
@@ -5015,7 +5015,7 @@
     <label class="section-title">📄 Título de la Nota *</label>
     <input type="text" id="correccion-nombre" class="modern-input" style="width: 100%;" placeholder="Coloque el título de su nota">
     </div>
-    <div style="background: #f0f9f4; border: 2px solid #2d6a4f; border-radius: 12px; padding: 15px; margin-bottom: 15px;">
+    <div style="background: #f0f9f4; border: 2px solid #2d6a4f; border-radius: 12px; padding: 15px; margin-top: 15px; margin-bottom: 15px;">
     <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
     <span style="font-size: 1.5rem;">📰</span>
     <span style="font-weight: 800; color: #5d4600; font-size: 0.95rem;">INSTRUCCIONES IMPORTANTES</span>
@@ -5038,7 +5038,7 @@
 
     <!-- FORMULARIO: COPY RRSS -->
     <div id="form-copy-rrss" class="form-type-section hidden">
-    <div style="background: linear-gradient(135deg, var(--celeste) 0%, var(--azul-deep) 100%); border: 2px solid var(--celeste); border-radius: 12px; padding: 15px; margin-bottom: 15px;">
+    <div style="background: linear-gradient(135deg, var(--celeste) 0%, var(--azul-deep) 100%); border: 2px solid var(--celeste); border-radius: 12px; padding: 15px; margin-top: 15px; margin-bottom: 15px;">
     <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
     <span style="font-size: 1.5rem;">📸</span>
     <span style="font-weight: 800; color: white; font-size: 0.95rem;">COPY RRSS</span>
@@ -13416,11 +13416,14 @@
 
         const file = fileInput.files[0];
         const fileSizeMB = file.size / (1024 * 1024);
+        const fileExtension = file.name.split('.').pop().toLowerCase();
+        const isVideo = fileExtension === 'mp4' || file.type === 'video/mp4';
 
         // 🚀 DETECTAR MODO Y REDIRIGIR
-        // Ambos modos tienen límite de 15MB para soportar presentaciones PowerPoint
-        if (file.size > 15 * 1024 * 1024) {
-            openModal("📏 Tamaño Excedido", "El archivo excede los 15MB permitidos. Por favor comprime la presentación o convierte a PDF.", "⚠️");
+        // Videos mp4 tienen límite de 20MB, otros archivos 15MB
+        const maxFileSizeMB = isVideo ? 20 : 15;
+        if (file.size > maxFileSizeMB * 1024 * 1024) {
+            openModal("📏 Tamaño Excedido", `El archivo excede los ${maxFileSizeMB}MB permitidos. Por favor comprime el archivo o use un formato más ligero.`, "⚠️");
             return;
         }
         
@@ -16679,6 +16682,16 @@
 
         const file = fileInput.files[0];
         const fileSizeMB = file.size / (1024 * 1024);
+        const fileExtension = file.name.split('.').pop().toLowerCase();
+        const isVideo = fileExtension === 'mp4' || file.type === 'video/mp4';
+
+        // ✅ VALIDAR TAMAÑO DE ARCHIVO
+        // Videos mp4 tienen límite de 20MB, otros archivos 15MB
+        const maxFileSizeMB = isVideo ? 20 : 15;
+        if (file.size > maxFileSizeMB * 1024 * 1024) {
+            openModal("📏 Tamaño Excedido", `El archivo excede los ${maxFileSizeMB}MB permitidos. Por favor comprima el archivo o use un formato más ligero.`, "⚠️");
+            return;
+        }
 
         // ✅ VALIDAR TIPO DE CORRECCIÓN EN MODO RÁPIDO
         let correctionType = "";
