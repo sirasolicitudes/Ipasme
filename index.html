@@ -242,6 +242,42 @@
     .row-correccion-nota-prensa .badge-prioridad { background: white !important; color: #2d6a4f !important; border: 1px solid white !important; }
     .row-correccion-nota-prensa .status-badge { color: white !important; }
 
+    /* ✅ ESTILOS PARA CORRECCIÓN DE DISEÑO - Azul Eléctrico y Negro */
+    .row-correccion-diseno { background: linear-gradient(135deg, #0033cc 0%, #111111 100%) !important; color: white !important; border-left: 5px solid #0033cc !important; }
+    .row-correccion-diseno td { color: white !important; font-weight: 600 !important; }
+    .row-correccion-diseno *, .row-correccion-diseno td *, .row-correccion-diseno span, .row-correccion-diseno div, .row-correccion-diseno a, .row-correccion-diseno button, .row-correccion-diseno .status-badge, .row-correccion-diseno .priority-badge { color: white !important; }
+    .row-correccion-diseno a:hover { color: #cccccc !important; }
+    .row-correccion-diseno .badge-new { background: white !important; color: #0033cc !important; border: 1px solid white !important; }
+    .row-correccion-diseno .badge-prioridad { background: white !important; color: #0033cc !important; border: 1px solid white !important; }
+    .row-correccion-diseno .status-badge { color: white !important; }
+
+    .correccion-diseno-btn {
+        background: linear-gradient(135deg, #0011aa 0%, #0a0a0a 100%) !important;
+        color: white !important;
+        border-color: #0033cc !important;
+        position: relative;
+        overflow: hidden;
+    }
+    .correccion-diseno-btn::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+        animation: none;
+    }
+    .correccion-diseno-btn.selected::before {
+        animation: shimmer 3s infinite;
+    }
+    .correccion-diseno-btn.selected {
+        background: linear-gradient(135deg, #0a0a0a 0%, #0033cc 100%) !important;
+        box-shadow: 0 0 20px rgba(0, 51, 204, 0.5) !important;
+        border-color: #0033cc !important;
+        transform: scale(0.98);
+    }
+
     /* ✅ ESTILOS PARA ACTIVIDADES DE APRENDIZAJE - Degradado rojo */
     .row-charlas { background: linear-gradient(135deg, #c0392b 0%, #e74c3c 50%, #ec7063 100%) !important; color: white !important; border-left: 5px solid #c0392b !important; }
     .row-charlas td { color: white !important; font-weight: 600 !important; }
@@ -4474,6 +4510,25 @@
     </div>
     <input type="file" id="arteFile" class="modern-input" accept=".jpg,.jpeg,.png,.pdf,.zip,.ppt,.pptx,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation" style="font-size: 0.8rem;">
     <p id="fileSizeLimit" style="font-size: 0.7rem; color: rgba(255, 255, 255, 0.8); margin-top: 5px; font-weight: 500;">📏 Máximo 15MB (Formatos: JPG, PNG, PDF, ZIP, PPT, PPTX)</p>
+    
+    <div id="correctionTypeSelector" class="hidden" style="margin-top: 15px; margin-bottom: 15px; background: rgba(251, 133, 0, 0.1); padding: 12px; border-radius: 10px; border: 1px solid rgba(251, 133, 0, 0.3);">
+        <p style="font-size: 0.8rem; color: #fb8500; margin: 0 0 8px 0; font-weight: 700;">🔄 Tipo de Corrección:</p>
+        <div style="display: flex; gap: 8px;">
+            <label class="corr-type-lbl" style="flex: 1; cursor: pointer; text-align: center; background: white; padding: 8px; border-radius: 6px; border: 2px solid var(--gris); font-size: 0.75rem; transition: 0.2s;">
+                <input type="radio" name="corrType" value="texto" style="display: none;" onchange="updateCorrTypeUI()">
+                📝 Texto
+            </label>
+            <label class="corr-type-lbl" style="flex: 1; cursor: pointer; text-align: center; background: white; padding: 8px; border-radius: 6px; border: 2px solid var(--gris); font-size: 0.75rem; transition: 0.2s;">
+                <input type="radio" name="corrType" value="diseno" style="display: none;" onchange="updateCorrTypeUI()">
+                🖌️ Diseño
+            </label>
+            <label class="corr-type-lbl" style="flex: 1; cursor: pointer; text-align: center; background: white; padding: 8px; border-radius: 6px; border: 2px solid var(--gris); font-size: 0.75rem; transition: 0.2s;">
+                <input type="radio" name="corrType" value="ambas" style="display: none;" onchange="updateCorrTypeUI()">
+                🔄 Ambas
+            </label>
+        </div>
+    </div>
+    
     <input type="hidden" id="currentReqId">
     <input type="hidden" id="selectedUploadMode" value="rapido">
     </div>
@@ -4668,6 +4723,10 @@
     <!-- ✅ NUEVO: Botón Pendón - Color púrpura inspirado en paleta Ocean -->
     <div class="card-btn pendon-btn" onclick="selectCat(this, 'pendon')" style="background: linear-gradient(135deg, #6B4EE6 0%, #9B7BFF 100%); color: white; border-color: #6B4EE6;">
         <span style="font-size: 1.2rem;">🚩</span> Pendón
+    </div>
+    <!-- ✅ NUEVO: Botón Corrección de Diseño - Azul Eléctrico y Negro -->
+    <div class="card-btn correccion-diseno-btn" onclick="selectCat(this, 'correccion-diseno')">
+        <span style="font-size: 1.2rem;">🖌️</span> Corrección de<br>Diseño
     </div>
     <!-- ✅ NUEVO: Botón Corrección Nota de Prensa - Degradado verde con tonos de la web -->
     <div class="card-btn correccion-btn" onclick="selectCat(this, 'correccion-nota-prensa')" style="background: linear-gradient(135deg, #2d6a4f 0%, #40916c 50%, #52b788 100%); color: white; border-color: #2d6a4f;">
@@ -4926,6 +4985,27 @@
     <label class="section-title">📝 4. Descripción del Pendón *</label>
     <textarea id="pendon-descripcion" class="modern-input" rows="4" style="width: 100%;" placeholder="Especifique sus necesidades, los detalles solicitados por su proveedor y el formato en que necesita el arte final."></textarea>
     </div>
+    </div>
+    </div>
+
+    <!-- FORMULARIO: CORRECCIÓN DE DISEÑO -->
+    <div id="form-correccion-diseno" class="form-type-section hidden">
+    <div style="background: linear-gradient(135deg, #0033cc 0%, #111111 100%); border: 2px solid #0033cc; border-radius: 12px; padding: 15px; margin-bottom: 15px;">
+        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+            <span style="font-size: 1.5rem;">🖌️</span>
+            <span style="font-weight: 800; color: white; font-size: 0.95rem;">CORRECCIÓN DE DISEÑO</span>
+        </div>
+        <p style="margin: 0; font-size: 0.85rem; color: #e0e0e0; line-height: 1.4;">
+            Utilice este formulario exclusivamente para solicitar modificaciones sobre un arte previamente entregado.
+        </p>
+    </div>
+    <div style="margin-bottom: 15px;">
+        <label class="section-title">🆔 3. Código de Requerimiento Anterior *</label>
+        <input type="text" id="correccion-diseno-id" class="modern-input" style="width: 100%; border: 2px solid #0033cc;" placeholder="Ej: REQ-1234567890">
+    </div>
+    <div style="margin-bottom: 15px;">
+        <label class="section-title">📝 4. Describa la corrección *</label>
+        <textarea id="correccion-diseno-desc" class="modern-input" rows="4" style="width: 100%;" placeholder="Detalle los cambios que necesita en el diseño (textos, colores, fotos a cambiar, etc.)..."></textarea>
     </div>
     </div>
 
@@ -9763,6 +9843,7 @@
             const esCertificado = solicitudLimpia.toLowerCase().includes("certificado");
             const esTextiles = solicitudLimpia.toLowerCase().includes("textiles");
             const esPendon = solicitudLimpia.toLowerCase().includes("pendon") || solicitudLimpia.toLowerCase().includes("pendón");
+            const esCorreccionDiseno = solicitudLimpia.toLowerCase().includes("corrección de diseño") || solicitudLimpia.toLowerCase().includes("correccion de diseno");
             const esCorreccionNotaPrensa = solicitudLimpia.toLowerCase().includes("corrección") || solicitudLimpia.toLowerCase().includes("correccion") || solicitudLimpia.toLowerCase().includes("nota de prensa");
             const esCopyRRSS = solicitudLimpia.toLowerCase().includes("copy rrss");
             const esCharlas = solicitudLimpia.toLowerCase().includes("charlas") || solicitudLimpia.toLowerCase().includes("sesiones educativas") || solicitudLimpia.toLowerCase().includes("actividades aprendizaje") || solicitudLimpia.toLowerCase().includes("aprendizaje");
@@ -9778,6 +9859,8 @@
             rowClass = "row-textiles";
             } else if (esPendon) {
             rowClass = "row-pendon";
+            } else if (esCorreccionDiseno) {
+            rowClass = "row-correccion-diseno";
             } else if (esCorreccionNotaPrensa) {
             rowClass = "row-correccion-nota-prensa";
             } else if (esCopyRRSS) {
@@ -10906,6 +10989,9 @@
             theme = { bg: "#8B4513", accent: "#CD853F", icon: "&#129525;" };
         } else if (solUpper.includes("PENDÓN") || solUpper.includes("PENDON")) {
             theme = { bg: "#6B4EE6", accent: "#9B7BFF", icon: "&#128681;" };
+        } else if (solUpper.includes("CORRECCIÓN DE DISEÑO") || solUpper.includes("CORRECCION DE DISENO")) {
+            // Azul eléctrico y oscuro
+            theme = { bg: "#0011aa", accent: "#0033cc", icon: "&#128396;" };
         } else if (solUpper.includes("CORRECCIÓN") || solUpper.includes("CORRECCION") || solUpper.includes("NOTA DE PRENSA")) {
             theme = { bg: "#2d6a4f", accent: "#52b788", icon: "&#128240;" };
         } else if (solUpper.includes("CHARLAS") || solUpper.includes("SESIONES EDUCATIVAS") || solUpper.includes("ACTIVIDADES APRENDIZAJE") || solUpper.includes("APRENDIZAJE")) {
@@ -13277,6 +13363,21 @@
         mainBtn.innerText = "SUBIR A DRIVE";
         mainBtn.onclick = uploadArte;
         mainBtn.style.display = 'block';
+        
+        // ✅ MOSTRAR SELECTOR DE TIPO DE CORRECCIÓN SI YA EXISTE UN ARTE
+        const corrSelector = document.getElementById('correctionTypeSelector');
+        document.querySelectorAll('.corr-type-lbl').forEach(lbl => {
+            lbl.style.borderColor = 'var(--gris)';
+            lbl.style.background = 'white';
+        });
+        document.querySelectorAll('input[name="corrType"]').forEach(r => r.checked = false);
+
+        if (selectedRequestData && selectedRequestData.ArteFinal && selectedRequestData.ArteFinal.trim() !== "" && selectedRequestData.ArteFinal !== "null") {
+            corrSelector.classList.remove('hidden');
+        } else {
+            corrSelector.classList.add('hidden');
+        }
+        
         // Mostrar modal
         document.getElementById('modalAlert').style.display = 'flex';
         // Forzar foco en el input de archivo
@@ -13284,6 +13385,20 @@
             arteFile.focus();
         }, 100);
     }
+    
+    // ✅ ACTUALIZAR UI DE SELECCIÓN DE TIPO DE CORRECCIÓN
+    function updateCorrTypeUI() {
+        document.querySelectorAll('.corr-type-lbl').forEach(lbl => {
+            lbl.style.borderColor = 'var(--gris)';
+            lbl.style.background = 'white';
+        });
+        const selected = document.querySelector('input[name="corrType"]:checked');
+        if (selected) {
+            selected.parentElement.style.borderColor = '#fb8500';
+            selected.parentElement.style.background = '#fff3e0';
+        }
+    }
+    
     // SUBIR ARTE CON SISTEMA DUAL (RÁPIDO / CLÁSICO)
     async function uploadArte() {
         const fileInput = document.getElementById('arteFile');
@@ -13341,6 +13456,21 @@
             uploadParams.append("mime", file.type);
             uploadParams.append("uploadedBy", userCredentials.displayName);
             uploadParams.append("isChunked", "false");
+            
+            // ✅ VALIDAR Y AGREGAR TIPO DE CORRECCIÓN SI ES VISIBLE
+            let correctionType = "";
+            const corrSelector = document.getElementById('correctionTypeSelector');
+            if (corrSelector && !corrSelector.classList.contains('hidden')) {
+                const selected = document.querySelector('input[name="corrType"]:checked');
+                if (selected) {
+                    correctionType = selected.value;
+                } else {
+                    openModal("❌ Error", "Debe seleccionar un tipo de corrección (Texto, Diseño o Ambas).", "⚠️");
+                    document.getElementById('progressBar').style.display = 'none';
+                    return;
+                }
+            }
+            uploadParams.append("correctionType", correctionType);
             
             // ✅ ENVIAR ESTATUS ACTUALIZADO AL BACKEND PARA GOOGLE SHEETS
             const request = localData.find(x => x.id == id);
@@ -14212,6 +14342,7 @@
             'deportivas': 'Actividades Deportivas',
             'textiles': 'Textiles',
             'pendon': 'Pendón',
+            'correccion-diseno': 'Corrección de Diseño',
             'correccion-nota-prensa': 'Corrección Nota de Prensa',
             'copy-rrss': 'Copy RRSS',
             'escuela': 'Vida saludable con Ipasme', // ✅ Se guarda en una sola línea en la BD
@@ -14362,7 +14493,23 @@
             document.getElementById('observaciones-section').classList.add('hidden');
             const photoWarning = document.getElementById('photo-quality-warning');
             if (photoWarning) photoWarning.style.display = 'none';
-            
+
+        } else if (tipo === 'correccion-diseno') {
+            // Formulario corrección de diseño: formulario estático
+            document.getElementById('form-correccion-diseno').classList.remove('hidden');
+
+            // Ocultar hora, ubicación y observaciones. Mantener fecha (esperada) y soportes.
+            const fechaHoraSection = document.getElementById('fecha-hora-section');
+            if (fechaHoraSection) {
+                const horaDiv = fechaHoraSection.children[1];
+                if (horaDiv) horaDiv.style.display = 'none';
+                const fechaLabel = fechaHoraSection.querySelector('label.section-title');
+                if (fechaLabel) fechaLabel.innerText = "📅 Fecha esperada *";
+            }
+            document.getElementById('ubicacion-section').classList.add('hidden');
+            document.getElementById('observaciones-section').classList.add('hidden');
+            // Los soportes quedan visibles por si necesitan subir una referencia o foto nueva.
+
         } else if (tipo === 'correccion-nota-prensa') {
             // Formulario corrección: formulario estático
             document.getElementById('form-correccion').classList.remove('hidden');
@@ -15027,6 +15174,18 @@
             isValid: () => document.getElementById('correccion-fecha')?.value !== '',
             label: 'Fecha'
         });
+    } else if (catType === 'correccion-diseno') {
+        // ✅ VALIDACIÓN ESPECIAL PARA CORRECCIÓN DE DISEÑO
+        fieldsInOrder.push({
+            id: 'correccion-diseno-id',
+            isValid: () => document.getElementById('correccion-diseno-id')?.value.trim() !== '',
+            label: 'Código de Requerimiento Anterior'
+        });
+        fieldsInOrder.push({
+            id: 'correccion-diseno-desc',
+            isValid: () => document.getElementById('correccion-diseno-desc')?.value.trim() !== '',
+            label: 'Descripción de la corrección'
+        });
     } else if (catType === 'copy-rrss') {
         // ✅ VALIDACIÓN PARA COPY RRSS
         fieldsInOrder.push({
@@ -15053,8 +15212,8 @@
         });
     }
 
-    // Campos de fecha y hora solo si no es obituario ni certificado ni textiles ni pendon ni correccion-nota-prensa ni copy-instagram ni efemerides
-    if (catType !== 'obituario' && catType !== 'certificado' && catType !== 'textiles' && catType !== 'pendon' && catType !== 'correccion-nota-prensa' && catType !== 'copy-rrss' && catType !== 'efemerides') {
+    // Campos de fecha y hora solo si no es obituario ni certificado ni textiles ni pendon ni correccion-nota-prensa ni copy-instagram ni efemerides ni correccion-diseno
+    if (catType !== 'obituario' && catType !== 'certificado' && catType !== 'textiles' && catType !== 'pendon' && catType !== 'correccion-nota-prensa' && catType !== 'copy-rrss' && catType !== 'efemerides' && catType !== 'correccion-diseno') {
         fieldsInOrder.push({
             id: 'fecha',
             isValid: () => {
@@ -15116,8 +15275,8 @@
     }
     if (!isValid) return false;
 
-    // ✅ VALIDACIÓN DE 48 HORAS SOLO SI NO ES OBITUARIO, CORRECCIÓN NOTA DE PRENSA NI COPY RRSS
-    if (catType !== 'obituario' && catType !== 'correccion-nota-prensa' && catType !== 'copy-rrss') {
+    // ✅ VALIDACIÓN DE 48 HORAS SOLO SI NO ES OBITUARIO, CORRECCIÓN NOTA DE PRENSA, COPY RRSS, CORRECCIÓN DE DISEÑO NI EFEMÉRIDES
+    if (catType !== 'obituario' && catType !== 'correccion-nota-prensa' && catType !== 'copy-rrss' && catType !== 'correccion-diseno' && catType !== 'efemerides') {
         const fechaInput = document.getElementById('fecha').value;
         const fechaSeleccionada = new Date(fechaInput + 'T00:00:00');
         const ahora = new Date();
@@ -15211,6 +15370,11 @@
         if (fecha) html += `<p><b>📅 Fecha:</b> ${fecha}</p>`;
         const documento = document.getElementById('correccion-documento')?.value;
         html += `<p><b>📎 Documento adjunto:</b> ${documento ? 'Sí' : 'No'}</p>`;
+    } else if (catType === 'correccion-diseno') {
+        const reqId = document.getElementById('correccion-diseno-id')?.value.trim();
+        if (reqId) html += `<p><b>🆔 Requerimiento Anterior:</b> ${reqId}</p>`;
+        const desc = document.getElementById('correccion-diseno-desc')?.value.trim();
+        if (desc) html += `<p><b>📝 Corrección solicitada:</b> ${desc}</p>`;
     } else if (catType === 'copy-rrss') {
         const copy = document.getElementById('copy-rrss-text')?.value.trim();
         if (copy) html += `<p><b>📝 Copy:</b> ${copy.substring(0, 100)}${copy.length > 100 ? '...' : ''}</p>`;
@@ -15561,6 +15725,28 @@
             params.append("Hora", "N/A");
             params.append("Observaciones", "");
             params.append("Fecha", fechaCorreccion);
+
+        } else if (catType === 'correccion-diseno') {
+            const reqId = document.getElementById('correccion-diseno-id')?.value.trim() || '';
+            const desc = document.getElementById('correccion-diseno-desc')?.value.trim() || '';
+            const fecha = document.getElementById('fecha').value;
+
+            let datosCorreccionDiseno = "Tipo de Solicitud: Corrección de Diseño\n";
+            if (reqId) datosCorreccionDiseno += "• Requerimiento Anterior: " + reqId + "\n";
+            if (desc) datosCorreccionDiseno += "• Detalles de Corrección: " + desc + "\n";
+
+            let unidadFinal = selectedUnidad.trim();
+            if (!EXCEPCIONES_SIN_UMI.includes(unidadFinal)) {
+                unidadFinal = "Unidad Médica " + unidadFinal;
+            }
+            params.append("Unidad", unidadFinal);
+            params.append("Solicitud", catName);
+            params.append("Otros", datosCorreccionDiseno);
+            params.append("Servicios", "");
+            params.append("Direccion", "");
+            params.append("Hora", "N/A");
+            params.append("Observaciones", "");
+            params.append("Fecha", fecha);
 
         } else if (catType === 'copy-rrss') {
             const descripcion = document.getElementById('copy-rrss-text')?.value.trim() || '';
@@ -16494,6 +16680,19 @@
         const file = fileInput.files[0];
         const fileSizeMB = file.size / (1024 * 1024);
 
+        // ✅ VALIDAR TIPO DE CORRECCIÓN EN MODO RÁPIDO
+        let correctionType = "";
+        const corrSelector = document.getElementById('correctionTypeSelector');
+        if (corrSelector && !corrSelector.classList.contains('hidden')) {
+            const selected = document.querySelector('input[name="corrType"]:checked');
+            if (selected) {
+                correctionType = selected.value;
+            } else {
+                openModal("❌ Error", "Debe seleccionar un tipo de corrección (Texto, Diseño o Ambas).", "⚠️");
+                return;
+            }
+        }
+
         // Mostrar UI de progreso
         showUploadProgressModal(id, file.name, fileSizeMB);
 
@@ -16644,6 +16843,7 @@
                 completeParams.append("displayName", userCredentials.displayName || userCredentials.username);
                 completeParams.append("username", userCredentials.username);
                 completeParams.append("password", userCredentials.password);
+                completeParams.append("correctionType", correctionType);
                 
                 const completeRes = await fetch(SCRIPT_URL, { 
                     method: 'POST', 
