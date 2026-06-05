@@ -4085,6 +4085,18 @@
         outline: none !important;
     }
 
+    /* Placeholder blanco para input de obituario */
+    #obituario-nombre::placeholder {
+        color: white;
+        opacity: 0.7;
+    }
+    #obituario-nombre:-ms-input-placeholder {
+        color: white;
+    }
+    #obituario-nombre::-webkit-input-placeholder {
+        color: white;
+    }
+
     .swal2-input::placeholder {
         color: rgba(255, 255, 255, 0.5) !important;
     }
@@ -4509,7 +4521,7 @@
         <p id="modeDescription" style="font-size: 0.7rem; color: rgba(255, 255, 255, 0.7); margin: 8px 0 0 0; font-style: italic;">✅ <strong>Modo recomendado.</strong> Subida directa a Google Drive con reintentos automáticos. Ideal para conexiones lentas o inestables (hasta 20MB para videos MP4, 15MB para otros). Soporta presentaciones PowerPoint y videos.</p>
     </div>
     <input type="file" id="arteFile" class="modern-input" accept=".jpg,.jpeg,.png,.pdf,.zip,.ppt,.pptx,.mp4,video/mp4,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation" style="font-size: 0.8rem;">
-    <p id="fileSizeLimit" style="font-size: 0.7rem; color: rgba(255, 255, 255, 0.8); margin-top: 5px; font-weight: 500;">📏 Máximo 15MB (Formatos: JPG, PNG, PDF, ZIP, PPT, PPTX) | 🎬 Máximo 20MB (Formatos: MP4)</p>
+    <p id="fileSizeLimit" style="font-size: 0.7rem; color: rgba(255, 255, 255, 0.8); margin-top: 5px; font-weight: 500;">📏 Máximo 15MB (Formatos: JPG, PNG, PDF, ZIP, PPT, PPTX) | 🎬 Máximo 20MB (Formatos: MP4 - Videos)</p>
     
     <div id="correctionTypeSelector" class="hidden" style="margin-top: 15px; margin-bottom: 15px; background: rgba(251, 133, 0, 0.1); padding: 12px; border-radius: 10px; border: 1px solid rgba(251, 133, 0, 0.3);">
         <p style="font-size: 0.8rem; color: #fb8500; margin: 0 0 8px 0; font-weight: 700;">🔄 Tipo de Corrección:</p>
@@ -4782,28 +4794,28 @@
     Esta solicitud se procesa de manera inmediata. La fecha está fijada al día actual y no requiere las 48 horas de anticipación habituales.
     </p>
     </div>
-    <div style="border: 3px solid #e74c3c; border-radius: 12px; padding: 15px; background: #fdf2f2; margin-bottom: 15px;">
-    <label class="section-title" style="color: #c0392b; font-size: 0.85rem;">🕊️ 3. Nombre del Fallecido *</label>
-    <input type="text" id="obituario-nombre" class="modern-input" placeholder="Nombre y apellido del fallecido" style="width: 100%; border: 2px solid #e74c3c; font-weight: 600;">
+    <div style="border: 3px solid #0f3460; border-radius: 12px; padding: 15px; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); margin-bottom: 15px;">
+    <label class="section-title" style="color: white; font-size: 0.85rem;">🕊️ 3. Nombre del Fallecido *</label>
+    <input type="text" id="obituario-nombre" class="modern-input obituario-input" placeholder="Nombre y apellido del fallecido" style="width: 100%; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); color: white; border: 2px solid #0f3460; font-weight: 600; padding: 12px;">
     </div>
     <div style="margin-bottom: 15px;">
-    <label class="section-title">👨‍👩‍👧‍👦 4. Parentesco</label>
+    <label class="section-title" style="color: #1a1a2e;">👨‍👩‍👧‍👦 4. Parentesco</label>
     <input type="text" id="obituario-parentesco" class="modern-input" placeholder="Madre, Padre, Hijo, etc... En caso de ser familiar de un trabajador del Ipasme" style="width: 100%;">
     </div>
     <div style="margin-bottom: 15px;">
-    <label class="section-title">👤 5. Nombre del familiar</label>
+    <label class="section-title" style="color: #1a1a2e;">👤 5. Nombre del familiar</label>
     <input type="text" id="obituario-familiar" class="modern-input" placeholder="En caso de parentesco" style="width: 100%;">
     </div>
     <div style="margin-bottom: 15px;">
-    <label class="section-title">🏥 6. Servicio o Jurisdicción</label>
+    <label class="section-title" style="color: #1a1a2e;">🏥 6. Servicio o Jurisdicción</label>
     <input type="text" id="obituario-servicio" class="modern-input" placeholder="Lugar de trabajo del fallecido o del familiar" style="width: 100%;">
     </div>
     <div style="margin-bottom: 15px;">
-    <label class="section-title">📝 7. Información Adicional</label>
+    <label class="section-title" style="color: #1a1a2e;">📝 7. Información Adicional</label>
     <textarea id="obituario-info" class="modern-input" rows="3" style="width: 100%;" placeholder="Indique por favor:&#10;- Cualquier información adicional relevante"></textarea>
     </div>
     <div style="margin-bottom: 15px;">
-    <label class="section-title">📅 8. Fecha</label>
+    <label class="section-title" style="color: #1a1a2e;">📅 8. Fecha</label>
     <input type="date" id="obituario-fecha" class="modern-input" style="width: 100%; background: #f8f9fa; border: 2px solid #6c757d;" readonly>
     </div>
     </div>
@@ -13292,10 +13304,10 @@
             modeClasico.classList.remove('active');
             
             if (modeDescription) {
-                modeDescription.innerHTML = '✅ <strong>Modo recomendado.</strong> Subida directa a Google Drive con reintentos automáticos. Ideal para conexiones lentas o inestables (hasta 15MB). Soporta presentaciones PowerPoint.';
+                modeDescription.innerHTML = '✅ <strong>Modo recomendado.</strong> Subida directa a Google Drive con reintentos automáticos. Ideal para conexiones lentas o inestables (hasta 20MB para videos MP4, 15MB para otros). Soporta presentaciones PowerPoint y videos.';
             }
             if (fileSizeLimit) {
-                fileSizeLimit.innerHTML = '📏 Máximo <strong>15MB</strong> (Formatos: JPG, PNG, PDF, ZIP, PPT, PPTX)';
+                fileSizeLimit.innerHTML = '📏 Máximo <strong>15MB</strong> (Formatos: JPG, PNG, PDF, ZIP, PPT, PPTX) | 🎬 Máximo <strong>20MB</strong> (MP4 - Videos)';
             }
             if (mainBtn) {
                 mainBtn.innerText = '🚀 SUBIR A DRIVE (RÁPIDO)';
@@ -14293,6 +14305,21 @@
                 photoWarning.style.display = 'block';
             }
             
+            // Restaurar color normal del label "8. DATOS DE CONTACTO"
+            const contactoLabel = document.querySelector('#contacto-section .section-title');
+            if (contactoLabel) {
+                contactoLabel.style.color = '';
+            }
+            
+            // Restaurar estilo normal del botón de enviar
+            const submitBtn = document.getElementById('submitBtn');
+            if (submitBtn) {
+                submitBtn.style.background = '';
+                submitBtn.style.borderColor = '';
+                submitBtn.style.color = '';
+                submitBtn.innerHTML = '🚀 ENVIAR SOLICITUD A COMUNICACIONES';
+            }
+            
             // Limpiar variables globales de tipos especiales
             window.tipoArteSeleccionado = null;
             window.tipoPrendaSeleccionada = null;
@@ -14364,6 +14391,80 @@
         document.getElementById('cat-grid').classList.remove('field-error');
         
         // ═══════════════════════════════════════════════════════════════════
+        // ACTUALIZAR BOTÓN DE ENVIAR SEGÚN EL TIPO DE SOLICITUD
+        // ═══════════════════════════════════════════════════════════════════
+        const submitBtn = document.getElementById('submitBtn');
+        if (submitBtn) {
+            // Mapeo de tipos con fondo específico (icono, fondo)
+            const tiposConFondo = {
+                'obituario': {
+                    icono: '🕊️',
+                    fondo: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)',
+                    borde: '#0f3460'
+                },
+                'efemerides': {
+                    icono: '📅',
+                    fondo: 'linear-gradient(135deg, #e67e22 0%, #f39c12 50%, #f1c40f 100%)',
+                    borde: '#d35400'
+                },
+                'certificado': {
+                    icono: '🏆',
+                    fondo: 'linear-gradient(135deg, var(--color-san-marino) 0%, var(--color-eden) 100%)',
+                    borde: 'var(--color-eden)'
+                },
+                'charlas-educativas': {
+                    icono: '🎓',
+                    fondo: 'linear-gradient(135deg, #c0392b 0%, #e74c3c 50%, #ec7063 100%)',
+                    borde: '#c0392b'
+                },
+                'textiles': {
+                    icono: '🧵',
+                    fondo: 'linear-gradient(135deg, #8B4513 0%, #CD853F 100%)',
+                    borde: '#8B4513'
+                },
+                'pendon': {
+                    icono: '🚩',
+                    fondo: 'linear-gradient(135deg, #6B4EE6 0%, #9B7BFF 100%)',
+                    borde: '#6B4EE6'
+                },
+                'correccion-nota-prensa': {
+                    icono: '📰',
+                    fondo: 'linear-gradient(135deg, #2d6a4f 0%, #40916c 50%, #52b788 100%)',
+                    borde: '#2d6a4f'
+                },
+                'deportivas': {
+                    icono: '⚽',
+                    fondo: 'linear-gradient(135deg, #005f73 0%, #0a9396 100%)',
+                    borde: '#005f73'
+                },
+                'correccion-diseno': {
+                    icono: '🖌️',
+                    fondo: 'linear-gradient(135deg, #0011aa 0%, #0a0a0a 100%)',
+                    borde: '#0033cc'
+                },
+                'copy-rrss': {
+                    icono: '📸',
+                    fondo: 'linear-gradient(135deg, var(--celeste) 0%, var(--azul-deep) 100%)',
+                    borde: 'var(--celeste)'
+                }
+            };
+            
+            if (tiposConFondo[tipo]) {
+                // Aplicar estilo específico del tipo
+                submitBtn.style.background = tiposConFondo[tipo].fondo;
+                submitBtn.style.borderColor = tiposConFondo[tipo].borde;
+                submitBtn.style.color = 'white';
+                submitBtn.innerHTML = tiposConFondo[tipo].icono + ' ENVIAR SOLICITUD A COMUNICACIONES';
+            } else {
+                // Restaurar estilo normal
+                submitBtn.style.background = '';
+                submitBtn.style.borderColor = '';
+                submitBtn.style.color = '';
+                submitBtn.innerHTML = '🚀 ENVIAR SOLICITUD A COMUNICACIONES';
+            }
+        }
+        
+        // ═══════════════════════════════════════════════════════════════════
         // MOSTRAR EL FORMULARIO CORRESPONDIENTE SEGÚN EL TIPO
         // ═══════════════════════════════════════════════════════════════════
         
@@ -14409,6 +14510,12 @@
                 const mm = String(hoy.getMonth() + 1).padStart(2, '0');
                 const dd = String(hoy.getDate()).padStart(2, '0');
                 fechaObituario.value = `${yyyy}-${mm}-${dd}`;
+            }
+            
+            // Cambiar color del label "8. DATOS DE CONTACTO" para obituario
+            const contactoLabel = document.querySelector('#contacto-section .section-title');
+            if (contactoLabel) {
+                contactoLabel.style.color = '#1a1a2e';
             }
             
             // Ocultar secciones no relevantes para obituario
