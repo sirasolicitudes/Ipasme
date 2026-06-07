@@ -14,6 +14,8 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <!-- ✅ Chart.js para gráficos de estadísticas -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- ✅ tsParticles para efectos de partículas -->
+    <script src="https://cdn.jsdelivr.net/npm/tsparticles@2.12.0/tsparticles.bundle.min.js"></script>
     <style>
     :root {
     /* Colores de la paleta Ocean */
@@ -742,7 +744,31 @@
     }
     /* MODAL MANTENIMIENTO */
     #maintOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--azul-deep); z-index: 30000;
-    display: none; flex-direction: column; align-items: center; justify-content: center; color: white; text-align: center; }
+    display: none; flex-direction: column; align-items: center; justify-content: center; color: white; text-align: center; overflow: hidden; }
+    
+    /* Partículas de fondo - tsParticles */
+    #maintParticles { 
+        position: absolute; 
+        top: 0; 
+        left: 0; 
+        width: 100%; 
+        height: 100%; 
+        pointer-events: none; 
+        z-index: 0;
+    }
+    
+    /* Contenido del modal */
+    .maint-content-wrapper { position: relative; z-index: 1; padding: 40px; max-width: 600px; }
+    .maint-icon-wrapper { margin-bottom: 20px; }
+    
+    /* Contador de cuenta regresiva */
+    .maint-countdown-wrapper { margin-top: 30px; padding: 20px; background: rgba(255,255,255,0.1); border-radius: 15px; backdrop-filter: blur(10px); }
+    .maint-countdown { display: flex; align-items: center; justify-content: center; gap: 10px; }
+    .countdown-block { display: flex; flex-direction: column; align-items: center; min-width: 60px; }
+    .countdown-value { font-size: 2.5rem; font-weight: 800; color: var(--turquesa); line-height: 1; }
+    .countdown-label { font-size: 0.8rem; opacity: 0.8; text-transform: uppercase; letter-spacing: 1px; }
+    .countdown-separator { font-size: 2.5rem; font-weight: 800; color: rgba(255,255,255,0.5); }
+    
     .modal-btn { background: var(--turquesa); color: white; border: none;
     padding: 12px; border-radius: 15px; font-weight: 800; width: 100%; margin-top: 25px; cursor: pointer; font-size: 1rem; transition: 0.3s; }
     .modal-btn:hover { background: var(--azul-deep);
@@ -2159,7 +2185,18 @@
     .page.active { display: block;
     }
     #loadingOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(135deg, rgba(2, 48, 71, 0.98) 0%, rgba(0, 150, 199, 0.95) 100%); display: none;
-    flex-direction: column; align-items: center; justify-content: center; z-index: 30000; color: white; text-align: center; padding: 20px; backdrop-filter: blur(10px); }
+    flex-direction: column; align-items: center; justify-content: center; z-index: 30000; color: white; text-align: center; padding: 20px; backdrop-filter: blur(10px); overflow: hidden; }
+    
+    /* Partículas de fondo - tsParticles para loadingOverlay */
+    #loadingParticles { 
+        position: absolute; 
+        top: 0; 
+        left: 0; 
+        width: 100%; 
+        height: 100%; 
+        pointer-events: none; 
+        z-index: 0;
+    }
     .spinner { width: 80px; height: 80px;
     border: 8px solid rgba(255,255,255,0.15); border-top: 8px solid var(--amarillo); border-right: 8px solid var(--turquesa); border-radius: 50%; animation: spin 1.2s cubic-bezier(0.4, 0, 0.2, 1) infinite; margin-bottom: 30px; box-shadow: 0 0 30px rgba(255, 183, 3, 0.4); filter: drop-shadow(0 0 10px rgba(0, 150, 199, 0.6));
     }
@@ -4393,14 +4430,28 @@
     </div>
 
     <div id="maintOverlay">
-    <span style="font-size: 80px;">🛠️</span>
-    <h1 style="font-weight: 800; font-size: 2.5rem; margin: 20px 0;">SISTEMA EN MANTENIMIENTO</h1>
-    <p style="font-size: 1.2rem; max-width: 500px; opacity: 0.9;">Estamos trabajando para mejorar tu experiencia.
-    Disculpen las molestias ocasionadas.</p>
-    <button class="btn-login" style="margin-top: 30px; padding: 12px 25px; font-size: 1rem;"
-    onclick="showLogin()">🔓 ACCESO ADMINISTRADOR</button>
+    <!-- Partículas de fondo -->
+    <div id="maintParticles"></div>
+    
+    <!-- Contenido principal -->
+    <div class="maint-content-wrapper">
+        <div class="maint-icon-wrapper">
+            <i class="fas fa-cogs fa-spin" style="font-size: 80px; color: var(--turquesa);"></i>
+        </div>
+        <h1 style="font-weight: 800; font-size: 2.5rem; margin: 20px 0; text-shadow: 0 4px 20px rgba(0,0,0,0.3);">SISTEMA EN MANTENIMIENTO</h1>
+        <p style="font-size: 1.2rem; max-width: 500px; opacity: 0.9; margin-bottom: 30px;">
+        Estamos trabajando para mejorar tu experiencia.
+        Disculpen las molestias ocasionadas.
+        </p>
+        
+        <button class="btn-login" style="margin-top: 30px; padding: 12px 25px; font-size: 1rem;"
+        onclick="showLogin()">🔓 ACCESO ADMINISTRADOR</button>
+    </div>
     </div>
     <div id="loadingOverlay">
+    <!-- Partículas de fondo -->
+    <div id="loadingParticles"></div>
+    
     <div class="spinner"></div>
     <div class="loading-text" id="loadMainTxt">Procesando...</div>
     <div class="loading-subtext" id="loadSubTxt"></div>
@@ -4803,11 +4854,11 @@
     </div>
     <div class="modal-overlay" id="confirmModal">
     <div class="modal-content">
-    <h2 style="font-weight: 800; color: var(--azul-deep); margin-top: 0;">🔍 Revisa tu Solicitud</h2>
+    <h2 style="font-weight: 800; color: var(--azul-deep); margin-top: 0;"><i class="fas fa-search"></i> Revisa tu Solicitud</h2>
     <div id="previewContent"></div>
     <div style="display: flex; gap: 12px; justify-content: center; width: 100%; max-width: 500px; margin: 0 auto; margin-top: 20px;">
-    <button id="btnCorregir" class="modal-btn-confirm corregir">✏️ Corregir</button>
-    <button id="btnEnviarConfirmado" class="modal-btn-confirm enviar" disabled>🚀 Enviar Solicitud (<span id="countdown">10</span>)</button>
+    <button id="btnCorregir" class="modal-btn-confirm corregir"><i class="fas fa-edit"></i> Corregir</button>
+    <button id="btnEnviarConfirmado" class="modal-btn-confirm enviar" disabled><i class="fas fa-paper-plane"></i> Enviar Solicitud (<span id="countdown">10</span>)</button>
     </div>
     </div>
     </div>
@@ -4815,7 +4866,7 @@
     <!-- ✅ MODAL PARA MENSAJE DE ID NO ENCONTRADO -->
     <div class="modal-overlay" id="idNotFoundModal" style="display: none;">
     <div class="modal-content" style="max-width: 450px; padding: 25px;">
-    <span style="font-size: 50px; display: block; margin-bottom: 15px; color: #fb8500;">🔍</span>
+    <span style="font-size: 50px; display: block; margin-bottom: 15px; color: #fb8500;"><i class="fas fa-search"></i></span>
     <h2 style="font-weight: 800; color: var(--azul-deep); margin: 0 0 15px 0;">ID no encontrado</h2>
     <p style="font-size: 1rem; line-height: 1.5; color: #495057; margin-bottom: 20px;">
     No se encontró ninguna solicitud con el ID: <strong id="notFoundId"></strong>
@@ -7781,9 +7832,13 @@
         if (isMaintActive && !isAdmin) {
             overlay.style.display = 'flex';
             document.body.style.overflow = 'hidden'; // Bloquear scroll
+            // ✅ Iniciar partículas con un pequeño delay para asegurar que el contenedor tenga dimensiones
+            setTimeout(() => createMaintenanceParticles(), 100);
         } else {
             overlay.style.display = 'none';
             document.body.style.overflow = '';
+            // ✅ Detener partículas cuando se oculta el modal
+            stopMaintenanceParticles();
         }
         
         // ✅ Actualizar texto del botón de mantenimiento en el panel
@@ -7797,6 +7852,267 @@
         }
     }
 
+    // ============================================================
+    // SISTEMA DE PARTÍCULAS tsParticles PARA MODAL DE MANTENIMIENTO
+    // ============================================================
+    
+    let tsParticlesInstance = null;
+    
+    async function createMaintenanceParticles() {
+        const container = document.getElementById('maintParticles');
+        if (!container) {
+            console.error("Contenedor maintParticles no encontrado");
+            return;
+        }
+        
+        console.log("Iniciando tsParticles...");
+        console.log("Dimensiones del contenedor:", container.offsetWidth, "x", container.offsetHeight);
+        
+        // Limpiar partículas existentes
+        container.innerHTML = '';
+        
+        try {
+            // Verificar si tsParticles está disponible
+            if (typeof tsParticles === 'undefined') {
+                console.error("tsParticles no está definido. Verifica que el CDN se cargó correctamente.");
+                return;
+            }
+            
+            // Configuración simplificada de tsParticles
+            const config = {
+                particles: {
+                    number: {
+                        value: 50,
+                    },
+                    shape: {
+                        type: "square",
+                    },
+                    size: {
+                        value: 5,
+                        random: true,
+                    },
+                    color: {
+                        value: "#00ffff",
+                    },
+                    opacity: {
+                        value: 0.5,
+                        random: true,
+                    },
+                    move: {
+                        enable: true,
+                        speed: 1,
+                        direction: "none",
+                        random: true,
+                        straight: false,
+                    },
+                    links: {
+                        enable: true,
+                        distance: 150,
+                        color: "#00ffff",
+                        opacity: 0.2,
+                        width: 1,
+                    },
+                },
+                interactivity: {
+                    events: {
+                        onhover: {
+                            enable: true,
+                            mode: "grab",
+                        },
+                    },
+                },
+            };
+            
+            console.log("Configuración tsParticles:", config);
+            
+            // Inicializar tsParticles
+            tsParticlesInstance = await tsParticles.load("maintParticles", config);
+            console.log("tsParticles inicializado correctamente:", tsParticlesInstance);
+        } catch (error) {
+            console.error("Error inicializando tsParticles:", error);
+        }
+    }
+    
+    function stopMaintenanceParticles() {
+        if (tsParticlesInstance) {
+            // Detener tsParticles correctamente
+            tsParticlesInstance.destroy();
+            tsParticlesInstance = null;
+        }
+    }
+    
+    // ============================================================
+    // SISTEMA DE PARTÍCULAS tsParticles PARA LOADING OVERLAY
+    // ============================================================
+    
+    let loadingParticlesInstance = null;
+    
+    async function createLoadingParticles() {
+        const container = document.getElementById('loadingParticles');
+        if (!container) {
+            console.error("Contenedor loadingParticles no encontrado");
+            return;
+        }
+        
+        console.log("Iniciando tsParticles para loadingOverlay...");
+        console.log("Dimensiones del contenedor:", container.offsetWidth, "x", container.offsetHeight);
+        
+        // Limpiar partículas existentes
+        container.innerHTML = '';
+        
+        try {
+            // Verificar si tsParticles está disponible
+            if (typeof tsParticles === 'undefined') {
+                console.error("tsParticles no está definido. Verifica que el CDN se cargó correctamente.");
+                return;
+            }
+            
+            // Configuración de tsParticles para loadingOverlay (más dinámico)
+            const config = {
+                particles: {
+                    number: {
+                        value: 80,
+                    },
+                    shape: {
+                        type: "circle",
+                    },
+                    size: {
+                        value: 3,
+                        random: true,
+                    },
+                    color: {
+                        value: ["#00ffff", "#ffcc00", "#ffffff"],
+                    },
+                    opacity: {
+                        value: 0.6,
+                        random: true,
+                    },
+                    move: {
+                        enable: true,
+                        speed: 2,
+                        direction: "none",
+                        random: true,
+                        straight: false,
+                    },
+                    links: {
+                        enable: true,
+                        distance: 120,
+                        color: "#ffffff",
+                        opacity: 0.3,
+                        width: 1,
+                    },
+                },
+                interactivity: {
+                    events: {
+                        onhover: {
+                            enable: true,
+                            mode: "grab",
+                        },
+                    },
+                },
+            };
+            
+            console.log("Configuración tsParticles (loading):", config);
+            
+            // Inicializar tsParticles
+            loadingParticlesInstance = await tsParticles.load("loadingParticles", config);
+            console.log("tsParticles (loading) inicializado correctamente:", loadingParticlesInstance);
+        } catch (error) {
+            console.error("Error inicializando tsParticles (loading):", error);
+        }
+    }
+    
+    function stopLoadingParticles() {
+        if (loadingParticlesInstance) {
+            // Detener tsParticles correctamente
+            loadingParticlesInstance.destroy();
+            loadingParticlesInstance = null;
+        }
+    }
+    
+    async function createMaintenanceParticles() {
+        const container = document.getElementById('maintParticles');
+        if (!container) {
+            console.error("Contenedor maintParticles no encontrado");
+            return;
+        }
+        
+        console.log("Iniciando tsParticles...");
+        console.log("Dimensiones del contenedor:", container.offsetWidth, "x", container.offsetHeight);
+        
+        // Limpiar partículas existentes
+        container.innerHTML = '';
+        
+        try {
+            // Verificar si tsParticles está disponible
+            if (typeof tsParticles === 'undefined') {
+                console.error("tsParticles no está definido. Verifica que el CDN se cargó correctamente.");
+                return;
+            }
+            
+            // Configuración simplificada de tsParticles
+            const config = {
+                particles: {
+                    number: {
+                        value: 50,
+                    },
+                    shape: {
+                        type: "square",
+                    },
+                    size: {
+                        value: 5,
+                        random: true,
+                    },
+                    color: {
+                        value: "#00ffff",
+                    },
+                    opacity: {
+                        value: 0.5,
+                        random: true,
+                    },
+                    move: {
+                        enable: true,
+                        speed: 1,
+                        direction: "none",
+                        random: true,
+                        straight: false,
+                    },
+                    links: {
+                        enable: true,
+                        distance: 150,
+                        color: "#00ffff",
+                        opacity: 0.2,
+                        width: 1,
+                    },
+                },
+                interactivity: {
+                    events: {
+                        onhover: {
+                            enable: true,
+                            mode: "grab",
+                        },
+                    },
+                },
+            };
+            
+            console.log("Configuración tsParticles:", config);
+            
+            // Inicializar tsParticles
+            tsParticlesInstance = await tsParticles.load("maintParticles", config);
+            console.log("tsParticles inicializado correctamente:", tsParticlesInstance);
+        } catch (error) {
+            console.error("Error inicializando tsParticles:", error);
+        }
+    }
+    
+    function stopMaintenanceParticles() {
+        if (tsParticlesInstance) {
+            // Detener tsParticles correctamente
+            tsParticlesInstance.destroy();
+            tsParticlesInstance = null;
+        }
+    }
+    
     let selectedRegionKey = "";
     let selectedUnidad = "";
     // ✅ CACHE DE DATOS PRINCIPAL - OPTIMIZADO
@@ -13071,6 +13387,9 @@
                     updateLoadingProgress(0);
                 }
             }
+            
+            // Inicializar partículas tsParticles
+            createLoadingParticles();
         }
     }
 
@@ -13099,7 +13418,174 @@
                 loadingOverlay.style.display = 'none';
                 loadingOverlay.style.opacity = '1';
             }, 300);
+            
+            // Detener partículas tsParticles
+            stopLoadingParticles();
         }
+    }
+
+    // ============================================================
+    // SISTEMA DE BARRA DE PROGRESO REAL
+    // Reemplaza updateLoadingProgress() con progreso basado en pasos
+    // ============================================================
+    
+    /**
+     * Configuración de pasos del proceso con pesos (deben sumar 100)
+     */
+    const PASOS_PROCESO = {
+        solicitud: {
+            pasos: [
+                { id: 'validando', peso: 5, texto: 'Validando datos...' },
+                { id: 'preparando', peso: 5, texto: 'Preparando solicitud...' },
+                { id: 'subiendo_fotos', peso: 25, texto: 'Subiendo fotos ({current}/{total})...' },
+                { id: 'subiendo_docs', peso: 15, texto: 'Subiendo documentos...' },
+                { id: 'guardando_gas', peso: 25, texto: 'Guardando en sistema principal...' },
+                { id: 'sync_rtdb', peso: 15, texto: 'Sincronizando tabla en tiempo real...' },
+                { id: 'finalizando', peso: 10, texto: 'Finalizando...' }
+            ]
+        },
+        arte: {
+            pasos: [
+                { id: 'validando', peso: 10, texto: 'Validando archivo...' },
+                { id: 'subiendo', peso: 50, texto: 'Subiendo arte al sistema...' },
+                { id: 'procesando', peso: 20, texto: 'Procesando archivo...' },
+                { id: 'guardando', peso: 15, texto: 'Guardando referencia...' },
+                { id: 'notificando', peso: 5, texto: 'Notificando al equipo...' }
+            ]
+        }
+    };
+    
+    let progresoActual = {
+        pasoActual: 0,
+        porcentaje: 0,
+        tipo: 'solicitud',
+        animacionActiva: null
+    };
+    
+    /**
+     * Inicializa la barra de progreso para un tipo de operación
+     */
+    function iniciarProgresoReal(tipo = 'solicitud', datosExtra = {}) {
+        progresoActual = {
+            pasoActual: 0,
+            porcentaje: 0,
+            tipo: tipo,
+            datosExtra: datosExtra,
+            animacionActiva: null
+        };
+        // showLoadingOverlay() ya se llama en proceedToSend() antes de iniciarProgresoReal()
+        // para evitar duplicación de llamadas
+        avanzarPaso(0);
+    }
+    
+    /**
+     * Avanza al siguiente paso del progreso
+     */
+    function avanzarPaso(indicePaso, datosPaso = {}) {
+        const config = PASOS_PROCESO[progresoActual.tipo];
+        if (!config || indicePaso >= config.pasos.length) return;
+        
+        const paso = config.pasos[indicePaso];
+        progresoActual.pasoActual = indicePaso;
+        
+        // Calcular porcentaje acumulado hasta este paso
+        let porcentajeAcumulado = 0;
+        for (let i = 0; i < indicePaso; i++) {
+            porcentajeAcumulado += config.pasos[i].peso;
+        }
+        
+        // Animación progresiva dentro del paso actual
+        const inicioPaso = porcentajeAcumulado;
+        const finPaso = porcentajeAcumulado + paso.peso;
+        
+        // Texto del paso con variables
+        let texto = paso.texto;
+        if (datosPaso.current && datosPaso.total) {
+            texto = texto.replace('{current}', datosPaso.current).replace('{total}', datosPaso.total);
+        }
+        
+        updateLoadingProgress(inicioPaso, texto);
+        
+        // Animar progresivamente hasta el fin del paso
+        const duracionPaso = estimarDuracionPaso(paso.id, progresoActual.tipo);
+        const inicioTiempo = performance.now();
+        
+        // Cancelar animación anterior si existe
+        if (progresoActual.animacionActiva) {
+            cancelAnimationFrame(progresoActual.animacionActiva);
+        }
+        
+        function animarPaso(tiempoActual) {
+            const transcurrido = tiempoActual - inicioTiempo;
+            const progresoPaso = Math.min(transcurrido / duracionPaso, 1);
+            
+            // Easing (ease-out quadratic)
+            const easing = 1 - Math.pow(1 - progresoPaso, 2);
+            const porcentajeActual = inicioPaso + (finPaso - inicioPaso) * easing;
+            
+            updateLoadingProgress(Math.round(porcentajeActual), texto);
+            
+            if (progresoPaso < 1 && progresoActual.pasoActual === indicePaso) {
+                progresoActual.animacionActiva = requestAnimationFrame(animarPaso);
+            }
+        }
+        
+        progresoActual.animacionActiva = requestAnimationFrame(animarPaso);
+    }
+    
+    /**
+     * Estima la duración de un paso para la animación (en ms)
+     */
+    function estimarDuracionPaso(pasoId, tipo) {
+        const estimaciones = {
+            solicitud: {
+                validando: 300,
+                preparando: 200,
+                subiendo_fotos: 3000,
+                subiendo_docs: 2000,
+                guardando_gas: 2000,
+                sync_rtdb: 1500,
+                finalizando: 500
+            },
+            arte: {
+                validando: 500,
+                subiendo: 4000,
+                procesando: 2000,
+                guardando: 1000,
+                notificando: 500
+            }
+        };
+        return (estimaciones[tipo] && estimaciones[tipo][pasoId]) || 1000;
+    }
+    
+    /**
+     * Actualiza el progreso dentro de un paso específico (para subida de fotos múltiples)
+     */
+    function actualizarProgresoPaso(indicePaso, fraccionCompletada, textoExtra = null) {
+        const config = PASOS_PROCESO[progresoActual.tipo];
+        if (!config || indicePaso >= config.pasos.length) return;
+        
+        let porcentajeBase = 0;
+        for (let i = 0; i < indicePaso; i++) {
+            porcentajeBase += config.pasos[i].peso;
+        }
+        
+        const porcentajeActual = porcentajeBase + (config.pasos[indicePaso].peso * fraccionCompletada);
+        const paso = config.pasos[indicePaso];
+        let texto = textoExtra || paso.texto;
+        
+        updateLoadingProgress(Math.round(porcentajeActual), texto);
+    }
+    
+    /**
+     * Completar progreso (100%)
+     */
+    function completarProgreso() {
+        if (progresoActual.animacionActiva) {
+            cancelAnimationFrame(progresoActual.animacionActiva);
+        }
+        updateLoadingProgress(100, '✅ Completado');
+        setTimeout(() => hideLoadingOverlay(), 500);
     }
 
     function openModal(t, m, icon = "⚠️", callback = null) {
@@ -16248,29 +16734,29 @@
     if (!validateForm()) return;
     const preview = document.getElementById('previewContent');
     let html = `
-    <p><b>📍 Región:</b> ${getNombreRegionLimpio(selectedRegionKey)}</p>
-    <p><b>🏥 Unidad:</b> ${selectedUnidad}</p>
+    <p><b><i class="fas fa-map-marker-alt"></i> Región:</b> ${getNombreRegionLimpio(selectedRegionKey)}</p>
+    <p><b><i class="fas fa-hospital"></i> Unidad:</b> ${selectedUnidad}</p>
     `;
-    html += `<p><b>📂 Tipo de Solicitud:</b> ${catName}</p>`;
+    html += `<p><b><i class="fas fa-folder"></i> Tipo de Solicitud:</b> ${catName}</p>`;
     if (catType === 'obituario') {
-        html += `<p><b>📝 Nombre del Fallecido:</b> ${document.getElementById('obituario-nombre').value.trim()}</p>`;
+        html += `<p><b><i class="fas fa-file-alt"></i> Nombre del Fallecido:</b> ${document.getElementById('obituario-nombre').value.trim()}</p>`;
         const parentesco = document.getElementById('obituario-parentesco').value.trim();
-        if (parentesco) html += `<p><b>👥 Parentesco:</b> ${parentesco}</p>`;
+        if (parentesco) html += `<p><b><i class="fas fa-users"></i> Parentesco:</b> ${parentesco}</p>`;
         const servicioJurisdiccion = document.getElementById('obituario-servicio').value.trim();
-        if (servicioJurisdiccion) html += `<p><b>🏥 Servicio o Jurisdicción:</b> ${servicioJurisdiccion}</p>`;
+        if (servicioJurisdiccion) html += `<p><b><i class="fas fa-hospital"></i> Servicio o Jurisdicción:</b> ${servicioJurisdiccion}</p>`;
         const infoAdicional = document.getElementById('obituario-info').value.trim();
-        if (infoAdicional) html += `<p><b>📋 Información Adicional:</b> ${infoAdicional}</p>`;
-        html += `<p><b>📅 Fecha:</b> ${document.getElementById('obituario-fecha').value}</p>`;
+        if (infoAdicional) html += `<p><b><i class="fas fa-clipboard-list"></i> Información Adicional:</b> ${infoAdicional}</p>`;
+        html += `<p><b><i class="fas fa-calendar-alt"></i> Fecha:</b> ${document.getElementById('obituario-fecha').value}</p>`;
     } else if (catType === 'efemerides') {
         // ✅ PREVISUALIZACIÓN PARA EFEMÉRIDES
-        html += `<p><b>📅 Fecha esperada:</b> ${document.getElementById('fecha')?.value}</p>`;
-        html += `<p><b>✏️ Nombre:</b> ${document.getElementById('efemerides-nombre')?.value.trim()}</p>`;
+        html += `<p><b><i class="fas fa-calendar-alt"></i> Fecha esperada:</b> ${document.getElementById('fecha')?.value}</p>`;
+        html += `<p><b><i class="fas fa-pen"></i> Nombre:</b> ${document.getElementById('efemerides-nombre')?.value.trim()}</p>`;
         const contexto = document.getElementById('efemerides-contexto')?.value.trim();
-        if (contexto) html += `<p><b>📜 Contexto:</b> ${contexto}</p>`;
+        if (contexto) html += `<p><b><i class="fas fa-scroll"></i> Contexto:</b> ${contexto}</p>`;
     } else if (catType === 'certificado') {
-        html += `<p><b>🏆 Tipo de Arte:</b> ${window.tipoArteSeleccionado === 'certificado' ? 'Certificado' : 'Reconocimiento'}</p>`;
+        html += `<p><b><i class="fas fa-trophy"></i> Tipo de Arte:</b> ${window.tipoArteSeleccionado === 'certificado' ? 'Certificado' : 'Reconocimiento'}</p>`;
         const descripcion = document.getElementById('certificado-descripcion')?.value.trim();
-        if (descripcion) html += `<p><b>📝 Descripción:</b> ${descripcion}</p>`;
+        if (descripcion) html += `<p><b><i class="fas fa-file-alt"></i> Descripción:</b> ${descripcion}</p>`;
         // Mostrar firmantes si existen
         let firmantes = [];
         const firmanteInputs = document.querySelectorAll('#sec-firmantes input[type="text"]');
@@ -16279,89 +16765,89 @@
                 firmantes.push(input.value.trim());
             }
         });
-        if (firmantes.length > 0) html += `<p><b>✍️ Firmantes:</b> ${firmantes.join(', ')}</p>`;
-        html += `<p><b>📅 Fecha del evento:</b> ${document.getElementById('fecha').value}</p>`;
+        if (firmantes.length > 0) html += `<p><b><i class="fas fa-pen-nib"></i> Firmantes:</b> ${firmantes.join(', ')}</p>`;
+        html += `<p><b><i class="fas fa-calendar-alt"></i> Fecha del evento:</b> ${document.getElementById('fecha').value}</p>`;
     } else if (catType === 'textiles') {
-        html += `<p><b>👕 Prenda seleccionada:</b> ${window.tipoPrendaSeleccionada || 'No seleccionada'}</p>`;
+        html += `<p><b><i class="fas fa-tshirt"></i> Prenda seleccionada:</b> ${window.tipoPrendaSeleccionada || 'No seleccionada'}</p>`;
         const descripcion = document.getElementById('textiles-descripcion')?.value.trim();
-        if (descripcion) html += `<p><b>📝 Descripción:</b> ${descripcion}</p>`;
+        if (descripcion) html += `<p><b><i class="fas fa-file-alt"></i> Descripción:</b> ${descripcion}</p>`;
     } else if (catType === 'charlas-educativas') {
-        html += `<p><b>🎓 Tipo:</b> ${window.tipoCharlaSeleccionado || 'No seleccionado'}</p>`;
+        html += `<p><b><i class="fas fa-graduation-cap"></i> Tipo:</b> ${window.tipoCharlaSeleccionado || 'No seleccionado'}</p>`;
         const nombreCharla = document.getElementById('charlas-nombre')?.value.trim();
-        if (nombreCharla) html += `<p><b>📝 Nombre:</b> ${nombreCharla}</p>`;
+        if (nombreCharla) html += `<p><b><i class="fas fa-file-alt"></i> Nombre:</b> ${nombreCharla}</p>`;
         const ponentes = document.getElementById('charlas-ponentes')?.value.trim();
-        if (ponentes) html += `<p><b>👨‍🏫 Ponente(s):</b> ${ponentes}</p>`;
+        if (ponentes) html += `<p><b><i class="fas fa-user-tie"></i> Ponente(s):</b> ${ponentes}</p>`;
         const fecha = document.getElementById('fecha')?.value;
         const hora = document.getElementById('hora')?.value;
         const ampm = document.querySelector('.btn-time.selected')?.innerText || 'a. m.';
-        if (fecha) html += `<p><b>📅 Fecha:</b> ${fecha}</p>`;
-        if (hora) html += `<p><b>⏰ Hora:</b> ${hora} ${ampm}</p>`;
+        if (fecha) html += `<p><b><i class="fas fa-calendar-alt"></i> Fecha:</b> ${fecha}</p>`;
+        if (hora) html += `<p><b><i class="fas fa-clock"></i> Hora:</b> ${hora} ${ampm}</p>`;
         // ✅ INSTITUCIÓN Y DIRECCIÓN PARA CHARLAS
         const institucion = document.getElementById('institucion')?.value.trim();
         const direccion = document.getElementById('direccion-exacta')?.value.trim();
         if (institucion || direccion) {
-            html += `<p><b>🧭 Ubicación:</b> ${[institucion, direccion].filter(x => x).join(', ')}</p>`;
+            html += `<p><b><i class="fas fa-map-marker-alt"></i> Ubicación:</b> ${[institucion, direccion].filter(x => x).join(', ')}</p>`;
         }
     } else if (catType === 'deportivas') {
         const nombreAct = document.getElementById('deportivas-nombre')?.value.trim();
-        if (nombreAct) html += `<p><b>🏆 Actividad:</b> ${nombreAct}</p>`;
+        if (nombreAct) html += `<p><b><i class="fas fa-trophy"></i> Actividad:</b> ${nombreAct}</p>`;
         const detallesAct = document.getElementById('deportivas-detalles')?.value.trim();
-        if (detallesAct) html += `<p><b>📝 Detalles:</b> ${detallesAct}</p>`;
+        if (detallesAct) html += `<p><b><i class="fas fa-file-alt"></i> Detalles:</b> ${detallesAct}</p>`;
     } else if (catType === 'pendon') {
-        html += `<p><b>🚩 Tamaño del pendón:</b> ${window.tipoPendonSeleccionado || 'No seleccionado'}</p>`;
+        html += `<p><b><i class="fas fa-flag"></i> Tamaño del pendón:</b> ${window.tipoPendonSeleccionado || 'No seleccionado'}</p>`;
         // Mostrar medidas si se seleccionó "Otros tamaños"
         if (window.tipoPendonSeleccionado === 'Otros tamaños') {
             const medidas = document.getElementById('pendon-medidas')?.value.trim();
-            if (medidas) html += `<p><b>📏 Medidas específicas:</b> ${medidas}</p>`;
+            if (medidas) html += `<p><b><i class="fas fa-ruler"></i> Medidas específicas:</b> ${medidas}</p>`;
         }
         const descripcion = document.getElementById('pendon-descripcion')?.value.trim();
-        if (descripcion) html += `<p><b>📝 Descripción:</b> ${descripcion}</p>`;
+        if (descripcion) html += `<p><b><i class="fas fa-file-alt"></i> Descripción:</b> ${descripcion}</p>`;
     } else if (catType === 'correccion-nota-prensa') {
         const nombreNota = document.getElementById('correccion-nombre')?.value.trim();
-        if (nombreNota) html += `<p><b>📄 Título de la Nota:</b> ${nombreNota}</p>`;
+        if (nombreNota) html += `<p><b><i class="fas fa-file"></i> Título de la Nota:</b> ${nombreNota}</p>`;
         const fecha = document.getElementById('correccion-fecha')?.value;
-        if (fecha) html += `<p><b>📅 Fecha:</b> ${fecha}</p>`;
+        if (fecha) html += `<p><b><i class="fas fa-calendar-alt"></i> Fecha:</b> ${fecha}</p>`;
         const documento = document.getElementById('correccion-documento')?.value;
-        html += `<p><b>📎 Documento adjunto:</b> ${documento ? 'Sí' : 'No'}</p>`;
+        html += `<p><b><i class="fas fa-paperclip"></i> Documento adjunto:</b> ${documento ? 'Sí' : 'No'}</p>`;
     } else if (catType === 'correccion-diseno') {
         const reqId = document.getElementById('correccion-diseno-id')?.value.trim();
-        if (reqId) html += `<p><b>🆔 Requerimiento Anterior:</b> ${reqId}</p>`;
+        if (reqId) html += `<p><b><i class="fas fa-hashtag"></i> Requerimiento Anterior:</b> ${reqId}</p>`;
         const desc = document.getElementById('correccion-diseno-desc')?.value.trim();
-        if (desc) html += `<p><b>📝 Corrección solicitada:</b> ${desc}</p>`;
+        if (desc) html += `<p><b><i class="fas fa-file-alt"></i> Corrección solicitada:</b> ${desc}</p>`;
     } else if (catType === 'copy-rrss') {
         const copy = document.getElementById('copy-rrss-text')?.value.trim();
-        if (copy) html += `<p><b>📝 Copy:</b> ${copy.substring(0, 100)}${copy.length > 100 ? '...' : ''}</p>`;
-        html += `<p><b>📅 Fecha:</b> ${document.getElementById('copy-rrss-fecha').value}</p>`;
+        if (copy) html += `<p><b><i class="fas fa-file-alt"></i> Copy:</b> ${copy.substring(0, 100)}${copy.length > 100 ? '...' : ''}</p>`;
+        html += `<p><b><i class="fas fa-calendar-alt"></i> Fecha:</b> ${document.getElementById('copy-rrss-fecha').value}</p>`;
     } else if (catType === 'otros') {
-        html += `<p><b>✨ Descripción:</b> ${document.getElementById('otros-descripcion').value.trim()}</p>`;
+        html += `<p><b><i class="fas fa-star"></i> Descripción:</b> ${document.getElementById('otros-descripcion').value.trim()}</p>`;
     } else {
         const selectedOps = Array.from(document.querySelectorAll('#cont-3 .card-btn.selected')).map(el => el.innerText).join(', ');
-        html += `<p><b>🩺 Detalle:</b> ${selectedOps || 'Ninguno'}</p>`;
+        html += `<p><b><i class="fas fa-stethoscope"></i> Detalle:</b> ${selectedOps || 'Ninguno'}</p>`;
     }
     const servicios = Array.from(document.querySelectorAll('#cont-4 .card-btn.selected')).map(el => el.innerText).join(', ');
-    if (servicios) html += `<p><b>✨ Servicios Adicionales:</b> ${servicios}</p>`;
+    if (servicios) html += `<p><b><i class="fas fa-star"></i> Servicios Adicionales:</b> ${servicios}</p>`;
 
     // Fecha de actividad, hora y ubicación solo para tipos que no son textiles, obituario, certificado, pendón, corrección ni instagram
     if (!['textiles', 'obituario', 'certificado', 'pendon', 'correccion-nota-prensa', 'copy-rrss'].includes(catType)) {
         const [year, month, day] = document.getElementById('fecha').value.split('-');
         const fechaFormateada = `${day}/${month}/${year}`;
-        html += `<p><b>📅 Fecha de Actividad:</b> ${fechaFormateada}</p>`;
-        html += `<p><b>⏰ Hora de Inicio:</b> ${document.getElementById('hora').value} ${selectedAMPM}</p>`;
+        html += `<p><b><i class="fas fa-calendar-alt"></i> Fecha de Actividad:</b> ${fechaFormateada}</p>`;
+        html += `<p><b><i class="fas fa-clock"></i> Hora de Inicio:</b> ${document.getElementById('hora').value} ${selectedAMPM}</p>`;
         const institucion = document.getElementById('institucion').value.trim();
         const direccion = document.getElementById('direccion-exacta').value.trim();
-        html += `<p><b>🧭 Ubicación:</b> ${[institucion, direccion].filter(x => x).join(', ')}</p>`;
+        html += `<p><b><i class="fas fa-map-marker-alt"></i> Ubicación:</b> ${[institucion, direccion].filter(x => x).join(', ')}</p>`;
     }
 
-    html += `<p><b>📱 Teléfono:</b> ${document.getElementById('tlf').value || 'No indicado'}</p>`;
-    html += `<p><b>✉️ Correo:</b> ${document.getElementById('mail').value || 'No indicado'}</p>`;
+    html += `<p><b><i class="fas fa-phone"></i> Teléfono:</b> ${document.getElementById('tlf').value || 'No indicado'}</p>`;
+    html += `<p><b><i class="fas fa-envelope"></i> Correo:</b> ${document.getElementById('mail').value || 'No indicado'}</p>`;
     const obs = document.getElementById('observaciones').value.trim();
-    if (obs) html += `<p><b>✏️ Observaciones:</b> ${obs}</p>`;
+    if (obs) html += `<p><b><i class="fas fa-edit"></i> Observaciones:</b> ${obs}</p>`;
     // CORREGIDO: Contar fotos usando el atributo data-has-image (máximo 5)
     const fotos = [1,2,3,4,5].filter(i => {
     const img = document.getElementById(`p${i}`);
     return img.getAttribute('data-has-image') === 'true';
     });
-    html += `<p><b>📸 Soportes Fotográficos:</b> ${fotos.length > 0 ? `${fotos.length} foto(s) adjunta(s)` : 'Ninguno'}</p>`;
+    html += `<p><b><i class="fas fa-camera"></i> Soportes Fotográficos:</b> ${fotos.length > 0 ? `${fotos.length} foto(s) adjunta(s)` : 'Ninguno'}</p>`;
     preview.innerHTML = html;
     document.getElementById('confirmModal').style.display = 'flex';
     let timeLeft = 10;
@@ -16438,6 +16924,8 @@
     function proceedToSend() {
         if (window.confirmTimer) clearInterval(window.confirmTimer);
         document.getElementById('confirmModal').style.display = 'none';
+        // Mostrar loadingOverlay inmediatamente antes de iniciar el envío
+        showLoadingOverlay("Enviando solicitud...", true);
         realSubmitForm();
     }
     // === ENVÍO REAL ===
@@ -16984,13 +17472,34 @@
         
         // 🔥 NUEVO FLUJO: GAS PRIMERO, RTDB DESPUÉS (evita solicitudes huérfanas)
         try {
-            // Mostrar indicador de carga con barra de progreso
-            showLoadingOverlay("Guardando solicitud...", true);
-            updateLoadingProgress(10, "Iniciando proceso...");
+            // ✅ INICIAR SISTEMA DE PROGRESO REAL
+            iniciarProgresoReal('solicitud', { idSolicitud, totalFotos: fotosUrls.length });
             
-            // ✅ PASO 1: ENVIAR A GAS PRIMERO (fuente de verdad)
+            // ✅ PASO 0: Validando datos
+            avanzarPaso(0);
+            
+            // ✅ PASO 1: Preparando solicitud
+            avanzarPaso(1);
+            
+            // ✅ PASO 2: Subiendo fotos (ya se subieron en prepararFotosParaPuente)
+            if (fotosUrls.length > 0) {
+                avanzarPaso(2, { current: fotosUrls.length, total: fotosUrls.length });
+            } else {
+                avanzarPaso(2); // Saltar si no hay fotos
+            }
+            
+            // ✅ PASO 3: Subiendo documentos (ya se subió en prepararFotosParaPuente)
+            if (documentoUrl) {
+                avanzarPaso(3);
+            } else {
+                avanzarPaso(3); // Saltar si no hay documento
+            }
+            
+            // ✅ PASO 4: ENVIAR A GAS PRIMERO (fuente de verdad)
             formData.append("idSolicitud", idSolicitud);
             formData.append("UsuarioID", uidUsuario);
+            
+            avanzarPaso(4);
             
             const gasResponse = await fetch(SCRIPT_URL, {
                 method: 'POST',
@@ -17000,14 +17509,14 @@
             
             const gasData = await gasResponse.json();
             
-            // ✅ PASO 2: VERIFICAR RESPUESTA DE GAS
-            updateLoadingProgress(50, "Guardado en sistema principal...");
+            // ✅ PASO 5: VERIFICAR RESPUESTA DE GAS
             if (!gasData.success) {
                 throw new Error(gasData.error || "Error al guardar en el sistema principal");
             }
 
-            // ✅ PASO 3: GUARDAR EN RTDB DESDE EL FRONTEND (con datos procesados por GAS)
-            updateLoadingProgress(75, "Sincronizando con tabla en tiempo real...");
+            // ✅ PASO 6: GUARDAR EN RTDB DESDE EL FRONTEND (con datos procesados por GAS)
+            avanzarPaso(5);
+            
             if (gasData.data && gasData.data.solicitudData) {
                 try {
                     const rtdbRef = window.ref(window.dbRT, 'solicitudes_vivas/' + idSolicitud);
@@ -17021,36 +17530,35 @@
                 console.warn("⚠️ GAS no devolvió solicitudData. La solicitud está en GAS pero no en RTDB.");
             }
             
-            updateLoadingProgress(90, "Finalizando...");
+            // ✅ PASO 7: Finalizando
+            avanzarPaso(6);
+            
+            // ✅ COMPLETAR PROGRESO
+            completarProgreso();
 
-            // ✅ PASO 4: OCULTAR LOADING, MOSTRAR ÉXITO Y LIMPIAR
+            // ✅ PASO 8: OCULTAR LOADING, MOSTRAR ÉXITO Y LIMPIAR
             // Esperar a que el loading se cierre completamente antes de mostrar el toast
             setTimeout(() => {
-                hideLoadingOverlay();
+                limpiarFormulario();
                 
-                // Pequeña pausa para que el fade out del loading termine
-                setTimeout(() => {
-                    limpiarFormulario();
+                if (catType === 'copy-rrss') {
+                    // Mostrar toast de éxito primero
+                    showToast("✅ Guardado en Sistema Principal y Tabla en Tiempo Real", "success", 3000);
+                    // Luego mostrar el modal con el ID después de una breve pausa
+                    setTimeout(() => {
+                        showSolicitudIdModal(idSolicitud);
+                    }, 500);
+                } else {
+                    // Mostrar éxito con mención explícita a GAS y RTDB
+                    showToast("✅ Guardado en Sistema Principal y Tabla en Tiempo Real", "success", 4000);
                     
-                    if (catType === 'copy-rrss') {
-                        // Mostrar toast de éxito primero
-                        showToast("✅ Guardado en Sistema Principal y Tabla en Tiempo Real", "success", 3000);
-                        // Luego mostrar el modal con el ID después de una breve pausa
-                        setTimeout(() => {
-                            showSolicitudIdModal(idSolicitud);
-                        }, 500);
-                    } else {
-                        // Mostrar éxito con mención explícita a GAS y RTDB
-                        showToast("✅ Guardado en Sistema Principal y Tabla en Tiempo Real", "success", 4000);
-                        
-                        // Redirección después de que el usuario vea el toast
-                        setTimeout(() => {
-                            invalidatePageCache();
-                            showPage('list-page', document.getElementById('tab-list'));
-                        }, 2500);
-                    }
-                }, 400); // Esperar fade out del loading
-            }, 100);
+                    // Redirección después de que el usuario vea el toast
+                    setTimeout(() => {
+                        invalidatePageCache();
+                        showPage('list-page', document.getElementById('tab-list'));
+                    }, 2500);
+                }
+            }, 600); // Esperar fade out del loading (500ms + 100ms buffer)
             
         } catch (error) {
             hideLoadingOverlay();
@@ -17109,13 +17617,10 @@
         }
         
         if (fotosUrls.length > 0) {
-            // ✅ ACTIVAR MODAL BLOQUEANTE DURANTE SUBIDA (NO OCULTAR AQUÍ)
-            showLoadingOverlay("Subiendo fotos al sistema...", true);
-            updateLoadingProgress(20, `Subiendo ${fotosUrls.length} fotos...`);
+            // ✅ Mostrar toast informativo (el progreso se maneja en bridgeToAppsScript)
             showToast(`📸 Iniciando subida de ${fotosUrls.length} fotos al sistema...`, "info", 2000);
             fotosUrls = await uploadFotosOptimizadas(idSolicitud, fotosUrls);
             console.log("✅ Fotos subidas al sistema:", fotosUrls.length, "archivos");
-            // ❌ NO OCULTAR MODAL AQUÍ - Debe mantenerse hasta completar todo el proceso
         }
         
         // ✅ NUEVO SISTEMA: Subir documento de corrección al sistema
@@ -17123,15 +17628,11 @@
         let documentoUrl = null;
         
         if (docInput && docInput.files && docInput.files[0]) {
-            showLoadingOverlay("Subiendo documento al sistema...", true);
-            updateLoadingProgress(30, "Subiendo documento...");
             showToast("📄 Subiendo documento al sistema...", "info", 2000);
             documentoUrl = await uploadDocumentoCorreccion(idSolicitud);
             if (documentoUrl) {
                 console.log("✅ Documento subido al sistema:", documentoUrl.nombre);
-                updateLoadingProgress(40, "Documento subido");
             }
-            // ❌ NO OCULTAR MODAL AQUÍ - Debe mantenerse hasta completar todo el proceso
         }
         
         return { fotosUrls, documentoUrl };
