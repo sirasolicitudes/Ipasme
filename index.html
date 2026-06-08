@@ -761,6 +761,16 @@
     .maint-content-wrapper { position: relative; z-index: 1; padding: 40px; max-width: 600px; }
     .maint-icon-wrapper { margin-bottom: 20px; }
     
+    /* Animación personalizada para engranajes - funciona en todos los dispositivos */
+    .maint-icon-wrapper .fa-cogs {
+        animation: spin-cogs 3s linear infinite;
+    }
+    
+    @keyframes spin-cogs {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+    
     /* Contador de cuenta regresiva */
     .maint-countdown-wrapper { margin-top: 30px; padding: 20px; background: rgba(255,255,255,0.1); border-radius: 15px; backdrop-filter: blur(10px); }
     .maint-countdown { display: flex; align-items: center; justify-content: center; gap: 10px; }
@@ -5653,6 +5663,50 @@
             <!-- Gráfico de Rendimiento Semanal -->
             <div class="quota-chart-container" style="height: 300px; padding: 0 15px 15px;">
                 <canvas id="weeklyPerformanceChart"></canvas>
+            </div>
+        </div>
+        
+        <!-- ✅ MÉTRICAS AVANZADAS (NUEVO) -->
+        <div class="quota-timeline-container" style="margin-bottom: 20px;">
+            <div class="quota-timeline-header">
+                <div class="quota-timeline-title"><span>📊</span> Métricas Avanzadas</div>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; padding: 0 15px;">
+                <!-- Tiempo Promedio de Respuesta -->
+                <div class="stat-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                    <span class="stat-label" style="color: #ffffff; font-size: 1rem; font-weight: 600;">⏱️ Tiempo Promedio Respuesta</span>
+                    <span id="avg-response-time" class="stat-val" style="font-size: 2rem; color: #ffffff;"><span class="skeleton"></span></span>
+                    <small style="color: #ffffff; font-size: 0.8rem;">Horas</small>
+                </div>
+                
+                <!-- Tasa de Finalización -->
+                <div class="stat-card" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white;">
+                    <span class="stat-label" style="color: #ffffff; font-size: 1rem; font-weight: 600;">✅ Tasa de Finalización</span>
+                    <span id="completion-rate" class="stat-val" style="font-size: 2rem; color: #ffffff;"><span class="skeleton"></span></span>
+                    <small style="color: #ffffff; font-size: 0.8rem;"></small>
+                </div>
+                
+                <!-- Solicitudes Hoy vs Promedio -->
+                <div class="stat-card" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white;">
+                    <span class="stat-label" style="color: #ffffff; font-size: 1rem; font-weight: 600;">📆 Hoy vs Promedio</span>
+                    <div style="display: flex; align-items: center; justify-content: center; gap: 5px;">
+                        <span id="today-requests" class="stat-val" style="font-size: 2rem; color: #ffffff;"><span class="skeleton"></span></span>
+                        <span style="font-size: 1rem; color: #ffffff;">/</span>
+                        <span id="avg-requests" style="font-size: 1.2rem; color: #ffffff;"><span class="skeleton"></span></span>
+                    </div>
+                    <small style="color: #ffffff; font-size: 0.8rem;">Solicitudes</small>
+                </div>
+            </div>
+        </div>
+        
+        <!-- ✅ GRÁFICO DE ASIGNACIONES POR HORA DEL DÍA (NUEVO) -->
+        <div class="quota-timeline-container" style="margin-bottom: 20px;">
+            <div class="quota-timeline-header">
+                <div class="quota-timeline-title"><span>⏰</span> Asignaciones por Hora del Día</div>
+            </div>
+            <div class="quota-chart-container" style="height: 300px; padding: 0 15px 15px;">
+                <canvas id="activityByHourChart"></canvas>
             </div>
         </div>
         
@@ -19027,7 +19081,8 @@
     connectionSpeed: null,
     requests: null,
     finalized: null,
-    designerPerformance: null
+    designerPerformance: null,
+    activityByHour: null
     };
     let currentStatsPeriod = 'month';
     let connectionSpeedHistory = [];
@@ -19393,6 +19448,52 @@
 
         // Actualizar estadísticas detalladas
         updateDetailedStats(statsData);
+        
+        // ✅ NUEVO: Actualizar métricas avanzadas (con fallback de seguridad)
+        const advancedMetrics = statsData.metricasAvanzadas || globalStatsCache.data.metricasAvanzadas;
+        console.log("🔍 Verificando métricas avanzadas:", advancedMetrics);
+
+        if (advancedMetrics) {
+            const metrics = advancedMetrics;
+            console.log("📊 Métricas avanzadas recibidas:", JSON.stringify(metrics));
+            
+            // Actualizar Tiempo Promedio de Respuesta
+            const avgResponseTimeEl = document.getElementById('avg-response-time');
+            if (avgResponseTimeEl) {
+                avgResponseTimeEl.textContent = metrics.tiempoPromedioRespuesta;
+                console.log("✅ Tiempo promedio actualizado:", metrics.tiempoPromedioRespuesta);
+            }
+            
+            // Actualizar Tasa de Finalización
+            const completionRateEl = document.getElementById('completion-rate');
+            if (completionRateEl) {
+                completionRateEl.textContent = metrics.tasaFinalizacion + '%';
+                console.log("✅ Tasa de finalización actualizada:", metrics.tasaFinalizacion);
+            }
+            
+            // Actualizar Solicitudes Hoy vs Promedio
+            const todayRequestsEl = document.getElementById('today-requests');
+            const avgRequestsEl = document.getElementById('avg-requests');
+            if (todayRequestsEl) {
+                todayRequestsEl.textContent = metrics.solicitudesHoy;
+                console.log("✅ Solicitudes hoy actualizadas:", metrics.solicitudesHoy);
+            }
+            if (avgRequestsEl) {
+                avgRequestsEl.textContent = metrics.solicitudesPromedio;
+                console.log("✅ Promedio actualizado:", metrics.solicitudesPromedio);
+            }
+            
+            // Actualizar gráfico de Actividad por Hora
+            if (metrics.porHora) {
+                console.log("📊 Actualizando gráfico de actividad por hora con:", Object.keys(metrics.porHora).length, "horas");
+                updateActivityByHourChart(metrics.porHora);
+            }
+            
+            console.log("✅ Métricas avanzadas actualizadas");
+        } else {
+            console.log("⚠️ No hay métricas avanzadas disponibles");
+            console.log("🔍 Estructura completa de statsData:", Object.keys(statsData));
+        }
 
         // Actualizar datos de diseñadores si existen
         if (statsData.porDisenador && Object.keys(statsData.porDisenador).length > 0) {
@@ -19815,7 +19916,8 @@
             // ✅ ÉXITO: Guardamos los datos recibidos del nuevo sistema
             globalStatsCache.data = {
                 actual: result.data.actual,      // Mes actual
-                anterior: result.data.anterior   // Mes anterior
+                anterior: result.data.anterior,   // Mes anterior
+                metricasAvanzadas: result.data.metricasAvanzadas // ✅ NUEVO: Métricas avanzadas
             };
             console.log("✅ Datos guardados en globalStatsCache:", globalStatsCache.data);
             
@@ -20579,6 +20681,139 @@
                 }
             }
         });
+    }
+    // ✅ NUEVO: ACTUALIZAR GRÁFICO DE ACTIVIDAD POR HORA DEL DÍA
+    function updateActivityByHourChart(porHora) {
+        const ctx = document.getElementById('activityByHourChart');
+        if (!ctx) return;
+        
+        if (!porHora || Object.keys(porHora).length === 0) {
+            console.warn("No hay datos de actividad por hora para mostrar");
+            showEmptyChart('activityByHourChart', 'No hay datos disponibles');
+            return;
+        }
+        
+        // Crear arrays de labels (0-23 horas)
+        const labels = [];
+        for (let h = 0; h < 24; h++) {
+            // Convertir a formato de 12 horas (a.m./p.m.)
+            const hour12 = h === 0 ? 12 : (h > 12 ? h - 12 : h);
+            const ampm = h < 12 ? 'a.m.' : 'p.m.';
+            labels.push(`${hour12}:00 ${ampm}`);
+        }
+        
+        // Crear datasets para cada diseñador y recibidas
+        const datasets = [
+            {
+                label: 'Recibidas',
+                data: [],
+                borderColor: '#667eea',
+                backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                tension: 0.4,
+                fill: true
+            },
+            {
+                label: 'Bermina',
+                data: [],
+                borderColor: '#f093fb',
+                backgroundColor: 'rgba(240, 147, 251, 0.1)',
+                tension: 0.4,
+                fill: true
+            },
+            {
+                label: 'Jorsy',
+                data: [],
+                borderColor: '#4facfe',
+                backgroundColor: 'rgba(79, 172, 254, 0.1)',
+                tension: 0.4,
+                fill: true
+            },
+            {
+                label: 'Xamir',
+                data: [],
+                borderColor: '#43e97b',
+                backgroundColor: 'rgba(67, 233, 123, 0.1)',
+                tension: 0.4,
+                fill: true
+            },
+            {
+                label: 'Fulan@',
+                data: [],
+                borderColor: '#f5576c',
+                backgroundColor: 'rgba(245, 87, 108, 0.1)',
+                tension: 0.4,
+                fill: true
+            }
+        ];
+        
+        // Llenar los datos para cada hora
+        for (let h = 0; h < 24; h++) {
+            datasets[0].data.push(porHora.recibidas ? (porHora.recibidas[h] || 0) : 0);
+            datasets[1].data.push(porHora.Bermina ? (porHora.Bermina[h] || 0) : 0);
+            datasets[2].data.push(porHora.Jorsy ? (porHora.Jorsy[h] || 0) : 0);
+            datasets[3].data.push(porHora.Xamir ? (porHora.Xamir[h] || 0) : 0);
+            datasets[4].data.push(porHora["Fulan@"] ? (porHora["Fulan@"][h] || 0) : 0);
+        }
+        
+        if (statsCharts.activityByHour) {
+            statsCharts.activityByHour.destroy();
+        }
+        
+        statsCharts.activityByHour = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: datasets
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { 
+                        display: true,
+                        position: 'top',
+                        labels: {
+                            color: '#333',
+                            font: {
+                                size: 12
+                            }
+                        }
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                        callbacks: {
+                            title: function(context) {
+                                return `Hora: ${context[0].label}`;
+                            },
+                            label: function(context) {
+                                return `${context.dataset.label}: ${context.raw}`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1
+                        }
+                    },
+                    x: {
+                        ticks: {
+                            maxRotation: 45,
+                            minRotation: 45
+                        }
+                    }
+                },
+                interaction: {
+                    mode: 'index',
+                    intersect: false
+                }
+            }
+        });
+        
+        console.log("✅ Gráfico de asignaciones por hora actualizado");
     }
     // ✅ ACTUALIZAR GRÁFICO DE DESEMPEÑO DE DISEÑADORES
     function updateDesignerPerformanceChart(data) {
