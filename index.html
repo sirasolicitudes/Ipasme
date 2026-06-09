@@ -274,6 +274,15 @@
     .row-correccion-diseno .badge-prioridad { background: white !important; color: #0033cc !important; border: 1px solid white !important; }
     .row-correccion-diseno .status-badge { color: white !important; }
 
+    /* ✅ ESTILOS PARA OTROS (SOLICITUD ESPECIAL) - Degradado azul */
+    .row-otros { background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%) !important; color: white !important; border-left: 5px solid #2196f3 !important; }
+    .row-otros td { color: white !important; font-weight: 600 !important; }
+    .row-otros *, .row-otros td *, .row-otros span, .row-otros div, .row-otros a, .row-otros button, .row-otros .status-badge, .row-otros .priority-badge { color: white !important; }
+    .row-otros a:hover { color: #cccccc !important; }
+    .row-otros .badge-new { background: white !important; color: #2196f3 !important; border: 1px solid white !important; }
+    .row-otros .badge-prioridad { background: white !important; color: #1976d2 !important; border: 1px solid white !important; }
+    .row-otros .status-badge { color: white !important; }
+
     .correccion-diseno-btn {
         background: linear-gradient(135deg, #0011aa 0%, #0a0a0a 100%) !important;
         color: white !important;
@@ -4159,6 +4168,218 @@
         }
     }
 
+/* ============================================================
+   ESTILOS PARA SOLICITUD ESPECIAL (OTROS REFORMADO)
+   ============================================================ */
+
+/* Boton "Otros" con degradado naranja-azul (como panel de correos) */
+.solicitud-especial-btn {
+    background: linear-gradient(135deg, #fb8500 0%, #4a6eb0 100%) !important;
+    color: white !important;
+    border-color: #fb8500 !important;
+    position: relative;
+    overflow: hidden;
+}
+.solicitud-especial-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+    animation: none;
+}
+.solicitud-especial-btn.selected::before {
+    animation: shimmer 3s infinite;
+}
+.solicitud-especial-btn.selected {
+    background: linear-gradient(135deg, #4a6eb0 0%, #fb8500 100%) !important;
+    box-shadow: 0 0 20px rgba(251, 133, 0, 0.5) !important;
+    border-color: #4a6eb0 !important;
+    transform: scale(0.98);
+}
+
+/* Contenedor de selecciones de Solicitud Especial */
+.solicitud-especial-container {
+    background: linear-gradient(135deg, #fef9f3 0%, #f0f4fa 100%);
+    border: 2px solid #fb8500;
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 15px;
+    animation: fadeIn 0.4s ease;
+}
+
+/* Titulo de seccion dentro de solicitud especial */
+.solicitud-especial-section-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 800;
+    font-size: 0.85rem;
+    color: var(--azul-deep);
+    margin-bottom: 12px;
+    border-left: 4px solid #fb8500;
+    padding-left: 10px;
+    text-transform: uppercase;
+}
+
+/* Grid para botones de tipo */
+.solicitud-especial-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+/* Botones de tipo (Es Flyer / No es Flyer) */
+.tipo-flyer-btn {
+    background: linear-gradient(135deg, #fb8500 0%, #e67e22 100%) !important;
+    color: white !important;
+    border-color: #e67e22 !important;
+    padding: 14px;
+    text-align: center;
+    font-weight: 700;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 50px;
+    font-size: 0.9rem;
+    position: relative;
+    overflow: hidden;
+}
+.tipo-flyer-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+    animation: none;
+}
+.tipo-flyer-btn.selected::before {
+    animation: shimmer 3s infinite;
+}
+.tipo-flyer-btn.selected {
+    background: linear-gradient(135deg, #d35400 0%, #fb8500 100%) !important;
+    box-shadow: 0 0 20px rgba(251, 133, 0, 0.5) !important;
+    border-color: #d35400 !important;
+    transform: scale(0.98);
+}
+.tipo-flyer-btn:hover:not(.selected) {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(251, 133, 0, 0.3);
+}
+
+/* Boton "No es Flyer" - Estilo alternativo */
+.no-flyer-btn {
+    background: linear-gradient(135deg, #4a6eb0 0%, #114c5f 100%) !important;
+    color: white !important;
+    border-color: #114c5f !important;
+}
+.no-flyer-btn.selected {
+    background: linear-gradient(135deg, #114c5f 0%, #4a6eb0 100%) !important;
+    box-shadow: 0 0 20px rgba(74, 110, 176, 0.5) !important;
+    border-color: #4a6eb0 !important;
+}
+.no-flyer-btn:hover:not(.selected) {
+    box-shadow: 0 4px 12px rgba(74, 110, 176, 0.3);
+}
+
+/* Botones de datos (Hora / Direccion) - seleccion multiples */
+.dato-tiempo-btn, .dato-ubicacion-btn {
+    background: linear-gradient(135deg, #0799b6 0%, #4a6eb0 100%) !important;
+    color: white !important;
+    border-color: #0799b6 !important;
+    padding: 14px;
+    text-align: center;
+    font-weight: 700;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 50px;
+    font-size: 0.9rem;
+    position: relative;
+    overflow: hidden;
+}
+.dato-tiempo-btn.selected, .dato-ubicacion-btn.selected {
+    background: linear-gradient(135deg, #114c5f 0%, #0799b6 100%) !important;
+    box-shadow: 0 0 20px rgba(7, 153, 182, 0.5) !important;
+    border-color: #114c5f !important;
+    transform: scale(0.98);
+}
+.dato-tiempo-btn:hover:not(.selected), .dato-ubicacion-btn:hover:not(.selected) {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(7, 153, 182, 0.3);
+}
+
+/* Indicador de seleccion multiple (check) */
+.multi-select-indicator {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    background: #2d6a4f;
+    color: white;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 800;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    z-index: 10;
+}
+.tipo-flyer-btn.selected .multi-select-indicator,
+.no-flyer-btn.selected .multi-select-indicator,
+.dato-tiempo-btn.selected .multi-select-indicator,
+.dato-ubicacion-btn.selected .multi-select-indicator {
+    display: flex;
+}
+
+/* Campos condicionales */
+.solicitud-especial-campo {
+    animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Info box explicativa */
+.solicitud-especial-info {
+    background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
+    border: 1px solid #4a6eb0;
+    border-radius: 10px;
+    padding: 12px 15px;
+    margin-bottom: 15px;
+    font-size: 0.8rem;
+    color: var(--azul-deep);
+    font-weight: 500;
+    line-height: 1.5;
+}
+
+/* Badges informativos */
+.flyer-badge {
+    display: inline-block;
+    background: linear-gradient(135deg, #fb8500 0%, #e67e22 100%);
+    color: white;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    margin-left: 8px;
+}
+
     </style>
 
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -5021,7 +5242,7 @@
     <div class="card-btn copy-instagram-btn" onclick="selectCat(this, 'copy-rrss')">
         <span style="font-size: 1.2rem;">📸</span> Copy RRSS
     </div>
-    <div class="card-btn" onclick="selectCat(this, 'otros')">Otros</div>
+    <div class="card-btn solicitud-especial-btn" onclick="selectCat(this, 'otros')"><span style="font-size: 1.2rem;">⚙️</span> Otros</div>
     </div>
     <div id="sec-3" class="hidden">
     <label class="section-title" id="label-3">🩺 3. DETALLE *</label>
@@ -5095,12 +5316,12 @@
 
     <!-- FORMULARIO: EFEMÉRIDES -->
     <div id="form-efemerides" class="form-type-section hidden">
-    <div style="grid-column: 1 / -1; background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%); border: 2px solid #e67e22; border-radius: 12px; padding: 15px; margin-top: 15px; margin-bottom: 15px;">
+    <div style="background: linear-gradient(135deg, #e67e22 0%, #f39c12 100%); border: 2px solid #e67e22; border-radius: 12px; padding: 15px; margin-top: 15px; margin-bottom: 15px;">
     <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
     <span style="font-size: 1.5rem;">📅</span>
-    <span style="font-weight: 800; color: #d35400; font-size: 0.95rem;">SOLICITUD DE EFEMÉRIDE</span>
+    <span style="font-weight: 800; color: white; font-size: 0.95rem;">SOLICITUD DE EFEMÉRIDE</span>
     </div>
-    <p style="margin: 0; font-size: 0.85rem; color: #a04000; line-height: 1.4;">
+    <p style="margin: 0; font-size: 0.85rem; color: white; line-height: 1.4;">
     La fecha de la efeméride se toma de la fecha del evento configurada arriba (mínimo 48 horas de anticipación).
     </p>
     </div>
@@ -5355,10 +5576,92 @@
     </div>
     </div>
 
-    <!-- FORMULARIO: OTROS -->
+    <!-- FORMULARIO: SOLICITUD ESPECIAL (OTROS REFORMADO) -->
     <div id="form-otros" class="form-type-section hidden">
-    <label class="section-title">📝 3. DESCRIPCIÓN DEL REQUERIMIENTO *</label>
-    <textarea id="otros-descripcion" class="modern-input" rows="3" style="width: 100%;" placeholder="Detalle aquí su solicitud especial..."></textarea>
+    <!-- INFO BOX -->
+    <div style="background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%); border: 2px solid #2196f3; border-radius: 12px; padding: 15px; margin-top: 15px; margin-bottom: 15px;">
+    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+    <span style="font-size: 1.5rem;">✨</span>
+    <span style="font-weight: 800; color: white; font-size: 0.95rem;">SOLICITUD ESPECIAL</span>
+    </div>
+    <p style="margin: 0; font-size: 0.85rem; color: white; line-height: 1.4;">
+    Seleccione el tipo de solicitud y los datos que necesita incluir. Los campos se mostraran segun su seleccion.
+    </p>
+    </div>
+
+    <!-- SECCION 1: TIPO DE SOLICITUD -->
+    <div class="solicitud-especial-container" id="seccion-tipo-solicitud">
+        <div class="solicitud-especial-section-title">🎯 3. TIPO DE SOLICITUD *</div>
+        <div class="solicitud-especial-grid">
+            <div class="card-btn tipo-flyer-btn" id="btn-es-flyer" onclick="selectTipoFlyer(this, 'es-flyer')">
+                <span class="multi-select-indicator">✓</span>
+                <span style="font-size: 1.3rem; margin-right: 8px;">📄</span>
+                <span>Es Flyer</span>
+            </div>
+            <div class="card-btn tipo-flyer-btn no-flyer-btn" id="btn-no-es-flyer" onclick="selectTipoFlyer(this, 'no-es-flyer')">
+                <span class="multi-select-indicator">✓</span>
+                <span style="font-size: 1.3rem; margin-right: 8px;">📦</span>
+                <span>No es Flyer</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- SECCION 2: DATOS DE TIEMPO Y UBICACION -->
+    <div class="solicitud-especial-container" id="seccion-datos-tiempo-ubicacion">
+        <div class="solicitud-especial-section-title">📍⏰ 4. DATOS DE TIEMPO Y UBICACION *</div>
+        <div class="solicitud-especial-grid">
+            <div class="card-btn dato-tiempo-btn" id="btn-dato-hora" onclick="toggleDatoTiempoUbicacion(this, 'hora')">
+                <span class="multi-select-indicator">✓</span>
+                <span style="font-size: 1.3rem; margin-right: 8px;">⏰</span>
+                <span>Hora</span>
+            </div>
+            <div class="card-btn dato-ubicacion-btn" id="btn-dato-direccion" onclick="toggleDatoTiempoUbicacion(this, 'direccion')">
+                <span class="multi-select-indicator">✓</span>
+                <span style="font-size: 1.3rem; margin-right: 8px;">📍</span>
+                <span>Direccion</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- CAMPO: DESCRIPCION (SIEMPRE VISIBLE) -->
+    <label class="section-title" id="label-otros-descripcion">📝 5. DESCRIPCION DEL REQUERIMIENTO *</label>
+    <textarea id="otros-descripcion" class="modern-input" rows="4" style="width: 100%;" placeholder="Describa detalladamente su solicitud especial..."></textarea>
+
+    <!-- CAMPO: FECHA DE ACTIVIDAD (SIEMPRE VISIBLE) -->
+    <label class="section-title">📅 6. FECHA DE ACTIVIDAD *</label>
+    <input type="date" id="otros-fecha" class="modern-input">
+
+    <!-- CAMPO CONDICIONAL: HORA DE INICIO (visible si selecciona Hora) -->
+    <div id="otros-campos-hora" class="hidden" style="margin-top: 15px;">
+        <div class="solicitud-especial-campo">
+            <label class="section-title">⏰ 7. HORA DE INICIO *</label>
+            <div class="hora-container" id="otros-hora-box" style="display: flex; gap: 10px; align-items: center;">
+                <input type="text" id="otros-hora" class="modern-input" style="width:100px; text-align:center" placeholder="08:00">
+                <button type="button" class="btn-time" id="btn-otros-am" onclick="setAMPMOtros('a. m.')">a. m.</button>
+                <button type="button" class="btn-time" id="btn-otros-pm" onclick="setAMPMOtros('p. m.')">p. m.</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- CAMPOS CONDICIONALES: UBICACION (visible si selecciona Direccion) -->
+    <div id="otros-campos-ubicacion" class="hidden" style="margin-top: 15px;">
+        <div class="solicitud-especial-campo">
+            <label class="section-title">📍 8. UBICACION *</label>
+            <div style="background: #fff8e1; border: 1px solid #ffe082; padding: 12px; border-radius: 8px; margin-bottom: 10px; font-size: 0.8rem; color: #5d4600; font-weight: 600; line-height: 1.4;">
+                Complete al menos el nombre de la institucion. La direccion exacta es opcional pero recomendada.
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <div>
+                    <label class="txt-small">🏫 Institucion *</label>
+                    <input type="text" id="otros-institucion" class="modern-input" placeholder="Escuela, Liceo, Jardin de ninos, etc.">
+                </div>
+                <div>
+                    <label class="txt-small">🧭 Direccion exacta</label>
+                    <input type="text" id="otros-direccion-exacta" class="modern-input" placeholder="Municipio, Parroquia, Ciudad, etc.">
+                </div>
+            </div>
+        </div>
+    </div>
     </div>
     <div id="sec-firmantes" class="hidden">
     <label class="section-title">✍️ 4. FIRMANTES</label>
@@ -7626,6 +7929,12 @@
     let catType = "";
     let catName = "";
     let localData = [];
+
+    // Variables globales para Solicitud Especial (Otros reformado)
+    let tipoFlyerSeleccionado = null;
+    let datoHoraSeleccionado = false;
+    let datoUbicacionSeleccionado = false;
+    let ampmOtrosSeleccionado = null;
     let isMaintActive = false;
 
     // ✅ SISTEMA DE CIERRE POR INACTIVIDAD - Solo para Usuarios Regulares
@@ -9586,7 +9895,7 @@
     const especialidades = ["Alergología", "Cardiología", "Cirugía general", "Dermatología", "Fisiatría", "Foniatría", "Gastroenterología", "Geriatría", "Ginecología y Obstetricia", "Infectología", "Medicina Familiar", "Medicina General", "Medicina Interna", "Medicina Ocupacional", "Nefrología", "Neumología", "Neurología", "Nutrición", "Odontología", "Oftalmología", "Oncología", "Optometría", "Pediatría", "Psicología", "Psiquiatría", "Reumatología", "Traumatología", "Urología"];
     const servicios = ["Actividades recreativas", "Afiliación", "Agudeza visual", "Aplicación de flúor", "Asesoría legal", "Bienestar social", "Captación odontológica", "Captación quirúrgica general", "Captación quirúrgica oftalmológica", "Charlas odontológicas", "Citología", "Control de glicemia", "Control de talla y peso", "Desparasitación", "Despistaje de glicemia capilar", "Despistaje HTA", "Ecografía", "Electrocardiograma", "Espirometría", "Farmacia", "Fisioterapia", "Fonoaudiología", "Gerontología", "Ingeniería biomédica", "Inmunización", "Laboratorio", "Liberación de hipoteca", "Masoterapia", "Peluquería y barbería", "Podología", "Psicopedagogía", "Quiropraxia", "Reposos médicos", "Sesión educativa", "Servicios sociales", "Terapia de lenguaje (Logopedia)", "Terapia del dolor", "Terapia ocupacional", "Tipiaje", "Trabajo social"];
     const vacunas = ["Fiebre amarilla", "Pentavalente", "Polio IPV", "Polio oral", "Toxoide (tetánico/diftérico)", "Trivalente viral (SRP)"];
-    const quirurgica = ["Bocio hiperfuncionante", "Colectomía", "Enfermedad hemorroidal", "Esterilización", "Fibromatosis", "Fimosis", "Hernia abdominal", "Hernia epigástrica", "Hernia escrotal", "Hernia inguinal", "Hernia umbilical", "Hidrocele", "Histerectomía", "Lipomas", "Litiasis vesicular (Colecistectomía)", "Lunares", "Miomatosis uterina", "Nevus", "Nódulos mamarios simples", "Paridad satisfecha", "Prolapso", "Quiste (TU)", "Quiste de epidídimo", "Quiste sebáceo", "Quiste tirogloso", "Quistes sebáceos", "Tumores ováricos", "Varicocele", "Vasectomía", "Verrugas"];
+    const quirurgica = ["Bocio hiperfuncionante", "Cistocele", "Colectomía", "Enfermedad hemorroidal", "Esterilización", "Eventración", "Fibromatosis", "Fístula anal", "Fístula rectovaginal", "Fimosis", "Hernia abdominal", "Hernia epigástrica", "Hernia escrotal", "Hernia inguinal", "Hernia umbilical", "Hidrocele", "Histerectomía", "Lipomas", "Litiasis vesicular (Colecistectomía)", "Lunares", "Miomatosis uterina", "Nevus", "Nódulos mamarios simples", "Paridad satisfecha", "Prolapso", "Prolapso rectal", "Quiste (TU)", "Quiste de epidídimo", "Quiste sebáceo", "Quiste tirogloso", "Rectocele", "Tumores ováricos", "Varicocele", "Vasectomía", "Verrugas"];
     const pediatrica = ["Criptorquidias", "Fimosis", "Hernia epigástrica", "Hernia inguinal", "Hernia umbilical", "Hidrocele", "Quiste tirogloso", "Varicocele"];
     const oftalmo = ["Cataratas", "Cirugía plástica ocular", "Dacriocistorrinostomía", "Desprendimiento de retina", "Glaucoma", "Melanoma uveal", "Pterigión", "Ptosis palpebral", "Queratoplastía", "Retinoblastoma", "Tumores oculares"];
     // ✅ FUNCIÓN ÚNICA DE BÚSQUEDA POR ID (CON BÚSQUEDA PARCIAL)
@@ -10587,6 +10896,7 @@
             const esCopyRRSS = solicitudLimpia.toLowerCase().includes("copy rrss");
             const esCharlas = solicitudLimpia.toLowerCase().includes("charlas") || solicitudLimpia.toLowerCase().includes("sesiones educativas") || solicitudLimpia.toLowerCase().includes("actividades aprendizaje") || solicitudLimpia.toLowerCase().includes("aprendizaje");
             const esDeportivas = solicitudLimpia.toLowerCase().includes("deportivas");
+            const esOtros = solicitudLimpia.toLowerCase().includes("otros");
 
             if (esObituario) {
             rowClass = "row-obituario";
@@ -10608,6 +10918,8 @@
             rowClass = "row-charlas";
             } else if (esDeportivas) {
             rowClass = "row-deportivas";
+            } else if (esOtros) {
+            rowClass = "row-otros";
             } else {
             rowClass = "row-new";
             }
@@ -15637,6 +15949,99 @@
     document.getElementById('hora-box').classList.remove('field-error');
     }
 
+    // === FUNCIONES PARA SOLICITUD ESPECIAL (OTROS REFORMADO) ===
+
+    // Seleccionar tipo de flyer (Es Flyer / No es Flyer) - Mutuamente exclusivo
+    function selectTipoFlyer(btn, tipo) {
+        tipoFlyerSeleccionado = tipo;
+        // Remover clase selected de ambos botones
+        document.getElementById('btn-es-flyer').classList.remove('selected');
+        document.getElementById('btn-no-es-flyer').classList.remove('selected');
+        // Agregar clase selected al boton seleccionado
+        btn.classList.add('selected');
+        // Remover error visual
+        document.getElementById('seccion-tipo-solicitud').style.borderColor = '#fb8500';
+    }
+
+    // Toggle de datos de tiempo y ubicacion (Hora / Direccion) - Multi-select
+    function toggleDatoTiempoUbicacion(btn, tipo) {
+        if (tipo === 'hora') {
+            datoHoraSeleccionado = !datoHoraSeleccionado;
+            btn.classList.toggle('selected', datoHoraSeleccionado);
+            // Mostrar/ocultar campos de hora
+            const camposHora = document.getElementById('otros-campos-hora');
+            if (datoHoraSeleccionado) {
+                camposHora.classList.remove('hidden');
+            } else {
+                camposHora.classList.add('hidden');
+            }
+        } else if (tipo === 'direccion') {
+            datoUbicacionSeleccionado = !datoUbicacionSeleccionado;
+            btn.classList.toggle('selected', datoUbicacionSeleccionado);
+            // Mostrar/ocultar campos de ubicacion
+            const camposUbicacion = document.getElementById('otros-campos-ubicacion');
+            if (datoUbicacionSeleccionado) {
+                camposUbicacion.classList.remove('hidden');
+            } else {
+                camposUbicacion.classList.add('hidden');
+            }
+        }
+        // Remover error visual si al menos uno esta seleccionado
+        if (datoHoraSeleccionado || datoUbicacionSeleccionado) {
+            document.getElementById('seccion-datos-tiempo-ubicacion').style.borderColor = '#fb8500';
+        }
+    }
+
+    // Establecer AM/PM para Solicitud Especial
+    function setAMPMOtros(periodo) {
+        ampmOtrosSeleccionado = periodo;
+        document.getElementById('btn-otros-am').classList.remove('active');
+        document.getElementById('btn-otros-pm').classList.remove('active');
+        document.getElementById(periodo === 'a. m.' ? 'btn-otros-am' : 'btn-otros-pm').classList.add('active');
+        document.getElementById('otros-hora-box').classList.remove('field-error');
+    }
+
+    // Resetear Solicitud Especial
+    function resetSolicitudEspecial() {
+        tipoFlyerSeleccionado = null;
+        datoHoraSeleccionado = false;
+        datoUbicacionSeleccionado = false;
+        ampmOtrosSeleccionado = null;
+
+        // Resetear botones de tipo
+        document.getElementById('btn-es-flyer').classList.remove('selected');
+        document.getElementById('btn-no-es-flyer').classList.remove('selected');
+
+        // Resetear botones de datos
+        document.getElementById('btn-dato-hora').classList.remove('selected');
+        document.getElementById('btn-dato-direccion').classList.remove('selected');
+
+        // Ocultar campos condicionales
+        document.getElementById('otros-campos-hora').classList.add('hidden');
+        document.getElementById('otros-campos-ubicacion').classList.add('hidden');
+
+        // Resetear campos
+        document.getElementById('otros-fecha').value = '';
+        document.getElementById('otros-descripcion').value = '';
+        document.getElementById('otros-hora').value = '';
+        document.getElementById('otros-institucion').value = '';
+        document.getElementById('otros-direccion-exacta').value = '';
+
+        // Resetear botones AM/PM
+        document.getElementById('btn-otros-am').classList.remove('active');
+        document.getElementById('btn-otros-pm').classList.remove('active');
+
+        // Resetear bordes de contenedores
+        document.getElementById('seccion-tipo-solicitud').style.borderColor = '#fb8500';
+        document.getElementById('seccion-datos-tiempo-ubicacion').style.borderColor = '#fb8500';
+    }
+
+    // Formatear hora para Solicitud Especial
+    function formatearHoraOtros(horaValor, ampm) {
+        if (!horaValor || !ampm) return "N/A";
+        return horaValor + " " + ampm;
+    }
+
     function selectCat(btn, tipo) {
         // ✅ Función unificada para restaurar TODO el formulario a su estado por defecto
         function resetFormToDefault() {
@@ -15727,6 +16132,9 @@
             // Ocultar campo de medidas de pendón
             const medidasContainer = document.getElementById('pendon-medidas-container');
             if (medidasContainer) medidasContainer.style.display = 'none';
+
+            // Resetear Solicitud Especial (Otros reformado)
+            resetSolicitudEspecial();
         }
 
         // 1. Si el usuario deselecciona el mismo botón
@@ -16067,8 +16475,12 @@
             document.getElementById('form-deportivas').classList.remove('hidden');
             // Nota: fecha/hora, ubicación, contacto y soportes se mantienen visibles por defecto
         } else if (tipo === 'otros') {
-            // Formulario otros: formulario estático
+            // Formulario Solicitud Especial (Otros reformado): formulario estático
             document.getElementById('form-otros').classList.remove('hidden');
+
+            // Ocultar secciones base (fecha-hora-section, ubicacion-section)
+            document.getElementById('fecha-hora-section').classList.add('hidden');
+            document.getElementById('ubicacion-section').classList.add('hidden');
         }
     }
     // Función para manejar la selección de tipo de arte (Certificado/Reconocimiento)
@@ -16690,12 +17102,60 @@
             label: 'Copy para redes sociales (máximo 2000 caracteres)'
         });
     } else if (catType === 'otros') {
-        // ✅ VALIDACIÓN ESPECIAL PARA OTROS
+        // VALIDACIÓN PARA SOLICITUD ESPECIAL
+
+        // 1. Validar que se selecciono un tipo de flyer
+        fieldsInOrder.push({
+            id: 'seccion-tipo-solicitud',
+            isValid: () => tipoFlyerSeleccionado !== null,
+            label: 'Tipo de solicitud (Es Flyer o No es Flyer)'
+        });
+
+        // 2. Validar fecha (SIEMPRE REQUERIDA)
+        fieldsInOrder.push({
+            id: 'otros-fecha',
+            isValid: () => {
+                const val = document.getElementById('otros-fecha').value;
+                return !!val;
+            },
+            label: 'Fecha de actividad'
+        });
+
+        // 4. Validar descripcion (siempre requerida)
         fieldsInOrder.push({
             id: 'otros-descripcion',
             isValid: () => document.getElementById('otros-descripcion')?.value.trim() !== '',
-            label: 'Descripción del requerimiento'
+            label: 'Descripcion del requerimiento'
         });
+
+        // 5. Validar hora (solo si selecciono Hora)
+        if (datoHoraSeleccionado) {
+            fieldsInOrder.push({
+                id: 'otros-hora',
+                isValid: () => {
+                    const val = document.getElementById('otros-hora').value.trim();
+                    return !!val;
+                },
+                label: 'Hora de inicio'
+            });
+            fieldsInOrder.push({
+                id: 'otros-hora-box',
+                isValid: () => ampmOtrosSeleccionado !== null,
+                label: 'Formato AM/PM'
+            });
+        }
+
+        // 6. Validar ubicacion (solo si selecciono Direccion)
+        if (datoUbicacionSeleccionado) {
+            fieldsInOrder.push({
+                id: 'otros-institucion',
+                isValid: () => {
+                    const val = document.getElementById('otros-institucion').value.trim();
+                    return !!val;
+                },
+                label: 'Institucion'
+            });
+        }
     } else {
         // Campos normales para otras solicitudes (médicas, vacunas, quirúrgicas)
         fieldsInOrder.push({
@@ -16705,8 +17165,8 @@
         });
     }
 
-    // Campos de fecha y hora solo si no es obituario ni certificado ni textiles ni pendon ni correccion-nota-prensa ni copy-instagram ni efemerides ni correccion-diseno
-    if (catType !== 'obituario' && catType !== 'certificado' && catType !== 'textiles' && catType !== 'pendon' && catType !== 'correccion-nota-prensa' && catType !== 'copy-rrss' && catType !== 'efemerides' && catType !== 'correccion-diseno') {
+    // Campos de fecha y hora solo si no es obituario ni certificado ni textiles ni pendon ni correccion-nota-prensa ni copy-instagram ni efemerides ni correccion-diseno ni otros
+    if (catType !== 'obituario' && catType !== 'certificado' && catType !== 'textiles' && catType !== 'pendon' && catType !== 'correccion-nota-prensa' && catType !== 'copy-rrss' && catType !== 'efemerides' && catType !== 'correccion-diseno' && catType !== 'otros') {
         fieldsInOrder.push({
             id: 'fecha',
             isValid: () => {
@@ -16768,17 +17228,24 @@
     }
     if (!isValid) return false;
 
-    // ✅ VALIDACIÓN DE 48 HORAS SOLO SI NO ES OBITUARIO, CORRECCIÓN NOTA DE PRENSA, COPY RRSS, CORRECCIÓN DE DISEÑO NI EFEMÉRIDES
+    // VALIDACIÓN DE 48 HORAS SOLO SI NO ES OBITUARIO, CORRECCIÓN NOTA DE PRENSA, COPY RRSS, CORRECCIÓN DE DISEÑO NI EFEMÉRIDES
     if (catType !== 'obituario' && catType !== 'correccion-nota-prensa' && catType !== 'copy-rrss' && catType !== 'correccion-diseno' && catType !== 'efemerides') {
-        const fechaInput = document.getElementById('fecha').value;
+        let fechaInput;
+        // Para Solicitud Especial (otros), usar siempre el campo de fecha condicional
+        if (catType === 'otros') {
+            fechaInput = document.getElementById('otros-fecha').value;
+        } else {
+            fechaInput = document.getElementById('fecha').value;
+        }
         const fechaSeleccionada = new Date(fechaInput + 'T00:00:00');
         const ahora = new Date();
         // VALIDACIÓN INTERNA: 24 HORAS (texto mantiene 48 para usuario)
         if ((fechaSeleccionada - ahora) / (1000 * 60 * 60) < 24) {
-            document.getElementById('fecha').classList.add('field-error');
-            document.getElementById('fecha').scrollIntoView({ behavior: 'smooth', block: 'center' });
+            const fechaEl = catType === 'otros' ? document.getElementById('otros-fecha') : document.getElementById('fecha');
+            fechaEl.classList.add('field-error');
+            fechaEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
             showToast("⏳ Las solicitudes deben realizarse con al menos 48 horas de anticipación", "warning", 6000);
-            setTimeout(() => document.getElementById('fecha').focus(), 600);
+            setTimeout(() => fechaEl.focus(), 600);
             return false;
         }
     }
@@ -16873,7 +17340,23 @@
         if (copy) html += `<p><b><i class="fas fa-file-alt"></i> Copy:</b> ${copy.substring(0, 100)}${copy.length > 100 ? '...' : ''}</p>`;
         html += `<p><b><i class="fas fa-calendar-alt"></i> Fecha:</b> ${document.getElementById('copy-rrss-fecha').value}</p>`;
     } else if (catType === 'otros') {
-        html += `<p><b><i class="fas fa-star"></i> Descripción:</b> ${document.getElementById('otros-descripcion').value.trim()}</p>`;
+        // VISUALIZACIÓN PARA SOLICITUD ESPECIAL
+        html += `<p><b><i class="fas fa-tag"></i> Tipo de solicitud:</b> ${tipoFlyerSeleccionado === 'es-flyer' ? 'Es Flyer' : 'No es Flyer'}</p>`;
+        const fechaOtros = document.getElementById('otros-fecha').value;
+        if (fechaOtros) {
+            const [year, month, day] = fechaOtros.split('-');
+            html += `<p><b><i class="fas fa-calendar-alt"></i> Fecha de actividad:</b> ${day}/${month}/${year}</p>`;
+        }
+        html += `<p><b><i class="fas fa-file-alt"></i> Descripción:</b> ${document.getElementById('otros-descripcion').value.trim()}</p>`;
+        if (datoHoraSeleccionado) {
+            const horaOtros = document.getElementById('otros-hora').value.trim();
+            if (horaOtros) html += `<p><b><i class="fas fa-clock"></i> Hora de inicio:</b> ${formatearHoraOtros(horaOtros, ampmOtrosSeleccionado)}</p>`;
+        }
+        if (datoUbicacionSeleccionado) {
+            const institucion = document.getElementById('otros-institucion').value.trim();
+            const direccion = document.getElementById('otros-direccion-exacta').value.trim();
+            if (institucion || direccion) html += `<p><b><i class="fas fa-map-marker-alt"></i> Ubicación:</b> ${[institucion, direccion].filter(x => x).join(', ')}</p>`;
+        }
     } else {
         const selectedOps = Array.from(document.querySelectorAll('#cont-3 .card-btn.selected')).map(el => el.innerText).join(', ');
         html += `<p><b><i class="fas fa-stethoscope"></i> Detalle:</b> ${selectedOps || 'Ninguno'}</p>`;
@@ -16881,8 +17364,8 @@
     const servicios = Array.from(document.querySelectorAll('#cont-4 .card-btn.selected')).map(el => el.innerText).join(', ');
     if (servicios) html += `<p><b><i class="fas fa-star"></i> Servicios Adicionales:</b> ${servicios}</p>`;
 
-    // Fecha de actividad, hora y ubicación solo para tipos que no son textiles, obituario, certificado, pendón, corrección ni instagram
-    if (!['textiles', 'obituario', 'certificado', 'pendon', 'correccion-nota-prensa', 'copy-rrss'].includes(catType)) {
+    // Fecha de actividad, hora y ubicación solo para tipos que no son textiles, obituario, certificado, pendón, corrección ni instagram ni otros
+    if (!['textiles', 'obituario', 'certificado', 'pendon', 'correccion-nota-prensa', 'copy-rrss', 'otros'].includes(catType)) {
         const [year, month, day] = document.getElementById('fecha').value.split('-');
         const fechaFormateada = `${day}/${month}/${year}`;
         html += `<p><b><i class="fas fa-calendar-alt"></i> Fecha de Actividad:</b> ${fechaFormateada}</p>`;
@@ -17262,6 +17745,32 @@
             params.append("Hora", "N/A");
             params.append("Observaciones", "");
             params.append("Fecha", fecha);
+
+        } else if (catType === 'otros') {
+            // ENVÍO PARA SOLICITUD ESPECIAL
+            const tipoSolicitud = tipoFlyerSeleccionado === 'es-flyer' ? 'Es Flyer' : 'No es Flyer';
+            const fechaOtros = document.getElementById('otros-fecha').value;
+            const descripcion = document.getElementById('otros-descripcion').value.trim();
+            const horaOtros = document.getElementById('otros-hora').value.trim();
+            const institucion = document.getElementById('otros-institucion').value.trim();
+            const direccionExacta = document.getElementById('otros-direccion-exacta').value.trim();
+
+            let datosOtros = "";
+            datosOtros += "Tipo de Solicitud: " + tipoSolicitud + "\n";
+            if (descripcion) datosOtros += "• Descripción: " + descripcion + "\n";
+
+            let unidadFinal = selectedUnidad.trim();
+            if (!EXCEPCIONES_SIN_UMI.includes(unidadFinal)) {
+                unidadFinal = "Unidad Médica " + unidadFinal;
+            }
+            params.append("Unidad", unidadFinal);
+            params.append("Solicitud", catName);
+            params.append("Otros", datosOtros);
+            params.append("Servicios", "");
+            params.append("Direccion", datoUbicacionSeleccionado ? [institucion, direccionExacta].filter(part => part).join(", ") : "");
+            params.append("Hora", datoHoraSeleccionado ? formatearHoraOtros(horaOtros, ampmOtrosSeleccionado) : "N/A");
+            params.append("Observaciones", "");
+            params.append("Fecha", fechaOtros);
 
         } else {
             // Solicitudes Estándar
