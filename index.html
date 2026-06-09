@@ -13713,6 +13713,61 @@
     document.head.appendChild(toastStyles);
 
     // ✅ FUNCIONES PARA MOSTRAR/OCULTAR LOADING OVERLAY
+    let fraseRotationInterval = null;
+    let fraseIndex = 0;
+    
+    const frasesRotativas = [
+        "💾 Guardando en sistema principal...",
+        "⚡ Sincronización en tiempo real activa",
+        "📤 No salga ni cierre esta ventana hasta que cargue la solicitud",
+        "📱 Si envías desde tu celular mantén buena señal o wifi",
+        "🔄 Procesando datos en servidor seguro",
+        "✨ Optimizando transmisión de información"
+    ];
+    
+    function iniciarRotacionDeFrases() {
+        const loadSubTxt = document.getElementById('loadSubTxt');
+        if (!loadSubTxt) return;
+        
+        fraseIndex = 0;
+        
+        // Mostrar primera frase inmediatamente
+        mostrarFraseConAnimacion(frasesRotativas[0]);
+        
+        // Rotar frases cada 4 segundos
+        fraseRotationInterval = setInterval(() => {
+            fraseIndex = (fraseIndex + 1) % frasesRotativas.length;
+            mostrarFraseConAnimacion(frasesRotativas[fraseIndex]);
+        }, 4000);
+    }
+    
+    function mostrarFraseConAnimacion(frase) {
+        const loadSubTxt = document.getElementById('loadSubTxt');
+        if (!loadSubTxt) return;
+        
+        // Animación de fade out
+        loadSubTxt.style.opacity = '0';
+        loadSubTxt.style.transition = 'opacity 0.3s ease';
+        
+        setTimeout(() => {
+            loadSubTxt.innerHTML = `
+                <div style="margin-top: 15px; font-size: 0.95rem; color: rgba(255,255,255,0.85);">
+                    ${frase}
+                </div>
+            `;
+            
+            // Animación de fade in
+            loadSubTxt.style.opacity = '1';
+        }, 300);
+    }
+    
+    function detenerRotacionDeFrases() {
+        if (fraseRotationInterval) {
+            clearInterval(fraseRotationInterval);
+            fraseRotationInterval = null;
+        }
+    }
+    
     function showLoadingOverlay(mensaje = "Procesando...", showProgress = false) {
         const loadingOverlay = document.getElementById('loadingOverlay');
         const loadMainTxt = document.getElementById('loadMainTxt');
@@ -13735,15 +13790,8 @@
             }
             
             if (loadSubTxt) {
-                loadSubTxt.innerHTML = `
-                    <div style="margin-top: 15px; font-size: 0.95rem; color: rgba(255,255,255,0.85);">
-                        <span style="display: inline-block; animation: pulse 1.5s ease-in-out infinite;">💾</span> 
-                        Guardando en sistema principal...
-                    </div>
-                    <div style="margin-top: 8px; font-size: 0.85rem; color: rgba(255,255,255,0.6);">
-                        ⚡ Sincronización en tiempo real activa
-                    </div>
-                `;
+                // Iniciar rotación de frases animadas
+                iniciarRotacionDeFrases();
             }
             
             // Mostrar u ocultar barra de progreso
@@ -13776,6 +13824,9 @@
     function hideLoadingOverlay() {
         const loadingOverlay = document.getElementById('loadingOverlay');
         if (loadingOverlay) {
+            // Detener rotación de frases
+            detenerRotacionDeFrases();
+            
             // Fade out suave
             loadingOverlay.style.transition = 'opacity 0.3s ease';
             loadingOverlay.style.opacity = '0';
@@ -18148,33 +18199,18 @@
             return { fotosUrls: [], documentoUrl: null }; // No procesar fotos para Copy RRSS
         }
         
-        // ✅ NUEVO SISTEMA: Subir fotos a Drive desde inputs del formulario
+        // ✅ NUEVO SISTEMA: Subir fotos a Drive directamente desde inputs (sin conversión base64→Blob)
         let fotosUrls = [];
         
-        // Buscar fotos en los inputs del formulario (p1, p2, p3, p4, p5)
+        // Buscar fotos directamente en los inputs de archivos (f1, f2, f3, f4, f5)
         for(let i=1; i<=5; i++) {
-            const img = document.getElementById('p'+i);
-            if(img && img.getAttribute('data-has-image') === 'true') {
-                // Convertir la imagen de data URL a Blob
-                const base64Data = img.src.split(',')[1];
-                const byteCharacters = atob(base64Data);
-                const byteArrays = [];
-                const sliceSize = 512;
-                
-                for (let offset = 0; offset < byteCharacters.length; offset += sliceSize) {
-                    const slice = byteCharacters.slice(offset, offset + sliceSize);
-                    const byteNumbers = new Array(slice.length);
-                    for (let i = 0; i < slice.length; i++) {
-                        byteNumbers[i] = slice.charCodeAt(i);
-                    }
-                    const byteArray = new Uint8Array(byteNumbers);
-                    byteArrays.push(byteArray);
-                }
-                
-                const blob = new Blob(byteArrays, { type: 'image/jpeg' });
+            const fileInput = document.getElementById('f'+i);
+            if(fileInput && fileInput.files && fileInput.files[0]) {
+                const file = fileInput.files[0];
+                const ext = file.name.split('.').pop().toLowerCase();
                 fotosUrls.push({
-                    nombre: `foto_${i}_${idSolicitud}.jpg`,
-                    blob: blob
+                    nombre: `FOTO_${idSolicitud}_${i}.${ext}`,
+                    blob: file // ✅ Usar el archivo File directamente (ya está en formato binario)
                 });
             }
         }
@@ -18953,10 +18989,9 @@
         
         if (!fotosBlobs || fotosBlobs.length === 0) return [];
         
-        const fotosUrls = [];
-        const CHUNK_SIZE = 256 * 1024; // 256KB
+        const CHUNK_SIZE = 512 * 1024; // 512KB (balance entre velocidad y estabilidad en conexiones móviles)
         
-        // Obtener autorización para carpeta de fotos
+        // Obtener autorización para carpeta de fotos (una sola vez para todas las fotos)
         const authParams = new URLSearchParams();
         authParams.append("action", "getUploadAuth");
         authParams.append("folderType", "fotos"); // ✅ Usar WELCOME_IMAGES_FOLDER_URL
@@ -18977,20 +19012,15 @@
         
         const authData = auth.data || auth;
         
-        // Subir cada foto
-        for (let i = 0; i < fotosBlobs.length; i++) {
-            const { nombre, blob } = fotosBlobs[i];
+        // ✅ OPTIMIZACIÓN: Subir fotos en paralelo en lugar de secuencial
+        const uploadPromises = fotosBlobs.map(async ({ nombre, blob }, index) => {
             const ext = nombre.split('.').pop().toLowerCase();
-            const fileName = nombre || `FOTO_${idSolicitud}_${i + 1}.${ext}`;
+            const fileName = nombre || `FOTO_${idSolicitud}_${index + 1}.${ext}`;
             
-            console.log(`📸 Subiendo foto ${i + 1}/${fotosBlobs.length}: ${fileName}`);
+            console.log(`📸 Subiendo foto ${index + 1}/${fotosBlobs.length}: ${fileName}`);
             
-            // Actualizar progreso para cada foto
-            const progressPercent = 20 + Math.round(((i + 1) / fotosBlobs.length) * 30); // 20-50%
-            updateLoadingProgress(progressPercent, `Subiendo foto ${i + 1}/${fotosBlobs.length}...`);
-            
-            // Crear objeto File-like para el blob
-            const file = new File([blob], fileName, { type: blob.type || 'image/jpeg' });
+            // ✅ Usar el blob directamente sin crear objeto File nuevo
+            const file = blob instanceof File ? blob : new File([blob], fileName, { type: blob.type || 'image/jpeg' });
             
             // Iniciar sesión resumable
             const uploadUrl = await iniciarSesionResumableGeneric(file, authData, fileName);
@@ -19009,7 +19039,6 @@
                         const responseData = JSON.parse(responseText);
                         fileId = responseData.id;
                     } catch (e) {
-                        // Si no es JSON, intentar extraer de otra forma
                         console.warn("⚠️ No se pudo extraer fileId de la respuesta");
                     }
                 }
@@ -19017,16 +19046,26 @@
             }
             
             if (fileId) {
-                fotosUrls.push({
+                console.log(`✅ Foto ${index + 1} subida: ${fileName}`);
+                return {
                     nombre: fileName,
                     url: `https://drive.google.com/file/d/${fileId}/view`,
                     fileId: fileId,
                     downloadUrl: `https://drive.google.com/uc?export=download&id=${fileId}`,
-                    thumbnailUrl: `https://drive.google.com/thumbnail?id=${fileId}&sz=w1000` // ✅ URL para visualización en <img> (igual que panel lateral)
-                });
-                console.log(`✅ Foto ${i + 1} subida: ${fileName}`);
-                showToast(`✅ Foto ${i + 1}/${fotosBlobs.length} subida al sistema`, "success", 1500);
+                    thumbnailUrl: `https://drive.google.com/thumbnail?id=${fileId}&sz=w1000`
+                };
             }
+            return null;
+        });
+        
+        // Esperar que todas las fotos se suban en paralelo
+        const resultados = await Promise.all(uploadPromises);
+        
+        // Filtrar resultados nulos y mostrar toast final
+        const fotosUrls = resultados.filter(r => r !== null);
+        
+        if (fotosUrls.length > 0) {
+            showToast(`✅ ${fotosUrls.length} fotos subidas al sistema`, "success", 2000);
         }
         
         return fotosUrls;
@@ -19060,7 +19099,7 @@
         const uploadUrl = await iniciarSesionResumableGeneric(file, authData, fileName);
         
         // Subir en chunks
-        const CHUNK_SIZE = 256 * 1024;
+        const CHUNK_SIZE = 512 * 1024; // 512KB (balance entre velocidad y estabilidad en conexiones móviles)
         let offset = 0;
         let fileId = null;
         while (offset < file.size) {
