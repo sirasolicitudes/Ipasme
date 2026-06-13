@@ -19401,55 +19401,56 @@
         }
         
         const authData = auth.data || auth;
+        const resultados = [];
         
-        // ✅ OPTIMIZACIÓN: Subir fotos en paralelo en lugar de secuencial
-        const uploadPromises = fotosBlobs.map(async ({ nombre, blob }, index) => {
+        // ✅ FIX: Subida secuencial usando for...of en lugar de Promise.all
+        // Esto evita saturación de red y rate limiting de Google Drive
+        for (let index = 0; index < fotosBlobs.length; index++) {
+            const { nombre, blob } = fotosBlobs[index];
             const ext = nombre.split('.').pop().toLowerCase();
             const fileName = nombre || `FOTO_${idSolicitud}_${index + 1}.${ext}`;
             
             console.log(`📸 Subiendo foto ${index + 1}/${fotosBlobs.length}: ${fileName}`);
+            showToast(`📸 Subiendo foto ${index + 1} de ${fotosBlobs.length}...`, "info", 3000);
             
-            // ✅ Usar el blob directamente sin crear objeto File nuevo
-            const file = blob instanceof File ? blob : new File([blob], fileName, { type: blob.type || 'image/jpeg' });
-            
-            // Iniciar sesión resumable
-            const uploadUrl = await iniciarSesionResumableGeneric(file, authData, fileName);
-            
-            // Subir en chunks
-            let offset = 0;
-            let fileId = null;
-            while (offset < file.size) {
-                const chunk = file.slice(offset, Math.min(offset + CHUNK_SIZE, file.size));
-                const response = await uploadBinaryChunk(uploadUrl, chunk, offset, file.size);
+            try {
+                const file = blob instanceof File ? blob : new File([blob], fileName, { type: blob.type || 'image/jpeg' });
+                const uploadUrl = await iniciarSesionResumableGeneric(file, authData, fileName);
                 
-                // Extraer fileId del último chunk
-                if (offset + chunk.size >= file.size && response.ok) {
-                    const responseText = await response.text();
-                    try {
-                        const responseData = JSON.parse(responseText);
-                        fileId = responseData.id;
-                    } catch (e) {
-                        console.warn("⚠️ No se pudo extraer fileId de la respuesta");
+                let offset = 0;
+                let fileId = null;
+                
+                while (offset < file.size) {
+                    const chunk = file.slice(offset, Math.min(offset + CHUNK_SIZE, file.size));
+                    const response = await uploadBinaryChunk(uploadUrl, chunk, offset, file.size);
+                    
+                    if (offset + chunk.size >= file.size && response.ok) {
+                        const responseText = await response.text();
+                        try {
+                            const responseData = JSON.parse(responseText);
+                            fileId = responseData.id;
+                        } catch (e) {
+                            console.warn("⚠️ No se pudo extraer fileId de la respuesta");
+                        }
                     }
+                    offset += chunk.size;
                 }
-                offset += chunk.size;
+                
+                if (fileId) {
+                    console.log(`✅ Foto ${index + 1} subida: ${fileName}`);
+                    resultados.push({
+                        nombre: fileName,
+                        url: `https://drive.google.com/file/d/${fileId}/view`,
+                        fileId: fileId,
+                        downloadUrl: `https://drive.google.com/uc?export=download&id=${fileId}`,
+                        thumbnailUrl: `https://drive.google.com/thumbnail?id=${fileId}&sz=w1000`
+                    });
+                }
+            } catch (errorFile) {
+                console.error(`❌ Error subiendo la foto ${index + 1}:`, errorFile);
+                throw new Error(`Fallo al subir la foto ${index + 1}. Verifica tu conexión a internet e intenta de nuevo.`);
             }
-            
-            if (fileId) {
-                console.log(`✅ Foto ${index + 1} subida: ${fileName}`);
-                return {
-                    nombre: fileName,
-                    url: `https://drive.google.com/file/d/${fileId}/view`,
-                    fileId: fileId,
-                    downloadUrl: `https://drive.google.com/uc?export=download&id=${fileId}`,
-                    thumbnailUrl: `https://drive.google.com/thumbnail?id=${fileId}&sz=w1000`
-                };
-            }
-            return null;
-        });
-        
-        // Esperar que todas las fotos se suban en paralelo
-        const resultados = await Promise.all(uploadPromises);
+        }
         
         // Filtrar resultados nulos y mostrar toast final
         const fotosUrls = resultados.filter(r => r !== null);
