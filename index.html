@@ -2985,6 +2985,7 @@
     .btn-view { background-color: var(--color-bondi); }
     .btn-attach { background-color: var(--azul-deep); }
     .btn-copy { background-color: #17a2b8; } /* Cyan/teal for copy action */
+    .btn-extract-finalized { background-color: #6c757d; } /* Gris para extraer finalizada */
     .btn-postit { background-color: #ffc107; } /* Amarillo para Post It */
     .btn-pill {
     display: flex;
@@ -4790,6 +4791,9 @@
         <button id="admin-attach-btn" class="btn-admin-action btn-attach" onclick="panelAdjuntarArte()" disabled>
             <span>📎</span> Adjuntar
         </button>
+        <button id="admin-attach-multiple-btn" class="btn-admin-action btn-attach" style="background-color: #00b894;" onclick="panelAdjuntarVarios()" disabled>
+            <span>📂</span> Adjuntar Varios
+        </button>
         <button id="admin-view-btn" class="btn-admin-action btn-view" onclick="panelVerArte()" disabled>
             <span>👁️</span> Ver
         </button>
@@ -4801,6 +4805,9 @@
         </button>
         <button id="admin-copytext-btn" class="btn-admin-action btn-copy" onclick="panelCopiarTexto()" disabled>
             <span>📋</span> Extraer información
+        </button>
+        <button id="admin-extract-finalized-btn" class="btn-admin-action btn-extract-finalized" onclick="panelExtraerFinalizada()" disabled>
+            <span>📋</span> Extraer finalizada
         </button>
         <button id="admin-postit-btn" class="btn-admin-action btn-postit" onclick="openPostItModal()" disabled>
             <span>📝</span> Post It
@@ -5109,6 +5116,34 @@
     
     <input type="hidden" id="currentReqId">
     <input type="hidden" id="selectedUploadMode" value="rapido">
+    </div>
+    
+    <div id="uploadMultipleArea" class="hidden" style="margin-top:20px;">
+    <div style="background: rgba(0, 184, 148, 0.1); padding: 12px; border-radius: 10px; border: 1px solid rgba(0, 184, 148, 0.3); margin-bottom: 15px;">
+        <p style="font-size: 0.8rem; color: #00b894; margin: 0 0 8px 0; font-weight: 700;">📂 Sube múltiples archivos a la vez</p>
+        <p style="font-size: 0.7rem; color: rgba(255, 255, 255, 0.8); margin: 0;">📏 Máx 6 archivos | Peso total máx 24MB</p>
+    </div>
+
+    <input type="file" id="arteFilesMultiple" class="modern-input" multiple accept=".jpg,.jpeg,.png,.pdf,.zip,.ppt,.pptx,.mp4,video/mp4,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation" style="font-size: 0.8rem;" onchange="validateMultipleFiles(this)">
+    <p id="multipleFilesInfo" style="font-size: 0.8rem; color: #FFD700; margin-top: 8px; font-weight: 600; text-align: center;"></p>
+    
+    <div id="correctionTypeSelectorMultiple" class="hidden" style="margin-top: 15px; margin-bottom: 15px; background: rgba(251, 133, 0, 0.1); padding: 12px; border-radius: 10px; border: 1px solid rgba(251, 133, 0, 0.3);">
+        <p style="font-size: 0.8rem; color: #fb8500; margin: 0 0 8px 0; font-weight: 700;">🔄 Tipo de Corrección:</p>
+        <div style="display: flex; gap: 8px;">
+            <label class="corr-type-lbl-multi" style="flex: 1; cursor: pointer; text-align: center; background: white; padding: 8px; border-radius: 6px; border: 2px solid var(--gris); font-size: 0.75rem; transition: 0.2s;">
+                <input type="radio" name="corrTypeMulti" value="texto" style="display: none;" onchange="updateCorrTypeUIMulti()">
+                📝 Texto
+            </label>
+            <label class="corr-type-lbl-multi" style="flex: 1; cursor: pointer; text-align: center; background: white; padding: 8px; border-radius: 6px; border: 2px solid var(--gris); font-size: 0.75rem; transition: 0.2s;">
+                <input type="radio" name="corrTypeMulti" value="diseno" style="display: none;" onchange="updateCorrTypeUIMulti()">
+                🖌️ Diseño
+            </label>
+            <label class="corr-type-lbl-multi" style="flex: 1; cursor: pointer; text-align: center; background: white; padding: 8px; border-radius: 6px; border: 2px solid var(--gris); font-size: 0.75rem; transition: 0.2s;">
+                <input type="radio" name="corrTypeMulti" value="ambas" style="display: none;" onchange="updateCorrTypeUIMulti()">
+                🔄 Ambas
+            </label>
+        </div>
+    </div>
     </div>
     <button id="mainModalBtn" class="modal-btn">ENTENDIDO</button>
     <button id="closeModalBtn" class="modal-btn modal-btn-alt hidden" onclick="closeModal()">CERRAR</button>
@@ -9984,20 +10019,80 @@
         // OCULTAR MODAL DE ID NO ENCONTRADO SI HAY RESULTADOS
         document.getElementById('idNotFoundModal').style.display = 'none';
     } else {
-        // MOSTRAR MENSAJE DE NO RESULTADOS Y RENDERIZAR TABLA VACÍA
-        document.getElementById('notFoundId').innerText = currentSearchId;
-        document.getElementById('idNotFoundModal').style.display = 'flex';
-        // RENDERIZAR TABLA VACÍA PARA MOSTRAR QUE NO HAY RESULTADOS
-        const body = document.getElementById('solicitudes-body');
-        body.innerHTML = `
-        <tr>
-            <td colspan="8" class="no-results-message show">
-            No se encontraron resultados para "${searchTerm}"
-            </td>
-        </tr>
-        `;
+        // ✅ NUEVO: Si no se encuentra localmente, buscar en el backend (todos los registros)
+        console.log('🔍 No encontrado localmente, buscando en backend...');
+        buscarEnBackend(searchTerm);
     }
     }
+    
+    // ✅ NUEVA FUNCIÓN: Buscar solicitud en backend (todos los registros)
+    async function buscarEnBackend(searchTerm) {
+        try {
+            console.log('🔍 Buscando en backend:', searchTerm);
+            
+            const params = new URLSearchParams();
+            params.append("action", "searchById");
+            params.append("searchId", searchTerm);
+            
+            const res = await fetch(SCRIPT_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: params.toString()
+            });
+            
+            const response = await res.json();
+            
+            if (response.success && response.found && response.data) {
+                console.log('✅ Encontrado en backend:', response.data);
+                
+                // Agregar a localData
+                const solicitudEncontrada = limpiarDatosSolicitud(response.data);
+                solicitudEncontrada.source = "gas"; // Marcador para identificar que viene de GAS
+                
+                // Verificar si ya existe en localData para evitar duplicados
+                const yaExiste = localData.some(item => item.id === solicitudEncontrada.id);
+                if (!yaExiste) {
+                    localData.unshift(solicitudEncontrada); // Agregar al principio
+                    buildDataIndexes(); // Reconstruir índices
+                }
+                
+                // Renderizar solo la solicitud encontrada
+                const body = document.getElementById('solicitudes-body');
+                body.innerHTML = '';
+                const tr = createRowElement(solicitudEncontrada, 0);
+                tr.classList.add('row-highlighted');
+                body.appendChild(tr);
+                
+                // Hacer scroll a la fila
+                tr.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                
+                // Ocultar modal de no encontrado
+                document.getElementById('idNotFoundModal').style.display = 'none';
+                
+                showToast(`✅ Solicitud ${solicitudEncontrada.id} encontrada en historial completo`, "success", 3000);
+            } else {
+                console.log('❌ No encontrado en backend');
+                // MOSTRAR MENSAJE DE NO RESULTADOS
+                document.getElementById('notFoundId').innerText = currentSearchId;
+                document.getElementById('idNotFoundModal').style.display = 'flex';
+                // RENDERIZAR TABLA VACÍA
+                const body = document.getElementById('solicitudes-body');
+                body.innerHTML = `
+                <tr>
+                    <td colspan="8" class="no-results-message show">
+                    No se encontraron resultados para "${searchTerm}"
+                    </td>
+                </tr>
+                `;
+            }
+        } catch (error) {
+            console.error('❌ Error buscando en backend:', error);
+            // En caso de error, mostrar el modal de no encontrado
+            document.getElementById('notFoundId').innerText = currentSearchId;
+            document.getElementById('idNotFoundModal').style.display = 'flex';
+        }
+    }
+    
     // APLICAR RESALTADO Y BLOQUEO
     function applySearchHighlight(searchTerm) {
         const rows = document.querySelectorAll('#solicitudes-body tr');
@@ -11524,8 +11619,77 @@
             document.getElementById('admin-email-btn').disabled = true;
             return;
         }
-        // Extraer ID de archivo de Google Drive
-        const fileIdMatch = arteUrl.match(/\/file\/d\/([-\w]{25,})/) || arteUrl.match(/[-\w]{25,}/);
+        
+        // ✅ MANEJAR MÚLTIPLES ARCHIVOS SEPARADOS POR \n
+        const urls = arteUrl.split('\n').map(u => u.trim()).filter(u => u);
+        
+        if (urls.length === 0) {
+            container.innerHTML = `
+            <div class="file-preview-placeholder">
+            <div class="file-preview-placeholder-icon">📎</div>
+            <div>No hay archivo adjunto</div>
+            </div>
+            `;
+            info.innerHTML = '';
+            document.getElementById('admin-view-btn').disabled = true;
+            document.getElementById('admin-telegram-btn').disabled = true;
+            document.getElementById('admin-email-btn').disabled = true;
+            return;
+        }
+        
+        // Si hay múltiples archivos, mostrar carrusel/slide
+        if (urls.length > 1) {
+            const fileIdMatch = urls[0].match(/\/file\/d\/([-\w]{25,})/) || urls[0].match(/[-\w]{25,}/);
+            const firstFileId = fileIdMatch ? fileIdMatch[1] : '';
+            const firstThumbnailUrl = firstFileId ? `https://drive.google.com/thumbnail?id=${firstFileId}&sz=w400` : '';
+            
+            container.innerHTML = `
+                <div class="file-preview-carousel" style="position: relative; width: 100%;">
+                    <button class="carousel-prev" onclick="carouselPrev()" style="position: absolute; left: 5px; top: 50%; transform: translateY(-50%); background: rgba(0,0,0,0.5); color: white; border: none; border-radius: 50%; width: 30px; height: 30px; cursor: pointer; z-index: 10; font-size: 16px;">❮</button>
+                    <img id="carousel-image" src="" class="file-preview-image-full" onclick="window.open(currentCarouselUrl, '_blank')" title="Click para ver en tamaño completo" style="width: 100%; height: auto; cursor: pointer;">
+                    <button class="carousel-next" onclick="carouselNext()" style="position: absolute; right: 5px; top: 50%; transform: translateY(-50%); background: rgba(0,0,0,0.5); color: white; border: none; border-radius: 50%; width: 30px; height: 30px; cursor: pointer; z-index: 10; font-size: 16px;">❯</button>
+                    <div class="carousel-indicators" style="position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); display: flex; gap: 5px; z-index: 10;"></div>
+                </div>
+            `;
+            
+            // Guardar URLs y estado del carrusel en el contenedor
+            container.dataset.carouselUrls = JSON.stringify(urls);
+            container.dataset.currentIndex = '0';
+            window.currentCarouselUrl = urls[0];
+            
+            // Crear indicadores
+            const indicatorsContainer = container.querySelector('.carousel-indicators');
+            urls.forEach((_, i) => {
+                const dot = document.createElement('div');
+                dot.style.cssText = `width: 8px; height: 8px; border-radius: 50%; background: ${i === 0 ? 'white' : 'rgba(255,255,255,0.5)'}; cursor: pointer;`;
+                dot.onclick = () => carouselGoTo(i);
+                indicatorsContainer.appendChild(dot);
+            });
+            
+            // Lazy loading para la imagen inicial
+            const img = container.querySelector('#carousel-image');
+            if (img) {
+                img.loading = 'lazy';
+                img.setAttribute('data-src', firstThumbnailUrl);
+                const observer = new IntersectionObserver((entries) => {
+                    entries.forEach(entry => {
+                        if (entry.isIntersecting) {
+                            img.src = img.getAttribute('data-src');
+                            observer.unobserve(img);
+                        }
+                    });
+                }, { rootMargin: '50px' });
+                observer.observe(img);
+            }
+            
+            info.innerHTML = `💾 ${urls.length} archivos adjuntos disponibles (${urls.length > 1 ? 'Usa las flechas para navegar' : ''})`;
+            document.getElementById('admin-view-btn').disabled = false;
+            document.getElementById('admin-telegram-btn').disabled = false;
+            return;
+        }
+        
+        // Si hay solo un archivo, mostrar como antes
+        const fileIdMatch = urls[0].match(/\/file\/d\/([-\w]{25,})/) || urls[0].match(/[-\w]{25,}/);
         if (!fileIdMatch) {
             container.innerHTML = `
             <div class="file-preview-placeholder">
@@ -11540,7 +11704,7 @@
         // Usar thumbnail de Google Drive - IMAGEN COMPLETA A ESCALA REDUCIDA
         const thumbnailUrl = `https://drive.google.com/thumbnail?id=${fileId}&sz=w400`;
         container.innerHTML = `
-        <img src="" class="file-preview-image-full" onclick="window.open('${arteUrl}', '_blank')" title="Click para ver en tamaño completo">
+        <img src="" class="file-preview-image-full" onclick="window.open('${urls[0]}', '_blank')" title="Click para ver en tamaño completo">
         `;
         // ✅ LAZY LOADING CON INTERSECTION OBSERVER
         const img = container.querySelector('img');
@@ -11564,6 +11728,61 @@
         document.getElementById('admin-telegram-btn').disabled = false;
         // El botón de correo se maneja en updatePanelContent() para validar el asterisco
     }
+    
+    // ✅ FUNCIONES PARA CONTROLAR EL CARRUSEL DE ARCHIVOS MÚLTIPLES
+    function carouselPrev() {
+        const container = document.getElementById('filePreviewContainer');
+        if (!container || !container.dataset.carouselUrls) return;
+        
+        const urls = JSON.parse(container.dataset.carouselUrls);
+        let currentIndex = parseInt(container.dataset.currentIndex || '0');
+        
+        currentIndex = (currentIndex - 1 + urls.length) % urls.length;
+        carouselGoTo(currentIndex);
+    }
+    
+    function carouselNext() {
+        const container = document.getElementById('filePreviewContainer');
+        if (!container || !container.dataset.carouselUrls) return;
+        
+        const urls = JSON.parse(container.dataset.carouselUrls);
+        let currentIndex = parseInt(container.dataset.currentIndex || '0');
+        
+        currentIndex = (currentIndex + 1) % urls.length;
+        carouselGoTo(currentIndex);
+    }
+    
+    function carouselGoTo(index) {
+        const container = document.getElementById('filePreviewContainer');
+        if (!container || !container.dataset.carouselUrls) return;
+        
+        const urls = JSON.parse(container.dataset.carouselUrls);
+        if (index < 0 || index >= urls.length) return;
+        
+        const url = urls[index];
+        const fileIdMatch = url.match(/\/file\/d\/([-\w]{25,})/) || url.match(/[-\w]{25,}/);
+        const fileId = fileIdMatch ? fileIdMatch[1] : '';
+        const thumbnailUrl = fileId ? `https://drive.google.com/thumbnail?id=${fileId}&sz=w400` : '';
+        
+        // Actualizar imagen
+        const img = container.querySelector('#carousel-image');
+        if (img) {
+            img.src = thumbnailUrl;
+        }
+        
+        // Actualizar URL actual para el click
+        window.currentCarouselUrl = url;
+        
+        // Actualizar índice
+        container.dataset.currentIndex = index.toString();
+        
+        // Actualizar indicadores
+        const indicators = container.querySelectorAll('.carousel-indicators div');
+        indicators.forEach((dot, i) => {
+            dot.style.background = i === index ? 'white' : 'rgba(255,255,255,0.5)';
+        });
+    }
+    
     // ✅ FUNCIÓN PARA DESHABILITAR TODOS LOS BOTONES DEL PANEL
     function disableAllPanelButtons() {
         // Botones de estado
@@ -11578,10 +11797,12 @@
         
         // Botones de archivo
         const btnAttach = document.getElementById('admin-attach-btn');
+        const btnAttachMulti = document.getElementById('admin-attach-multiple-btn');
         const btnView = document.getElementById('admin-view-btn');
         const btnTelegram = document.getElementById('admin-telegram-btn');
         const btnEmail = document.getElementById('admin-email-btn');
         if (btnAttach) btnAttach.disabled = true;
+        if (btnAttachMulti) btnAttachMulti.disabled = true;
         if (btnView) btnView.disabled = true;
         if (btnTelegram) btnTelegram.disabled = true;
         if (btnEmail) btnEmail.disabled = true;
@@ -11600,12 +11821,15 @@
         document.getElementById('btnStatusFin').disabled = false;
         document.getElementById('btnStatusRec').disabled = false;
         // Botones de archivo
-        document.getElementById('admin-attach-btn').disabled = false;
+        document.getElementById('admin-attach-btn').disabled = !(isAdmin || isDesigner);
+        document.getElementById('admin-attach-multiple-btn').disabled = !(isAdmin || isDesigner);
         document.getElementById('admin-view-btn').disabled = !selectedRequestData?.ArteFinal;
         document.getElementById('admin-telegram-btn').disabled = !selectedRequestData?.ArteFinal;
         // ✅ El botón de correo se maneja en updatePanelContent() para validar el asterisco
         // ✅ Botón de copiar texto - disponible para Admin y Diseñador
         document.getElementById('admin-copytext-btn').disabled = false;
+        // ✅ Botón de extraer finalizada - disponible para Admin y Diseñador
+        document.getElementById('admin-extract-finalized-btn').disabled = false;
         // ✅ Botón Post It - disponible solo para Admin
         document.getElementById('admin-postit-btn').disabled = !isAdmin;
         // Botones especiales de Admin
@@ -11799,9 +12023,308 @@
         if (!selectedRequestId) return;
         openArteModal(selectedRequestId);
     }
+    
+    // ✅ FUNCIONES PARA "ADJUNTAR VARIOS"
+    function updateCorrTypeUIMulti() {
+        document.querySelectorAll('.corr-type-lbl-multi').forEach(lbl => {
+            lbl.style.borderColor = 'var(--gris)';
+            lbl.style.background = 'white';
+        });
+        const selected = document.querySelector('input[name="corrTypeMulti"]:checked');
+        if (selected) {
+            selected.parentElement.style.borderColor = '#fb8500';
+            selected.parentElement.style.background = '#fff3e0';
+        }
+    }
+
+    function validateMultipleFiles(input) {
+        const info = document.getElementById('multipleFilesInfo');
+        const mainBtn = document.getElementById('mainModalBtn');
+        
+        if (input.files.length === 0) {
+            info.innerText = "";
+            mainBtn.disabled = false;
+            return;
+        }
+        
+        if (input.files.length > 6) {
+            info.innerText = `❌ Has seleccionado ${input.files.length} archivos. El máximo permitido es 6.`;
+            info.style.color = "#ff4757";
+            mainBtn.disabled = true;
+            return;
+        }
+        
+        let totalSize = 0;
+        for (let i = 0; i < input.files.length; i++) {
+            totalSize += input.files[i].size;
+        }
+        
+        const totalMB = totalSize / (1024 * 1024);
+        
+        if (totalMB > 24) {
+            info.innerText = `❌ Peso total: ${totalMB.toFixed(2)}MB. El máximo es 24MB.`;
+            info.style.color = "#ff4757";
+            mainBtn.disabled = true;
+        } else {
+            info.innerText = `✅ ${input.files.length} archivos seleccionados | Peso total: ${totalMB.toFixed(2)}MB`;
+            info.style.color = "#2ecc71";
+            mainBtn.disabled = false;
+        }
+    }
+
+    function panelAdjuntarVarios() {
+        if (!selectedRequestId) return;
+        const currentReqId = document.getElementById('currentReqId');
+        if(currentReqId) currentReqId.value = selectedRequestId;
+        
+        document.getElementById('modalIcon').innerText = "📂";
+        document.getElementById('modalTitle').innerText = "Adjuntar Múltiples Archivos";
+        document.getElementById('modalMsg').innerText = "Seleccione los archivos para la solicitud " + selectedRequestId;
+        
+        document.getElementById('loginArea').classList.add('hidden');
+        document.getElementById('loginProgressBar').style.display = 'none';
+        document.getElementById('uploadArea').classList.add('hidden');
+        document.getElementById('uploadMultipleArea').classList.remove('hidden');
+        
+        document.getElementById('arteFilesMultiple').value = '';
+        document.getElementById('multipleFilesInfo').innerText = '';
+        
+        // Selectores de corrección
+        const corrSelector = document.getElementById('correctionTypeSelectorMultiple');
+        document.querySelectorAll('.corr-type-lbl-multi').forEach(lbl => {
+            lbl.style.borderColor = 'var(--gris)';
+            lbl.style.background = 'white';
+        });
+        document.querySelectorAll('input[name="corrTypeMulti"]').forEach(r => r.checked = false);
+
+        if (selectedRequestData && selectedRequestData.ArteFinal && selectedRequestData.ArteFinal.trim() !== "" && selectedRequestData.ArteFinal !== "null") {
+            corrSelector.classList.remove('hidden');
+        } else {
+            corrSelector.classList.add('hidden');
+        }
+        
+        const mainBtn = document.getElementById('mainModalBtn');
+        mainBtn.classList.remove('hidden');
+        mainBtn.innerText = "SUBIR ARCHIVOS A DRIVE";
+        mainBtn.onclick = uploadVariosArtes;
+        mainBtn.disabled = false;
+        mainBtn.style.display = 'block';
+        
+        document.getElementById('closeModalBtn').classList.remove('hidden');
+        document.getElementById('modalAlert').style.display = 'flex';
+        
+        // ✅ OCULTAR BARRA DE PROGRESO DEL LOGIN DESPUÉS DE MOSTRAR MODAL
+        const loginProgressBarCheck = document.getElementById('loginProgressBar');
+        if (loginProgressBarCheck) {
+            loginProgressBarCheck.style.display = 'none';
+        }
+    }
+
+    // ✅ FUNCIÓN CON REINTENTOS PARA SUBIDA DE CHUNKS
+    async function uploadBinaryChunkWithRetry(url, chunk, offset, fileSize, maxRetries = 3) {
+        for (let attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+                return await uploadBinaryChunk(url, chunk, offset, fileSize);
+            } catch (error) {
+                if (attempt === maxRetries) throw error;
+                await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+            }
+        }
+    }
+
+    // ✅ FUNCIÓN PARA VALIDAR FORMATO DE ID DE DRIVE
+    function isValidDriveId(id) {
+        return /^[-_a-zA-Z0-9]{25,}$/.test(id);
+    }
+
+    async function uploadVariosArtes() {
+        const input = document.getElementById('arteFilesMultiple');
+        const id = document.getElementById('currentReqId')?.value;
+        
+        if (input.files.length === 0) {
+            openModal("📎 Advertencia", "Por favor seleccione al menos un archivo.", "📁");
+            return;
+        }
+        
+        let correctionType = "";
+        const corrSelector = document.getElementById('correctionTypeSelectorMultiple');
+        if (!corrSelector.classList.contains('hidden')) {
+            const selected = document.querySelector('input[name="corrTypeMulti"]:checked');
+            if (selected) {
+                correctionType = selected.value;
+            } else {
+                openModal("❌ Error", "Debe seleccionar un tipo de corrección.", "⚠️");
+                return;
+            }
+        }
+        
+        let totalSizeMB = 0;
+        for (let i = 0; i < input.files.length; i++) {
+            totalSizeMB += input.files[i].size / (1024*1024);
+        }
+        
+        // UI Progress
+        showUploadProgressModal(id, `Múltiples archivos (${input.files.length})`, totalSizeMB);
+        
+        try {
+            document.getElementById('progressStatus').innerText = '🔑 Obteniendo autorización...';
+            
+            // ✅ CORRECCIÓN: Enviar credenciales para autenticación
+            const authParams = new URLSearchParams();
+            authParams.append("action", "getUploadAuth");
+            authParams.append("username", userCredentials.username);
+            authParams.append("password", userCredentials.password);
+            
+            const authRes = await fetch(SCRIPT_URL, { method: 'POST', body: authParams });
+            const authDataRaw = await authRes.json();
+            if (!authDataRaw.success) throw new Error("Error obteniendo autorización de Google Drive: " + (authDataRaw.error || "Credenciales inválidas"));
+            const authData = authDataRaw.data || authDataRaw;
+            
+            let urls = [];
+            let totalFiles = input.files.length;
+            
+            for (let i = 0; i < totalFiles; i++) {
+                const file = input.files[i];
+                const fileExt = file.name.split('.').pop().toLowerCase();
+                const uploadName = `ARTE_${id}_PARTE${i+1}.${fileExt}`;
+                
+                document.getElementById('progressStatus').innerText = `📦 Subiendo archivo ${i+1} de ${totalFiles}...`;
+                
+                // ✅ CORRECCIÓN: Usar función existente iniciarSesionResumableGeneric
+                const uploadUrl = await iniciarSesionResumableGeneric(file, authData, uploadName);
+                
+                const CHUNK_SIZE = 256 * 1024;
+                let offset = 0;
+                let finalResponse = null;
+                
+                try {
+                    while (offset < file.size) {
+                        const chunk = file.slice(offset, Math.min(offset + CHUNK_SIZE, file.size));
+                        const isLastChunk = (offset + chunk.size) >= file.size;
+                        
+                        // ✅ CORRECCIÓN: Usar función con reintentos
+                        const response = await uploadBinaryChunkWithRetry(uploadUrl, chunk, offset, file.size);
+                        if (isLastChunk && response.ok) finalResponse = response;
+                        
+                        offset += chunk.size;
+                        
+                        const fileProgress = offset / file.size;
+                        const overallProgress = Math.round(((i + fileProgress) / totalFiles) * 100);
+                        document.getElementById('progressBar').style.width = overallProgress + '%';
+                        document.getElementById('progressPercent').innerText = overallProgress + '%';
+                        document.getElementById('progressInfo').innerText = `Subiendo: ${file.name} | Archivo ${i+1}/${totalFiles}`;
+                    }
+                    
+                    if (finalResponse && finalResponse.ok) {
+                        const responseData = await finalResponse.json();
+                        // ✅ CORRECCIÓN: Validar formato de ID
+                        if (!isValidDriveId(responseData.id)) {
+                            throw new Error(`ID de archivo inválido recibido: ${responseData.id}`);
+                        }
+                        urls.push(`https://drive.google.com/file/d/${responseData.id}/view`);
+                    } else {
+                        throw new Error(`Error en el archivo ${i+1}`);
+                    }
+                } catch (fileError) {
+                    // ✅ CORRECCIÓN: Manejo de errores específico por archivo
+                    console.error(`Error en archivo ${i+1}:`, fileError);
+                    document.getElementById('progressStatus').innerText = `❌ Error en archivo ${i+1}: ${fileError.message}`;
+                    throw fileError;
+                }
+            }
+            
+            const urlsJoined = urls.join('\n');
+            
+            document.getElementById('progressStatus').innerText = '📝 Finalizando y registrando...';
+            
+            const completeParams = new URLSearchParams();
+            completeParams.append("action", "completeUploadMultiple");
+            completeParams.append("id", id);
+            completeParams.append("fileUrls", urlsJoined);
+            completeParams.append("correctionType", correctionType);
+            completeParams.append("uploadedBy", userCredentials.username);
+            completeParams.append("displayName", userCredentials.displayName || userCredentials.username);
+            
+            const request = localData.find(x => x.id == id);
+            if (request && (request.Estatus || "").toUpperCase().trim() === "PENDIENTE") {
+                completeParams.append("autoStatus", "PROCESANDO");
+            }
+            
+            const completeRes = await fetch(SCRIPT_URL, { method: 'POST', body: completeParams });
+            const completeData = await completeRes.json();
+            
+            if (!completeData.success) {
+                throw new Error(completeData.error || "Error al completar la subida");
+            }
+            
+            // ✅ CORRECCIÓN: Usar transacción en RTDB para evitar race conditions
+            const designerName = userCredentials.displayName || userCredentials.username;
+            const rtdbUpdate = {
+                ArteFinal: urlsJoined,
+                Disenador: designerName,
+                PostIt: ""
+            };
+            if (request && (request.Estatus || "").toUpperCase().trim() === "PENDIENTE") {
+                rtdbUpdate.Estatus = "PROCESANDO";
+            }
+            
+            // ✅ CORRECCIÓN: Usar update de Realtime Database en lugar de runTransaction de Firestore
+            const ref = window.ref(window.dbRT, 'solicitudes_vivas/' + id);
+            await window.update(ref, rtdbUpdate);
+            
+            // Actualizar datos locales
+            if (request) {
+                request.ArteFinal = urlsJoined;
+                request.Disenador = designerName;
+                request.PostIt = "";
+                if (rtdbUpdate.Estatus) request.Estatus = rtdbUpdate.Estatus;
+                
+                if (selectedRequestId === id && selectedRequestData) {
+                    selectedRequestData.ArteFinal = urlsJoined;
+                    selectedRequestData.Disenador = designerName;
+                    selectedRequestData.PostIt = "";
+                    if (rtdbUpdate.Estatus) selectedRequestData.Estatus = rtdbUpdate.Estatus;
+                }
+            }
+            
+            document.getElementById('progressStatus').innerText = '✅ ¡Subida completada!';
+            setTimeout(() => {
+                closeModal();
+                showToast(`✅ Se adjuntaron ${totalFiles} archivos a la solicitud ${id}`, "success", 4000, () => {
+                    invalidatePageCache();
+                });
+                updatePanelContent();
+            }, 1000);
+            
+        } catch (e) {
+            console.error(e);
+            document.getElementById('progressStatus').innerText = '❌ Error en subida';
+            setTimeout(() => {
+                closeModal();
+                openModal("❌ Error de Subida", e.message, "💥");
+            }, 1500);
+        }
+    }
+
     function panelVerArte() {
         if (!selectedRequestData?.ArteFinal) return;
-        window.open(selectedRequestData.ArteFinal, '_blank');
+        const urls = selectedRequestData.ArteFinal.split('\n').map(u => u.trim()).filter(u => u);
+        
+        if (urls.length === 1) {
+            window.open(urls[0], '_blank');
+        } else {
+            let html = '<div style="display:flex; flex-direction:column; gap:10px; margin-top: 15px;">';
+            urls.forEach((url, i) => {
+                html += `<button class="modal-btn" style="background:var(--turquesa);" onclick="window.open('${url}', '_blank')">📄 Ver Archivo ${i+1}</button>`;
+            });
+            html += '</div>';
+            Swal.fire({
+                title: 'Archivos Adjuntos',
+                html: html,
+                showConfirmButton: false,
+                showCloseButton: true
+            });
+        }
     }
     async function panelEnviarTelegram() {
         if (!selectedRequestId || !selectedRequestData?.ArteFinal) return;
@@ -12112,6 +12635,116 @@
                 });
             }
         });
+    }
+
+    async function panelExtraerFinalizada() {
+        // Abrir modal pidiendo el número de requerimiento
+        const { value: reqNumber } = await Swal.fire({
+            title: '📋 Extraer Solicitud Finalizada',
+            input: 'text',
+            inputLabel: 'Número de Requerimiento',
+            inputPlaceholder: 'Ej: 12345',
+            showCancelButton: true,
+            cancelButtonText: 'Cancelar',
+            confirmButtonText: 'Buscar',
+            confirmButtonColor: '#6c757d',
+            inputValidator: (value) => {
+                if (!value) {
+                    return 'Por favor ingresa el número de requerimiento'
+                }
+            }
+        });
+
+        if (!reqNumber) return; // Usuario canceló
+
+        try {
+            // Mostrar loading
+            Swal.fire({
+                title: 'Buscando solicitud...',
+                text: 'Cargando datos desde el sistema',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
+            // Llamar al backend para obtener la solicitud desde GAS
+            const params = new URLSearchParams();
+            params.append("action", "getRequestData");
+            params.append("id", reqNumber);
+            params.append("username", userCredentials.username);
+            params.append("password", userCredentials.password);
+
+            const res = await fetch(SCRIPT_URL, { method: 'POST', body: params });
+            const data = await res.json();
+
+            if (!data.success) {
+                throw new Error(data.error || "Solicitud no encontrada");
+            }
+
+            const requestData = data.data;
+            console.log("✅ Datos cargados desde backend (solicitud finalizada)");
+
+            // Verificar que sea una solicitud finalizada
+            const estatus = (requestData.Estatus || "").toUpperCase();
+            if (!estatus.includes("FINALIZADA")) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: '⚠️ Solicitud no finalizada',
+                    text: 'Esta solicitud no está finalizada. Usa el botón "Extraer información" para solicitudes activas.',
+                    confirmButtonColor: '#6c757d'
+                });
+                return;
+            }
+
+            // Formatear como email
+            const formattedHTML = formatRequestAsEmail(requestData);
+
+            // Guardar datos para reabrir el modal
+            window.currentRequestData = requestData;
+            window.currentFormattedHTML = formattedHTML;
+
+            // Mostrar el modal con la información
+            Swal.fire({
+                title: '📋 Información de Solicitud Finalizada',
+                html: `
+                    <div style="max-height: 450px; overflow-y: auto; text-align: left;">
+                        <div id="copyTextContent" style="background: #ffffff; border-radius: 6px; overflow: hidden;"></div>
+                    </div>
+                    <div style="margin-top: 15px; display: flex; gap: 10px; justify-content: center;">
+                        <button id="btnCopiarTexto" class="swal2-confirm swal2-styled" style="background-color: #fb8500;">📋 Copiar Texto</button>
+                        <button id="btnCopiarREQ" class="swal2-confirm swal2-styled" style="background-color: #2196f3;">📋 Copiar REQ</button>
+                    </div>
+                `,
+                width: '600px',
+                showConfirmButton: false,
+                showDenyButton: false,
+                showCancelButton: false,
+                showLoaderOnConfirm: false,
+                didOpen: () => {
+                    const contentDiv = document.getElementById('copyTextContent');
+                    contentDiv.innerHTML = formattedHTML;
+
+                    // Event listeners para botones
+                    document.getElementById('btnCopiarTexto').addEventListener('click', async () => {
+                        await copyTextToClipboard();
+                    });
+
+                    document.getElementById('btnCopiarREQ').addEventListener('click', async () => {
+                        await copyREQToClipboard();
+                    });
+                }
+            });
+
+        } catch (error) {
+            console.error("Error al extraer solicitud finalizada:", error);
+            Swal.fire({
+                icon: 'error',
+                title: '❌ Error',
+                text: error.message || 'No se pudo cargar la solicitud finalizada',
+                confirmButtonColor: '#6c757d'
+            });
+        }
     }
 
     async function panelCopiarTexto() {
@@ -14436,8 +15069,10 @@
         // Reiniciar todos los elementos del modal
         const loginArea = document.getElementById('loginArea');
         const uploadArea = document.getElementById('uploadArea');
+        const uploadMultipleArea = document.getElementById('uploadMultipleArea');
         if (loginArea) loginArea.classList.add('hidden');
         if (uploadArea) uploadArea.classList.add('hidden');
+        if (uploadMultipleArea) uploadMultipleArea.classList.add('hidden');
         
         // Restaurar botones a estado por defecto
         const mainBtn = document.getElementById('mainModalBtn');
@@ -14505,9 +15140,9 @@
             btnCancelUpload.style.display = 'none';
         }
         // ✅ OCULTAR BARRA DE PROGRESO DEL LOGIN
-        const loginProgressBar = document.getElementById('loginProgressBar');
-        if (loginProgressBar) {
-            loginProgressBar.style.display = 'none';
+        const loginProgressBarEl = document.getElementById('loginProgressBar');
+        if (loginProgressBarEl) {
+            loginProgressBarEl.style.display = 'none';
             // Restaurar estilos por defecto
             const progressBarInner = document.getElementById('loginProgressBarInner');
             const progressText = document.getElementById('loginProgressText');
@@ -19413,6 +20048,26 @@
             console.log(`📸 Subiendo foto ${index + 1}/${fotosBlobs.length}: ${fileName}`);
             showToast(`📸 Subiendo foto ${index + 1} de ${fotosBlobs.length}...`, "info", 3000);
             
+            // ✅ ACTUALIZAR BARRA DE PROGRESO DEL MODAL
+            const progressBar = document.getElementById('progressBar');
+            const progressPercent = document.getElementById('progressPercent');
+            const progressStatus = document.getElementById('progressStatus');
+            const progressInfo = document.getElementById('progressInfo');
+            
+            if (progressBar) {
+                const totalProgress = ((index + 1) / fotosBlobs.length) * 100;
+                progressBar.style.width = totalProgress + '%';
+            }
+            if (progressPercent) {
+                progressPercent.innerText = Math.round(((index + 1) / fotosBlobs.length) * 100) + '%';
+            }
+            if (progressStatus) {
+                progressStatus.innerText = `Subiendo foto ${index + 1} de ${fotosBlobs.length}...`;
+            }
+            if (progressInfo) {
+                progressInfo.innerText = `Archivo: ${fileName}`;
+            }
+            
             try {
                 const file = blob instanceof File ? blob : new File([blob], fileName, { type: blob.type || 'image/jpeg' });
                 const uploadUrl = await iniciarSesionResumableGeneric(file, authData, fileName);
@@ -19423,6 +20078,18 @@
                 while (offset < file.size) {
                     const chunk = file.slice(offset, Math.min(offset + CHUNK_SIZE, file.size));
                     const response = await uploadBinaryChunk(uploadUrl, chunk, offset, file.size);
+                    
+                    // ✅ ACTUALIZAR PROGRESO DENTRO DE LA SUBIDA DE CHUNKS
+                    if (progressBar) {
+                        const chunkProgress = (offset / file.size) * 100;
+                        const totalProgress = ((index + chunkProgress / 100) / fotosBlobs.length) * 100;
+                        progressBar.style.width = totalProgress + '%';
+                    }
+                    if (progressPercent) {
+                        const chunkProgress = (offset / file.size) * 100;
+                        const totalProgress = ((index + chunkProgress / 100) / fotosBlobs.length) * 100;
+                        progressPercent.innerText = Math.round(totalProgress) + '%';
+                    }
                     
                     if (offset + chunk.size >= file.size && response.ok) {
                         const responseText = await response.text();
