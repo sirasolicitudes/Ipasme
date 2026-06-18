@@ -6167,6 +6167,20 @@
                             <small style="color: #27ae60; font-weight: 600;">Finalizadas</small>
                         </div>
                     </div>
+
+                    <div class="stat-dashboard-card" style="border-top: 5px solid #dc3545; flex-direction: row; justify-content: space-around; align-items: center; padding: 20px;">
+                        <div style="text-align: center;">
+                            <span style="font-size: 0.7rem; color: #6c757d; font-weight: 700; text-transform: uppercase;">Mes Anterior</span>
+                            <div id="comp-prev-rech" style="font-size: 2rem; font-weight: 800; color: #8b0000;">0</div>
+                            <small style="color: #8b0000; font-weight: 600;">Rechazadas</small>
+                        </div>
+                        <div style="text-align: center; background: #f8f9fa; padding: 10px; border-radius: 50%; width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; font-weight: 800; color: #adb5bd; border: 1px solid #eee;">VS</div>
+                        <div style="text-align: center;">
+                            <span style="font-size: 0.7rem; color: #6c757d; font-weight: 700; text-transform: uppercase;">Mes Actual</span>
+                            <div id="comp-curr-rech" style="font-size: 2rem; font-weight: 800; color: #dc3545;">0</div>
+                            <small style="color: #dc3545; font-weight: 600;">Rechazadas</small>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- TOP SOLICITUDES TENDENCIA - TARJETAS COMPACTAS -->
@@ -6184,7 +6198,7 @@
 
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 20px;">
                     <div class="stat-dashboard-card">
-                        <div class="stat-card-title">Distribución: Recibidas vs Finalizadas</div>
+                        <div class="stat-card-title">Distribución: Recibidas vs Finalizadas vs Rechazadas</div>
                         <div style="position: relative; height: 400px;">
                             <canvas id="compGlobalChartV2"></canvas>
                         </div>
@@ -20406,24 +20420,31 @@
             // ✅ LOS DATOS VIENEN ANIDADOS EN data.data
             const quotaData = data.data; // ✅ Acceder directamente a data.data
             
-            // Actualizar elementos del DOM
-            document.getElementById('emailUsed').textContent = quotaData.recipientsUsed || 0;
+            // ✅ AHORA SOLO CUENTA CORREOS DE ENTREGA DE ARTE (Solicitud Recibida eliminada)
+            const byType = quotaData.byType || {};
+            const arteEmails = byType['Entrega de Arte'] || 0;
+            
+            // Actualizar elementos del DOM - Solo correos de arte
+            document.getElementById('emailUsed').textContent = arteEmails;
             document.getElementById('emailLimit').textContent = quotaData.limit || 100;
-            document.getElementById('emailPercentage').textContent = (quotaData.percentage || 0) + '%';
-            document.getElementById('emailRemaining').textContent = quotaData.remaining || 100;
-            document.getElementById('emailStatus').textContent = quotaData.status || '🟢';
+            
+            // Calcular porcentaje basado solo en correos de arte
+            const percentage = quotaData.limit > 0 ? ((arteEmails / quotaData.limit) * 100).toFixed(1) : 0;
+            document.getElementById('emailPercentage').textContent = percentage + '%';
+            document.getElementById('emailRemaining').textContent = Math.max(0, quotaData.limit - arteEmails);
+            document.getElementById('emailStatus').textContent = percentage >= 95 ? '🔴' : percentage >= 80 ? '🟡' : '🟢';
             document.getElementById('emailDate').textContent = quotaData.date || '--';
             
             // ✅ ACTUALIZAR CONTADORES DE SOLICITUDES Y ENTREGAS
-            const byType = quotaData.byType || {};
             document.getElementById('requestCount').textContent = byType['Solicitud Recibida'] || 0;
-            document.getElementById('deliveryCount').textContent = byType['Entrega de Arte'] || 0;
-            // Cambiar colores según porcentaje
+            document.getElementById('deliveryCount').textContent = arteEmails;
+            
+            // Cambiar colores según porcentaje (usando el porcentaje calculado de arte)
             const container = document.getElementById('emailQuotaContainer');
-            const percentage = quotaData.percentage || 0;
-            if (percentage >= 95) {
+            const percentageNum = parseFloat(percentage);
+            if (percentageNum >= 95) {
                 container.style.background = 'linear-gradient(135deg, #e74c3c 0%, #c0392b 100%)';
-            } else if (percentage >= 80) {
+            } else if (percentageNum >= 80) {
                 container.style.background = 'linear-gradient(135deg, #f39c12 0%, #e67e22 100%)';
             } else {
                 container.style.background = 'linear-gradient(135deg, #fb8500 0%, #023e8a 100%)';
@@ -21649,6 +21670,28 @@
         }
         finTrendEl.innerHTML = finTrendHtml;
 
+        // Rechazadas con porcentaje
+        document.getElementById('comp-prev-rech').innerText = data.previous.rechazada || 0;
+        document.getElementById('comp-curr-rech').innerText = data.current.rechazada || 0;
+
+        // Calcular y mostrar porcentaje para Rechazadas
+        const rechDiff = (data.current.rechazada || 0) - (data.previous.rechazada || 0);
+        const rechPct = (data.previous.rechazada || 0) > 0 ? Math.round((rechDiff / (data.previous.rechazada || 0)) * 100) : ((data.current.rechazada || 0) > 0 ? 100 : 0);
+        const rechTrendHtml = rechPct > 0 ? `<span style="color:#dc3545;">↑ +${rechPct}%</span>` : 
+                             rechPct < 0 ? `<span style="color:#2ecc71;">↓ ${rechPct}%</span>` : 
+                             `<span style="color:#6c757d;">= 0%</span>`;
+
+        // Agregar indicador de tendencia después de las rechazadas
+        const rechCard = document.getElementById('comp-curr-rech').parentElement.parentElement;
+        let rechTrendEl = document.getElementById('comp-rech-trend');
+        if (!rechTrendEl) {
+            rechTrendEl = document.createElement('div');
+            rechTrendEl.id = 'comp-rech-trend';
+            rechTrendEl.style.cssText = 'text-align:center; margin-top:8px; padding:4px 10px; border-radius:12px; font-size:0.75rem; font-weight:700; background:#f8f9fa;';
+            rechCard.appendChild(rechTrendEl);
+        }
+        rechTrendEl.innerHTML = rechTrendHtml;
+
         // Función auxiliar para unificar tablas comparativas (CORREGIDA)
         function renderComparativeTableFixed(tbodyId, prevArr, currArr) {
             const tbody = document.getElementById(tbodyId);
@@ -22058,6 +22101,8 @@
         const colorCurrTotal = '#0799b6'; // Bondi (Turquesa)
         const colorPrevFin = '#1a531a';   // Verde Muy Oscuro
         const colorCurrFin = '#2ecc71';   // Verde Reborn Claro
+        const colorPrevRech = '#8b0000';  // Rojo Oscuro (Rechazadas mes anterior)
+        const colorCurrRech = '#dc3545';  // Rojo Claro (Rechazadas mes actual)
 
         // Animación escalonada común
         const staggeredAnimation = {
@@ -22073,27 +22118,37 @@
             compGlobalChartInstance = new Chart(ctxGlobal, {
                 type: 'bar',
                 data: {
-                    labels: ['Total Recibidas', 'Finalizadas'],
+                    labels: ['Total Recibidas', 'Finalizadas', 'Rechazadas'],
                     datasets: [
                         {
                             label: `Total (${data.prevMonthName})`,
-                            data: [data.previous.total, null], // Agrupamos para aplicar colores individuales
+                            data: [data.previous.total, null, null], // Agrupamos para aplicar colores individuales
                             backgroundColor: colorPrevTotal, borderRadius: 5, stack: 'Stack 0'
                         },
                         {
                             label: `Total (${data.currentMonthName})`,
-                            data: [data.current.total, null],
+                            data: [data.current.total, null, null],
                             backgroundColor: colorCurrTotal, borderRadius: 5, stack: 'Stack 1'
                         },
                         {
                             label: `Fin. (${data.prevMonthName})`,
-                            data: [null, data.previous.finalizada],
+                            data: [null, data.previous.finalizada, null],
                             backgroundColor: colorPrevFin, borderRadius: 5, stack: 'Stack 0'
                         },
                         {
                             label: `Fin. (${data.currentMonthName})`,
-                            data: [null, data.current.finalizada],
+                            data: [null, data.current.finalizada, null],
                             backgroundColor: colorCurrFin, borderRadius: 5, stack: 'Stack 1'
+                        },
+                        {
+                            label: `Rech. (${data.prevMonthName})`,
+                            data: [null, null, data.previous.rechazada || 0],
+                            backgroundColor: colorPrevRech, borderRadius: 5, stack: 'Stack 0'
+                        },
+                        {
+                            label: `Rech. (${data.currentMonthName})`,
+                            data: [null, null, data.current.rechazada || 0],
+                            backgroundColor: colorCurrRech, borderRadius: 5, stack: 'Stack 1'
                         }
                     ]
                 },
@@ -22322,8 +22377,8 @@
             {
                 label: 'Bermina',
                 data: [],
-                borderColor: '#f093fb',
-                backgroundColor: 'rgba(240, 147, 251, 0.1)',
+                borderColor: '#fb8500',
+                backgroundColor: 'rgba(251, 133, 0, 0.1)',
                 tension: 0.4,
                 fill: true
             },
@@ -22338,8 +22393,8 @@
             {
                 label: 'Xamir',
                 data: [],
-                borderColor: '#43e97b',
-                backgroundColor: 'rgba(67, 233, 123, 0.1)',
+                borderColor: '#9b59b6',
+                backgroundColor: 'rgba(155, 89, 182, 0.1)',
                 tension: 0.4,
                 fill: true
             },
