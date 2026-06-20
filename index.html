@@ -5620,6 +5620,7 @@
     Diseño atractivo y visual para publicaciones en redes sociales siguiendo los colores y estilo de la marca. Ideal para campañas, anuncios y contenido visual impactante.
     </p>
     </div>
+    
     <div style="border: 3px solid #f39c12; border-radius: 12px; padding: 15px; background: #fef9e7; margin-bottom: 15px;">
     <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
     <span style="font-size: 1.5rem;">⚡</span>
@@ -5629,6 +5630,7 @@
     Esta solicitud se procesa de manera inmediata. La fecha está fijada al día actual y no requiere las 48 horas de anticipación habituales.
     </p>
     </div>
+    
     <div style="margin-bottom: 15px;">
     <label class="section-title">📝 3. Escriba su copy para corrección y aprobación *</label>
     <div style="position: relative;">
@@ -5636,8 +5638,55 @@
     <div id="copy-rrss-contador" style="position: absolute; bottom: 10px; right: 10px; background: rgba(255,255,255,0.9); padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; color: #666; font-weight: 500;">0 / 2000</div>
     </div>
     </div>
+    
+    <div style="margin-bottom: 15px;" id="copy-rrss-media-section">
+    <label class="section-title">📎 4. Adjuntos Multimedia *</label>
+    <div style="background: #fff8e1; border: 1px solid #ffe082; padding: 12px; border-radius: 8px; margin-bottom: 10px; font-size: 0.8rem; color: #5d4600; font-weight: 600; line-height: 1.4;">
+    ⚠️ <b>IMPORTANTE:</b> Debes seleccionar entre adjuntar fotos o un video. No se permiten ambos.
+    </div>
+    
+    <div style="display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap;">
+    <button type="button" id="btn-copy-fotos" class="modal-btn" style="background: var(--azul-deep); color: white; flex: 1; min-width: 200px; font-size: 0.85rem; margin-bottom: 0;" onclick="toggleCopyMedia('fotos')">📸 Adjuntar Fotos (10 max / 45MB)</button>
+    <button type="button" id="btn-copy-video" class="modal-btn" style="background: var(--gris); color: var(--azul-deep); flex: 1; min-width: 200px; font-size: 0.85rem; margin-bottom: 0; box-shadow: none;" onclick="toggleCopyMedia('video')">🎬 Adjuntar Video (1 max / 512MB)</button>
+    </div>
+    
+    <input type="hidden" id="copy-media-type" value="fotos">
+    
+    <div id="copy-fotos-container" style="background: #f8f9fa; padding: 15px; border-radius: 12px; border: 1px solid #edf2f4;">
+    <div style="font-size: 0.75rem; margin-bottom: 10px; color: #334155; font-weight: 700; text-align: right;">Peso total actual: <span id="copy-fotos-size" style="color: var(--turquesa); font-size: 0.85rem;">0.00</span> MB / 45 MB</div>
+    <div class="photo-grid" style="grid-template-columns: repeat(auto-fit, minmax(60px, 1fr)); gap: 10px;">
+    <div class="upload-box" style="height: 75px;"><label for="c_f1" class="upload-label" style="font-size:0.55rem;">✚ FOTO 1</label><input type="file" id="c_f1" class="hidden" accept="image/*" onchange="handleCopyPhoto(this, 'c_p1', 'c_b1')"><img id="c_p1" class="preview"><button type="button" id="c_b1" class="remove-btn" style="width:20px;height:20px;font-size:10px;top:2px;right:2px;" onclick="clearCopyPhoto('c_f1', 'c_p1', 'c_b1')">×</button></div>
+    <div class="upload-box" style="height: 75px;"><label for="c_f2" class="upload-label" style="font-size:0.55rem;">✚ FOTO 2</label><input type="file" id="c_f2" class="hidden" accept="image/*" onchange="handleCopyPhoto(this, 'c_p2', 'c_b2')"><img id="c_p2" class="preview"><button type="button" id="c_b2" class="remove-btn" style="width:20px;height:20px;font-size:10px;top:2px;right:2px;" onclick="clearCopyPhoto('c_f2', 'c_p2', 'c_b2')">×</button></div>
+    <div class="upload-box" style="height: 75px;"><label for="c_f3" class="upload-label" style="font-size:0.55rem;">✚ FOTO 3</label><input type="file" id="c_f3" class="hidden" accept="image/*" onchange="handleCopyPhoto(this, 'c_p3', 'c_b3')"><img id="c_p3" class="preview"><button type="button" id="c_b3" class="remove-btn" style="width:20px;height:20px;font-size:10px;top:2px;right:2px;" onclick="clearCopyPhoto('c_f3', 'c_p3', 'c_b3')">×</button></div>
+    <div class="upload-box" style="height: 75px;"><label for="c_f4" class="upload-label" style="font-size:0.55rem;">✚ FOTO 4</label><input type="file" id="c_f4" class="hidden" accept="image/*" onchange="handleCopyPhoto(this, 'c_p4', 'c_b4')"><img id="c_p4" class="preview"><button type="button" id="c_b4" class="remove-btn" style="width:20px;height:20px;font-size:10px;top:2px;right:2px;" onclick="clearCopyPhoto('c_f4', 'c_p4', 'c_b4')">×</button></div>
+    <div class="upload-box" style="height: 75px;"><label for="c_f5" class="upload-label" style="font-size:0.55rem;">✚ FOTO 5</label><input type="file" id="c_f5" class="hidden" accept="image/*" onchange="handleCopyPhoto(this, 'c_p5', 'c_b5')"><img id="c_p5" class="preview"><button type="button" id="c_b5" class="remove-btn" style="width:20px;height:20px;font-size:10px;top:2px;right:2px;" onclick="clearCopyPhoto('c_f5', 'c_p5', 'c_b5')">×</button></div>
+    <div class="upload-box" style="height: 75px;"><label for="c_f6" class="upload-label" style="font-size:0.55rem;">✚ FOTO 6</label><input type="file" id="c_f6" class="hidden" accept="image/*" onchange="handleCopyPhoto(this, 'c_p6', 'c_b6')"><img id="c_p6" class="preview"><button type="button" id="c_b6" class="remove-btn" style="width:20px;height:20px;font-size:10px;top:2px;right:2px;" onclick="clearCopyPhoto('c_f6', 'c_p6', 'c_b6')">×</button></div>
+    <div class="upload-box" style="height: 75px;"><label for="c_f7" class="upload-label" style="font-size:0.55rem;">✚ FOTO 7</label><input type="file" id="c_f7" class="hidden" accept="image/*" onchange="handleCopyPhoto(this, 'c_p7', 'c_b7')"><img id="c_p7" class="preview"><button type="button" id="c_b7" class="remove-btn" style="width:20px;height:20px;font-size:10px;top:2px;right:2px;" onclick="clearCopyPhoto('c_f7', 'c_p7', 'c_b7')">×</button></div>
+    <div class="upload-box" style="height: 75px;"><label for="c_f8" class="upload-label" style="font-size:0.55rem;">✚ FOTO 8</label><input type="file" id="c_f8" class="hidden" accept="image/*" onchange="handleCopyPhoto(this, 'c_p8', 'c_b8')"><img id="c_p8" class="preview"><button type="button" id="c_b8" class="remove-btn" style="width:20px;height:20px;font-size:10px;top:2px;right:2px;" onclick="clearCopyPhoto('c_f8', 'c_p8', 'c_b8')">×</button></div>
+    <div class="upload-box" style="height: 75px;"><label for="c_f9" class="upload-label" style="font-size:0.55rem;">✚ FOTO 9</label><input type="file" id="c_f9" class="hidden" accept="image/*" onchange="handleCopyPhoto(this, 'c_p9', 'c_b9')"><img id="c_p9" class="preview"><button type="button" id="c_b9" class="remove-btn" style="width:20px;height:20px;font-size:10px;top:2px;right:2px;" onclick="clearCopyPhoto('c_f9', 'c_p9', 'c_b9')">×</button></div>
+    <div class="upload-box" style="height: 75px;"><label for="c_f10" class="upload-label" style="font-size:0.55rem;">✚ FOTO 10</label><input type="file" id="c_f10" class="hidden" accept="image/*" onchange="handleCopyPhoto(this, 'c_p10', 'c_b10')"><img id="c_p10" class="preview"><button type="button" id="c_b10" class="remove-btn" style="width:20px;height:20px;font-size:10px;top:2px;right:2px;" onclick="clearCopyPhoto('c_f10', 'c_p10', 'c_b10')">×</button></div>
+    </div>
+    </div>
+    
+    <div id="copy-video-container" class="hidden" style="background: #f8f9fa; padding: 15px; border-radius: 12px; border: 1px solid #edf2f4;">
+    <div class="upload-box" style="height: 160px; width: 100%; border: 2.5px dashed var(--celeste); border-radius: 15px; background: #f0f9ff; position: relative;">
+    <label for="c_v1" class="upload-label" style="display: flex; flex-direction: column; justify-content: center; align-items: center; width: 100%; height: 100%; cursor: pointer;">
+    <span style="font-size: 3rem; margin-bottom: 8px;">🎬</span>
+    <span style="font-size: 0.95rem; font-weight: 800; color: var(--turquesa);">SELECCIONAR VIDEO MP4</span>
+    </label>
+    <input type="file" id="c_v1" class="hidden" accept="video/mp4,video/quicktime,video/x-msvideo" onchange="handleCopyVideo(this)">
+    <div id="c_v1_preview" class="preview" style="background: var(--azul-deep); display: none; align-items: center; justify-content: center; flex-direction: column; width: 100%; height: 100%; position: absolute; top: 0; left: 0; z-index: 5; border-radius: 15px;">
+    <span style="font-size: 2.5rem; margin-bottom: 5px;">📼</span>
+    <span style="font-size: 0.85rem; font-weight: 700; color: var(--turquesa);">VIDEO LISTO PARA SUBIR</span>
+    <span id="c_v1_name" style="font-size: 0.75rem; color: white; margin-top: 8px; text-align: center; padding: 0 15px; word-break: break-all;"></span>
+    </div>
+    <button type="button" id="c_v1_btn" class="remove-btn" style="z-index: 10; width: 35px; height: 35px; font-size: 16px;" onclick="clearCopyVideo()">×</button>
+    </div>
+    </div>
+    </div>
+    
     <div style="margin-bottom: 15px;">
-    <label class="section-title">📅 4. Fecha</label>
+    <label class="section-title">📅 5. Fecha</label>
     <input type="date" id="copy-rrss-fecha" class="modern-input" style="width: 100%; background-color: #f5f5f5;" readonly>
     <small style="color: #666; font-size: 0.8rem; margin-top: 5px; display: block;">La fecha se establece automáticamente al día actual</small>
     </div>
@@ -12836,24 +12885,49 @@
                     
                     if (hasPhotos) {
                         // Mostrar sección de fotos con visor interactivo
-                        const fotosHTML = requestData.Fotos.map((foto, index) => `
-                            <div style="margin: 10px 0; padding: 10px; background: #f5f5f5; border-radius: 8px;">
-                                <div style="position: relative; width: 100%; height: 300px; background: #e0e0e0; border-radius: 6px; overflow: hidden; margin-bottom: 8px; cursor: pointer;" onclick="Swal.close(); openImageViewer('${foto.thumbnailUrl || foto.downloadUrl}', '${foto.nombre}')">
-                                    <img src="${foto.thumbnailUrl || foto.downloadUrl}" alt="Foto ${index + 1}" style="width: 100%; height: 100%; object-fit: contain; object-position: center;" onerror="console.error('Error cargando imagen, intentando con downloadUrl'); this.src='${foto.downloadUrl}';">
-                                    <div style="position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.7); color: white; padding: 8px; text-align: center; font-size: 0.85rem;">
-                                        🔍 Clic para ampliar
+                        const fotosHTML = requestData.Fotos.map((foto, index) => {
+                            const isVideo = foto.isVideo || foto.nombre.startsWith('VIDEO_RRSS_');
+                            if (isVideo) {
+                                // ✅ Reproductor de video para Copy RRSS usando iframe de Drive con formato correcto
+                                const fileId = foto.fileId || foto.url.match(/\/d\/([a-zA-Z0-9_-]+)/)[1];
+                                const embedUrl = `https://drive.google.com/file/d/${fileId}/preview`;
+                                return `
+                                    <div style="margin: 10px 0; padding: 10px; background: #f5f5f5; border-radius: 8px;">
+                                        <div style="position: relative; width: 100%; height: 300px; background: #000; border-radius: 6px; overflow: hidden; margin-bottom: 8px;">
+                                            <iframe src="${embedUrl}" style="width: 100%; height: 100%; border: none;" allowfullscreen></iframe>
+                                        </div>
+                                        <div style="display: flex; gap: 8px; justify-content: center;">
+                                            <a href="${foto.downloadUrl}" download="${foto.nombre}" style="padding: 8px 16px; background: var(--verde); color: white; border-radius: 6px; text-decoration: none; font-size: 0.9rem; border: 2px solid var(--verde); display: inline-block; text-align: center; min-width: 100px;">
+                                                📥 Descargar
+                                            </a>
+                                            <a href="${foto.url}" target="_blank" style="padding: 8px 16px; background: #1a73e8; color: white; border-radius: 6px; text-decoration: none; font-size: 0.9rem; border: 2px solid #1a73e8; display: inline-block; text-align: center; min-width: 100px;">
+                                                🔗 Ver en Drive
+                                            </a>
+                                        </div>
                                     </div>
-                                </div>
-                                <div style="display: flex; gap: 8px; justify-content: center;">
-                                    <a href="${foto.downloadUrl}" download="${foto.nombre}" style="padding: 8px 16px; background: var(--verde); color: white; border-radius: 6px; text-decoration: none; font-size: 0.9rem; border: 2px solid var(--verde); display: inline-block; text-align: center; min-width: 100px;">
-                                        📥 Descargar
-                                    </a>
-                                    <a href="${foto.url}" target="_blank" style="padding: 8px 16px; background: #1a73e8; color: white; border-radius: 6px; text-decoration: none; font-size: 0.9rem; border: 2px solid #1a73e8; display: inline-block; text-align: center; min-width: 100px;">
-                                        🔗 Ver en Drive
-                                    </a>
-                                </div>
-                            </div>
-                        `).join('');
+                                `;
+                            } else {
+                                // ✅ Imagen normal
+                                return `
+                                    <div style="margin: 10px 0; padding: 10px; background: #f5f5f5; border-radius: 8px;">
+                                        <div style="position: relative; width: 100%; height: 300px; background: #e0e0e0; border-radius: 6px; overflow: hidden; margin-bottom: 8px; cursor: pointer;" onclick="Swal.close(); openImageViewer('${foto.thumbnailUrl || foto.downloadUrl}', '${foto.nombre}')">
+                                            <img src="${foto.thumbnailUrl || foto.downloadUrl}" alt="Foto ${index + 1}" style="width: 100%; height: 100%; object-fit: contain; object-position: center;" onerror="console.error('Error cargando imagen, intentando con downloadUrl'); this.src='${foto.downloadUrl}';">
+                                            <div style="position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.7); color: white; padding: 8px; text-align: center; font-size: 0.85rem;">
+                                                🔍 Clic para ampliar
+                                            </div>
+                                        </div>
+                                        <div style="display: flex; gap: 8px; justify-content: center;">
+                                            <a href="${foto.downloadUrl}" download="${foto.nombre}" style="padding: 8px 16px; background: var(--verde); color: white; border-radius: 6px; text-decoration: none; font-size: 0.9rem; border: 2px solid var(--verde); display: inline-block; text-align: center; min-width: 100px;">
+                                                📥 Descargar
+                                            </a>
+                                            <a href="${foto.url}" target="_blank" style="padding: 8px 16px; background: #1a73e8; color: white; border-radius: 6px; text-decoration: none; font-size: 0.9rem; border: 2px solid #1a73e8; display: inline-block; text-align: center; min-width: 100px;">
+                                                🔗 Ver en Drive
+                                            </a>
+                                        </div>
+                                    </div>
+                                `;
+                            }
+                        }).join('');
                         
                         // Agregar fotos al modal
                         const fotosContainer = document.createElement('div');
@@ -14182,6 +14256,162 @@
     img.removeAttribute('data-has-image'); // ✅ Eliminar marca de imagen válida
     document.getElementById(btnId).style.display = 'none';
     }
+    // ============================================================
+    // FUNCIONES PARA MULTIMEDIA COPY RRSS (10 FOTOS O 1 VIDEO)
+    // ============================================================
+
+    function toggleCopyMedia(type) {
+        const btnFotos = document.getElementById('btn-copy-fotos');
+        const btnVideo = document.getElementById('btn-copy-video');
+        const contFotos = document.getElementById('copy-fotos-container');
+        const contVideo = document.getElementById('copy-video-container');
+        const inputType = document.getElementById('copy-media-type');
+
+        inputType.value = type;
+        
+        // Quitar errores visuales al cambiar
+        document.getElementById('copy-rrss-media-section').classList.remove('field-error');
+
+        if (type === 'fotos') {
+            // Estilo Activo Fotos
+            btnFotos.style.background = 'var(--azul-deep)';
+            btnFotos.style.color = 'white';
+            btnFotos.style.boxShadow = '0 4px 15px rgba(2, 48, 71, 0.3)';
+            // Estilo Inactivo Video
+            btnVideo.style.background = 'var(--gris)';
+            btnVideo.style.color = 'var(--azul-deep)';
+            btnVideo.style.boxShadow = 'none';
+            // Mostrar/Ocultar
+            contFotos.classList.remove('hidden');
+            contVideo.classList.add('hidden');
+            // Limpieza
+            clearCopyVideo();
+        } else {
+            // Estilo Activo Video
+            btnVideo.style.background = 'var(--azul-deep)';
+            btnVideo.style.color = 'white';
+            btnVideo.style.boxShadow = '0 4px 15px rgba(2, 48, 71, 0.3)';
+            // Estilo Inactivo Fotos
+            btnFotos.style.background = 'var(--gris)';
+            btnFotos.style.color = 'var(--azul-deep)';
+            btnFotos.style.boxShadow = 'none';
+            // Mostrar/Ocultar
+            contVideo.classList.remove('hidden');
+            contFotos.classList.add('hidden');
+            // Limpieza
+            clearCopyFotos();
+        }
+    }
+
+    function handleCopyPhoto(input, imgId, btnId) {
+        const file = input.files[0];
+        if (!file) return;
+
+        // Calcular peso total de todos los inputs de Copy RRSS
+        let totalSize = 0;
+        for (let i = 1; i <= 10; i++) {
+            const fInput = document.getElementById('c_f' + i);
+            if (fInput && fInput.files && fInput.files[0]) {
+                totalSize += fInput.files[0].size;
+            }
+        }
+
+        const totalMB = totalSize / (1024 * 1024);
+        if (totalMB > 45) {
+            showToast("📏 El peso total excede los 45MB permitidos.", "error", 5000);
+            input.value = ''; // Abortar
+            updateCopyFotosSize();
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const img = document.getElementById(imgId);
+            img.src = e.target.result;
+            img.style.display = 'block';
+            document.getElementById(btnId).style.display = 'block';
+            img.setAttribute('data-has-image', 'true');
+            updateCopyFotosSize();
+            document.getElementById('copy-rrss-media-section').classList.remove('field-error');
+        };
+        reader.readAsDataURL(file);
+    }
+
+    function clearCopyPhoto(inputId, imgId, btnId) {
+        document.getElementById(inputId).value = "";
+        const img = document.getElementById(imgId);
+        img.src = "";
+        img.style.display = 'none';
+        img.removeAttribute('data-has-image');
+        document.getElementById(btnId).style.display = 'none';
+        updateCopyFotosSize();
+    }
+
+    function updateCopyFotosSize() {
+        let totalSize = 0;
+        for (let i = 1; i <= 10; i++) {
+            const fInput = document.getElementById('c_f' + i);
+            if (fInput && fInput.files && fInput.files[0]) {
+                totalSize += fInput.files[0].size;
+            }
+        }
+        const totalMB = totalSize / (1024 * 1024);
+        const spanSize = document.getElementById('copy-fotos-size');
+        spanSize.innerText = totalMB.toFixed(2);
+        
+        if (totalMB > 40) {
+            spanSize.style.color = '#e74c3c'; // Rojo peligro
+        } else if (totalMB > 30) {
+            spanSize.style.color = '#f39c12'; // Naranja advertencia
+        } else {
+            spanSize.style.color = 'var(--turquesa)'; // Normal
+        }
+    }
+
+    function clearCopyFotos() {
+        for (let i = 1; i <= 10; i++) {
+            clearCopyPhoto('c_f'+i, 'c_p'+i, 'c_b'+i);
+        }
+    }
+
+    function handleCopyVideo(input) {
+        const file = input.files[0];
+        if (!file) return;
+
+        const totalMB = file.size / (1024 * 1024);
+        if (totalMB > 512) {
+            showToast("📏 El video excede el límite masivo de 512MB.", "error", 5000);
+            input.value = '';
+            return;
+        }
+
+        const preview = document.getElementById('c_v1_preview');
+        const nameEl = document.getElementById('c_v1_name');
+        const btn = document.getElementById('c_v1_btn');
+
+        nameEl.innerText = `${file.name}\n(${totalMB.toFixed(2)} MB)`;
+        preview.style.display = 'flex';
+        btn.style.display = 'block';
+        preview.setAttribute('data-has-video', 'true');
+        
+        document.getElementById('copy-rrss-media-section').classList.remove('field-error');
+    }
+
+    function clearCopyVideo() {
+        const input = document.getElementById('c_v1');
+        const preview = document.getElementById('c_v1_preview');
+        const nameEl = document.getElementById('c_v1_name');
+        const btn = document.getElementById('c_v1_btn');
+
+        if(input) input.value = '';
+        if(preview) {
+            preview.style.display = 'none';
+            preview.removeAttribute('data-has-video');
+        }
+        if(nameEl) nameEl.innerText = '';
+        if(btn) btn.style.display = 'none';
+    }
+
     // ✅ FUNCIÓN PARA ELIMINAR field-error AUTOMÁTICAMENTE
     function setupFieldErrorRemoval() {
     ['fecha', 'hora', 'institucion', 'direccion-exacta', 'tlf', 'mail', 'observaciones'].forEach(id => {
@@ -15201,6 +15431,34 @@
             img.removeAttribute('data-has-image'); // Limpiar marca
             document.getElementById('b'+i).style.display = 'none';
         }
+        // ✅ Limpiar fotos de Copy RRSS
+        for(let i=1; i<=10; i++) {
+            const input = document.getElementById('c_f'+i);
+            const preview = document.getElementById('c_p'+i);
+            const btn = document.getElementById('c_b'+i);
+            if(input) input.value = '';
+            if(preview) {
+                preview.src = '';
+                preview.style.display = 'none';
+                preview.removeAttribute('data-has-image');
+            }
+            if(btn) btn.style.display = 'none';
+        }
+        // ✅ Limpiar video de Copy RRSS
+        const videoInput = document.getElementById('c_v1');
+        const videoPreview = document.getElementById('c_v1_preview');
+        const videoName = document.getElementById('c_v1_name');
+        const videoBtn = document.getElementById('c_v1_btn');
+        if(videoInput) videoInput.value = '';
+        if(videoPreview) {
+            videoPreview.style.display = 'none';
+            videoPreview.removeAttribute('data-has-video');
+        }
+        if(videoName) videoName.innerText = '';
+        if(videoBtn) videoBtn.style.display = 'none';
+        // ✅ Limpiar contador de tamaño de fotos Copy RRSS
+        const sizeDisplay = document.getElementById('copy-fotos-size');
+        if(sizeDisplay) sizeDisplay.innerText = '0.00';
         document.querySelectorAll('.card-btn').forEach(btn => btn.classList.remove('selected'));
         document.getElementById('sec-3').classList.add('hidden');
         document.getElementById('sec-4').classList.add('hidden');
@@ -17235,6 +17493,11 @@
 
             // Resetear Solicitud Especial (Otros reformado)
             resetSolicitudEspecial();
+            
+            // ✅ Limpiar el nuevo gestor multimedia de Copy RRSS
+            toggleCopyMedia('fotos');
+            clearCopyFotos();
+            clearCopyVideo();
         }
 
         // 1. Si el usuario deselecciona el mismo botón
@@ -18201,6 +18464,25 @@
             },
             label: 'Copy para redes sociales (máximo 2000 caracteres)'
         });
+        
+        // ✅ NUEVA VALIDACIÓN MULTIMEDIA
+        fieldsInOrder.push({
+            id: 'copy-rrss-media-section',
+            isValid: () => {
+                const mediaType = document.getElementById('copy-media-type')?.value;
+                if (mediaType === 'fotos') {
+                    for (let i = 1; i <= 10; i++) {
+                        const img = document.getElementById(`c_p${i}`);
+                        if (img && img.getAttribute('data-has-image') === 'true') return true;
+                    }
+                    return false;
+                } else {
+                    const vid = document.getElementById('c_v1_preview');
+                    return vid && vid.getAttribute('data-has-video') === 'true';
+                }
+            },
+            label: 'Multimedia (Se requiere al menos 1 foto o 1 video)'
+        });
     } else if (catType === 'otros') {
         // VALIDACIÓN PARA SOLICITUD ESPECIAL
 
@@ -18439,6 +18721,19 @@
         const copy = document.getElementById('copy-rrss-text')?.value.trim();
         if (copy) html += `<p><b><i class="fas fa-file-alt"></i> Copy:</b> ${copy.substring(0, 100)}${copy.length > 100 ? '...' : ''}</p>`;
         html += `<p><b><i class="fas fa-calendar-alt"></i> Fecha:</b> ${document.getElementById('copy-rrss-fecha').value}</p>`;
+        
+        const mediaType = document.getElementById('copy-media-type')?.value;
+        if (mediaType === 'fotos') {
+            const fotosCount = [1,2,3,4,5,6,7,8,9,10].filter(i => {
+                const img = document.getElementById(`c_p${i}`);
+                return img && img.getAttribute('data-has-image') === 'true';
+            }).length;
+            html += `<p><b><i class="fas fa-camera"></i> Multimedia:</b> ${fotosCount > 0 ? `${fotosCount} foto(s) adjunta(s)` : 'Ninguna'}</p>`;
+        } else {
+            const vid = document.getElementById('c_v1_preview');
+            const hasVid = vid && vid.getAttribute('data-has-video') === 'true';
+            html += `<p><b><i class="fas fa-video"></i> Multimedia:</b> ${hasVid ? '1 Archivo de Video MP4' : 'Ninguno'}</p>`;
+        }
     } else if (catType === 'otros') {
         // VISUALIZACIÓN PARA SOLICITUD ESPECIAL
         html += `<p><b><i class="fas fa-tag"></i> Tipo de solicitud:</b> ${tipoFlyerSeleccionado === 'es-flyer' ? 'Es Flyer' : 'No es Flyer'}</p>`;
@@ -18479,12 +18774,15 @@
     html += `<p><b><i class="fas fa-envelope"></i> Correo:</b> ${document.getElementById('mail').value || 'No indicado'}</p>`;
     const obs = document.getElementById('observaciones').value.trim();
     if (obs) html += `<p><b><i class="fas fa-edit"></i> Observaciones:</b> ${obs}</p>`;
-    // CORREGIDO: Contar fotos usando el atributo data-has-image (máximo 5)
-    const fotos = [1,2,3,4,5].filter(i => {
-    const img = document.getElementById(`p${i}`);
-    return img.getAttribute('data-has-image') === 'true';
-    });
-    html += `<p><b><i class="fas fa-camera"></i> Soportes Fotográficos:</b> ${fotos.length > 0 ? `${fotos.length} foto(s) adjunta(s)` : 'Ninguno'}</p>`;
+    // ✅ EXCLUIR COPY RRSS DE SOPORTES FOTOGRÁFICOS (usa su propio sistema multimedia)
+    if (catType !== 'copy-rrss') {
+        // CORREGIDO: Contar fotos usando el atributo data-has-image (máximo 5)
+        const fotos = [1,2,3,4,5].filter(i => {
+        const img = document.getElementById(`p${i}`);
+        return img.getAttribute('data-has-image') === 'true';
+        });
+        html += `<p><b><i class="fas fa-camera"></i> Soportes Fotográficos:</b> ${fotos.length > 0 ? `${fotos.length} foto(s) adjunta(s)` : 'Ninguno'}</p>`;
+    }
     preview.innerHTML = html;
     document.getElementById('confirmModal').style.display = 'flex';
     let timeLeft = 10;
@@ -19175,7 +19473,17 @@
             
             // ✅ PASO 5: VERIFICAR RESPUESTA DE GAS
             if (!gasData.success) {
-                throw new Error(gasData.error || "Error al guardar en el sistema principal");
+                let errorMessage = "Error al guardar en el sistema principal";
+                if (gasData.error) {
+                    // Si el error está envuelto en un objeto (ej. por un TypeError en GAS)
+                    if (typeof gasData.error === 'object') {
+                        errorMessage = gasData.error.error || JSON.stringify(gasData.error);
+                    } else {
+                        errorMessage = gasData.error;
+                    }
+                }
+                console.error("❌ Error del backend:", gasData);
+                throw new Error(errorMessage);
             }
 
             // ✅ PASO 6: GUARDAR EN RTDB DESDE EL FRONTEND (con datos procesados por GAS)
@@ -19243,10 +19551,56 @@
 
     // ✅ FUNCIÓN PARA PREPARAR FOTOS ANTES DEL PUENTE (NUEVO SISTEMA: Drive)
     async function prepararFotosParaPuente(formData, idSolicitud) {
-        // ⚠️ VALIDACIÓN: Copy RRSS no debe tener fotos
+        // ✅ PROCESAMIENTO MULTIMEDIA PARA COPY RRSS (10 FOTOS O 1 VIDEO)
         if (catType === 'copy-rrss') {
-            console.log("⚠️ Tipo Copy RRSS detectado. Ignorando fotos (no permitidas para este tipo).");
-            return { fotosUrls: [], documentoUrl: null }; // No procesar fotos para Copy RRSS
+            console.log("📸 Procesando multimedia específica para Copy RRSS");
+            let fotosUrls = [];
+            const mediaType = document.getElementById('copy-media-type')?.value || 'fotos';
+
+            if (mediaType === 'fotos') {
+                for(let i=1; i<=10; i++) {
+                    const fileInput = document.getElementById('c_f'+i);
+                    if(fileInput && fileInput.files && fileInput.files[0]) {
+                        const file = fileInput.files[0];
+                        const ext = file.name.split('.').pop().toLowerCase();
+                        fotosUrls.push({
+                            nombre: `FOTO_RRSS_${idSolicitud}_${i}.${ext}`,
+                            blob: file
+                        });
+                    }
+                }
+            } else if (mediaType === 'video') {
+                const videoInput = document.getElementById('c_v1');
+                if (videoInput && videoInput.files && videoInput.files[0]) {
+                    const file = videoInput.files[0];
+                    const ext = file.name.split('.').pop().toLowerCase();
+                    fotosUrls.push({
+                        nombre: `VIDEO_RRSS_${idSolicitud}.${ext}`,
+                        blob: file
+                    });
+                }
+            }
+
+            if (fotosUrls.length > 0) {
+                const loadMainTxt = document.getElementById('loadMainTxt');
+                const loadConnectionTxt = document.getElementById('loadConnectionTxt');
+                const totalSizeMB = fotosUrls.reduce((sum, f) => sum + f.blob.size, 0) / (1024 * 1024);
+                const connectionType = getConnectionType();
+                
+                if (loadMainTxt) {
+                    loadMainTxt.innerHTML = `<span style="font-size: 1.4rem; font-weight: 700; text-shadow: 0 2px 10px rgba(0,0,0,0.3);">Subiendo adjuntos multimedia (${totalSizeMB.toFixed(1)}MB)...</span>`;
+                }
+                if (loadConnectionTxt) {
+                    loadConnectionTxt.style.display = 'block';
+                    loadConnectionTxt.textContent = `📡 ${connectionType} | 📦 ${totalSizeMB.toFixed(2)}MB`;
+                }
+
+                fotosUrls = await uploadFotosOptimizadas(idSolicitud, fotosUrls);
+                console.log(`✅ Archivos de Copy RRSS subidos: ${fotosUrls.length}`);
+            }
+            
+            // Retornamos las fotosUrls y null para documento
+            return { fotosUrls, documentoUrl: null };
         }
         
         // ✅ NUEVO SISTEMA: Subir fotos a Drive directamente desde inputs (sin conversión base64→Blob)
