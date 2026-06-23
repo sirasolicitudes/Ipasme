@@ -19274,7 +19274,9 @@
                 operacion: "continueFormSubmission"
             });
 
-            openModal("❌ Error", "No se pudo enviar la solicitud. Intente nuevamente.", "⚠️");
+            // ✅ MODIFICADO: Mostrar error detallado para diagnóstico
+            const errorMessage = err.message || err.toString();
+            openModal("❌ Error", `No se pudo enviar la solicitud.\n\nError: ${errorMessage}\n\nPor favor intenta nuevamente.`, "⚠️");
         });
     }
 
