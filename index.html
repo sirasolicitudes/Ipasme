@@ -13410,6 +13410,20 @@
             }
 
             // Paso 3: Confirmar si se desea re-enviar
+            // Calcular cantidad de fotos y videos
+            const fotos = solicitud.Fotos || [];
+            const cantidadFotos = fotos.filter(f => !f.isVideo).length;
+            const tieneVideo = fotos.some(f => f.isVideo);
+            
+            const multimediaInfo = [];
+            if (cantidadFotos > 0) {
+                multimediaInfo.push(`<b style="color: #0799b6;">📷 ${cantidadFotos} foto${cantidadFotos > 1 ? 's' : ''}</b>`);
+            }
+            if (tieneVideo) {
+                multimediaInfo.push(`<b style="color: #0799b6;">🎬 1 video</b>`);
+            }
+            const multimediaText = multimediaInfo.length > 0 ? multimediaInfo.join(' + ') : '<span style="color: #6c757d;">Sin multimedia</span>';
+            
             const confirmResult = await Swal.fire({
                 title: '¡Solicitud Encontrada!',
                 html: `
@@ -13418,6 +13432,7 @@
                         <p style="margin: 5px 0; color: #212529;"><b style="color: #0799b6;">🏥 Unidad:</b> ${solicitud.Unidad}</p>
                         <p style="margin: 5px 0; color: #212529;"><b style="color: #0799b6;">📅 Fecha:</b> ${solicitud.Fecha}</p>
                         <p style="margin: 5px 0; color: #212529;"><b style="color: #0799b6;">✉️ Correo:</b> ${solicitud.Correo || 'No especificado'}</p>
+                        <p style="margin: 5px 0; color: #212529;"><b style="color: #0799b6;">📎 Multimedia:</b> ${multimediaText}</p>
                     </div>
                     <p style="margin-top: 15px; color: #e74c3c; font-weight: 600;">¿Desea enviar la notificación al grupo de Prensa en Telegram?</p>
                 `,
