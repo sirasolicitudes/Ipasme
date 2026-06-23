@@ -5147,6 +5147,7 @@
     </div>
     </div>
     <button id="mainModalBtn" class="modal-btn">ENTENDIDO</button>
+    <button id="copyErrorBtn" class="modal-btn modal-btn-alt hidden" onclick="copyErrorToClipboard()">📋 COPIAR ERROR</button>
     <button id="closeModalBtn" class="modal-btn modal-btn-alt hidden" onclick="closeModal()">CERRAR</button>
     </div>
     </div>
@@ -15343,7 +15344,7 @@
         setTimeout(() => hideLoadingOverlay(), 500);
     }
 
-    function openModal(t, m, icon = "⚠️", callback = null) {
+    function openModal(t, m, icon = "⚠️", callback = null, showCopyBtn = false) {
     clearCredentials();
     // Asegurarse que loadingOverlay esté oculto al abrir modales de alerta
     document.getElementById('loadingOverlay').style.display = 'none';
@@ -15362,6 +15363,16 @@
     document.getElementById('modalMsg').innerText = m;
     const btn = document.getElementById('mainModalBtn');
     btn.innerText = "ENTENDIDO";
+
+    // ✅ MOSTRAR BOTÓN DE COPIAR ERROR SI SE SOLICITA
+    const copyBtn = document.getElementById('copyErrorBtn');
+    if (copyBtn) {
+        if (showCopyBtn) {
+            copyBtn.classList.remove('hidden');
+        } else {
+            copyBtn.classList.add('hidden');
+        }
+    }
 
     // ✅ USAR CALLBACK PERSONALIZADO SI SE PROPORCIONA
     if (callback && typeof callback === 'function') {
@@ -15596,6 +15607,25 @@
         };
         
         document.getElementById('modalAlert').style.display = 'flex';
+    }
+
+    // ✅ FUNCIÓN PARA COPIAR ERROR AL PORTAPAPELES
+    function copyErrorToClipboard() {
+        const modalMsg = document.getElementById('modalMsg');
+        if (modalMsg && modalMsg.innerText) {
+            navigator.clipboard.writeText(modalMsg.innerText).then(() => {
+                const copyBtn = document.getElementById('copyErrorBtn');
+                copyBtn.innerText = "✅ COPIADO";
+                copyBtn.style.background = "var(--verde)";
+                setTimeout(() => {
+                    copyBtn.innerText = "📋 COPIAR ERROR";
+                    copyBtn.style.background = "";
+                }, 2000);
+            }).catch(err => {
+                console.error("Error al copiar:", err);
+                showToast("No se pudo copiar el error", "error");
+            });
+        }
     }
 
     // ✅ FUNCIÓN PARA COPIAR ID DE SOLICITUD AL PORTAPAPELES
@@ -19274,9 +19304,9 @@
                 operacion: "continueFormSubmission"
             });
 
-            // ✅ MODIFICADO: Mostrar error detallado para diagnóstico
+            // ✅ MODIFICADO: Mostrar error detallado para diagnóstico con botón de copiar
             const errorMessage = err.message || err.toString();
-            openModal("❌ Error", `No se pudo enviar la solicitud.\n\nError: ${errorMessage}\n\nPor favor intenta nuevamente.`, "⚠️");
+            openModal("❌ Error", `No se pudo enviar la solicitud.\n\nError: ${errorMessage}\n\nPor favor intenta nuevamente.`, "⚠️", null, true);
         });
     }
 
@@ -19612,11 +19642,11 @@
             });
             
             // 🔥 CRÍTICO: No guardar en RTDB si GAS falló - evita solicitudes huérfanas
-            openModal("❌ Error al Guardar", 
+            openModal("❌ Error al Guardar",
                 "No se pudo registrar la solicitud.\n\n" +
                 "Detalle: " + error.message + "\n\n" +
-                "Por favor intenta nuevamente.", 
-                "⚠️");
+                "Por favor intenta nuevamente.",
+                "⚠️", null, true);
             
             return false;
         }
