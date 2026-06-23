@@ -14810,6 +14810,52 @@
     // ============================================================
 
     /**
+     * Registra fallas de envío directamente en RTDB para auditoría.
+     * @param {string} errorMsg - El mensaje de error capturado.
+     * @param {Object} contexto - Datos adicionales (operación, detalles).
+     */
+    function registrarFallaEnvioRTDB(errorMsg, contexto = {}) {
+        try {
+            if (!window.dbRT) return;
+
+            const errorLogId = 'FAIL-' + Date.now();
+            const errorRef = window.ref(window.dbRT, 'logs_errores/' + errorLogId);
+
+            // Extraer la telemetría del usuario actual
+            const currentUser = window.userCredentials || window.usuarioRegular || {};
+            const unidadInfo = currentUser.unidad || document.getElementById('regUnidad')?.value || "Desconocida";
+            const emailInfo = currentUser.username || currentUser.correo || "Desconocido";
+            const tipoConexion = typeof getConnectionType === 'function' ? getConnectionType() : 'Desconocido';
+
+            // Estructurar el payload
+            const logData = {
+                id_falla: errorLogId,
+                timestamp: Date.now(),
+                fecha_hora: new Date().toLocaleString('es-VE', { timeZone: 'America/Caracas' }),
+                unidad: unidadInfo,
+                usuario_email: emailInfo,
+                error_mensaje: errorMsg,
+                operacion: contexto.operacion || "Envío general",
+                tipo_solicitud: window.catName || "No definido",
+                conexion_detectada: tipoConexion,
+                navegador: navigator.userAgent
+            };
+
+            if (contexto.detalles) {
+                logData.detalles_adicionales = contexto.detalles;
+            }
+
+            // Ejecutar escritura asíncrona (Fire and forget)
+            window.set(errorRef, logData)
+                .then(() => console.log("📝 Falla registrada en RTDB para investigación:", errorLogId))
+                .catch(e => console.error("Fallo silencioso al registrar log en RTDB:", e));
+
+        } catch (e) {
+            console.error("Error crítico en el interceptor de logs:", e);
+        }
+    }
+
+    /**
      * Muestra un toast notification de forma independiente
      * @param {string} message - Mensaje a mostrar
      * @param {string} type - 'success' | 'error' | 'warning' | 'info'
@@ -19222,6 +19268,12 @@
         continueFormSubmission(params).catch(err => {
             console.error("❌ Error enviando formulario:", err);
             hideLoadingOverlay();
+            
+            // ✅ NUEVO: Atrapar fallos de red a nivel superior
+            registrarFallaEnvioRTDB(err.message || err.toString(), {
+                operacion: "continueFormSubmission"
+            });
+
             openModal("❌ Error", "No se pudo enviar la solicitud. Intente nuevamente.", "⚠️");
         });
     }
@@ -19550,6 +19602,12 @@
         } catch (error) {
             hideLoadingOverlay();
             console.error("❌ Error en flujo de guardado:", error);
+            
+            // ✅ NUEVO: Interceptar y loguear en RTDB
+            registrarFallaEnvioRTDB(error.message || error.toString(), {
+                operacion: "bridgeToAppsScript",
+                detalles: "Fallo durante la subida de fotos, documentos o timeout de GAS."
+            });
             
             // 🔥 CRÍTICO: No guardar en RTDB si GAS falló - evita solicitudes huérfanas
             openModal("❌ Error al Guardar", 
@@ -20603,6 +20661,13 @@
                 }
             } catch (errorFile) {
                 console.error(`❌ Error subiendo la foto ${index + 1}:`, errorFile);
+                
+                // ✅ NUEVO: Loguear el archivo exacto que causó el fallo
+                registrarFallaEnvioRTDB(errorFile.message || errorFile.toString(), {
+                    operacion: "uploadFotosOptimizadas - Chunks",
+                    detalles: `Fallo al intentar subir la foto ${index + 1} de ${fotosBlobs.length}. Archivo: ${fileName}` 
+                });
+
                 throw new Error(`Fallo al subir la foto ${index + 1}. Verifica tu conexión a internet e intenta de nuevo.`);
             }
         }
