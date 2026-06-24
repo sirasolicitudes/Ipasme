@@ -2872,6 +2872,31 @@
     .panel-btn-danger { background: var(--rojo); color: white; }
     .panel-btn-info { background: var(--celeste); color: var(--azul-deep); }
     .panel-btn-secondary { background: #e9ecef; color: var(--azul-deep); }
+    .panel-btn-error { background: #dc3545; color: white; }
+    .panel-btn-error.has-new-logs { animation: pulse-error 2s infinite; }
+    
+    @keyframes pulse-error {
+        0%, 100% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7); }
+        50% { box-shadow: 0 0 0 10px rgba(220, 53, 69, 0); }
+    }
+    
+    .error-logs-badge {
+        position: absolute;
+        top: -5px;
+        right: -5px;
+        background: #ff4444;
+        color: white;
+        font-size: 0.7rem;
+        font-weight: bold;
+        padding: 2px 6px;
+        border-radius: 10px;
+        animation: bounce 1s infinite;
+    }
+    
+    @keyframes bounce {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-3px); }
+    }
     /* ✅ CORRECCIÓN: Colores correctos para botones de estatus en panel */
     .panel-btn-pendiente { 
         background: var(--celeste); 
@@ -2986,7 +3011,7 @@
     .btn-attach { background-color: var(--azul-deep); }
     .btn-copy { background-color: #17a2b8; } /* Cyan/teal for copy action */
     .btn-extract-finalized { background-color: #6c757d; } /* Gris para extraer finalizada */
-    .btn-postit { background-color: #ffc107; } /* Amarillo para Post It */
+    .btn-postit { background-color: #ffc107; color: var(--azul-deep); } /* Amarillo para Post It */
     .btn-pill {
     display: flex;
     align-items: center;
@@ -4826,6 +4851,10 @@
     </button>
     <button class="panel-btn panel-btn-primary" id="btnCompareCounters" onclick="compararContadoresYRecrear()" style="background: var(--turquesa); color: white;">
     ⚖️ Comparar Contadores con Tabla
+    </button>
+    <button class="panel-btn panel-btn-info" id="btnViewErrorLogs" onclick="openErrorLogsModal()" style="position: relative;">
+    📋 Ver Log de Errores
+    <span id="errorLogsBadge" class="error-logs-badge hidden">0</span>
     </button>
     <button class="panel-btn panel-btn-danger" id="btnEliminar" onclick="panelEliminar()" disabled>
     🗑️ Eliminar Solicitud
@@ -11711,7 +11740,7 @@
             container.innerHTML = `
                 <div class="file-preview-carousel" style="position: relative; width: 100%;">
                     <button class="carousel-prev" onclick="carouselPrev()" style="position: absolute; left: 5px; top: 50%; transform: translateY(-50%); background: rgba(0,0,0,0.5); color: white; border: none; border-radius: 50%; width: 30px; height: 30px; cursor: pointer; z-index: 10; font-size: 16px;">❮</button>
-                    <img id="carousel-image" src="" class="file-preview-image-full" onclick="window.open(currentCarouselUrl, '_blank')" title="Click para ver en tamaño completo" style="width: 100%; height: auto; cursor: pointer;">
+                    <img id="carousel-image" src="" class="file-preview-image-full" onclick="openPanelImageViewer()" title="Click para ver en tamaño completo" style="width: 100%; height: auto; cursor: pointer;">
                     <button class="carousel-next" onclick="carouselNext()" style="position: absolute; right: 5px; top: 50%; transform: translateY(-50%); background: rgba(0,0,0,0.5); color: white; border: none; border-radius: 50%; width: 30px; height: 30px; cursor: pointer; z-index: 10; font-size: 16px;">❯</button>
                     <div class="carousel-indicators" style="position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); display: flex; gap: 5px; z-index: 10;"></div>
                 </div>
@@ -11769,7 +11798,7 @@
         // Usar thumbnail de Google Drive - IMAGEN COMPLETA A ESCALA REDUCIDA
         const thumbnailUrl = `https://drive.google.com/thumbnail?id=${fileId}&sz=w400`;
         container.innerHTML = `
-        <img src="" class="file-preview-image-full" onclick="window.open('${urls[0]}', '_blank')" title="Click para ver en tamaño completo">
+        <img src="" class="file-preview-image-full" onclick="openPanelImageViewer()" title="Click para ver en tamaño completo">
         `;
         // ✅ LAZY LOADING CON INTERSECTION OBSERVER
         const img = container.querySelector('img');
@@ -11792,6 +11821,54 @@
         document.getElementById('admin-view-btn').disabled = false;
         document.getElementById('admin-telegram-btn').disabled = false;
         // El botón de correo se maneja en updatePanelContent() para validar el asterisco
+    }
+    
+    // ✅ FUNCIÓN PARA ABRIR VISOR DE IMÁGENES DEL PANEL LATERAL
+    function openPanelImageViewer() {
+        const container = document.getElementById('filePreviewContainer');
+        if (!container) return;
+        
+        let urls = [];
+        let currentIndex = 0;
+        
+        // Verificar si hay carrusel (múltiples archivos)
+        if (container.dataset.carouselUrls) {
+            urls = JSON.parse(container.dataset.carouselUrls);
+            currentIndex = parseInt(container.dataset.currentIndex || '0');
+        } else {
+            // Si es un solo archivo, obtener la URL de la imagen actual
+            const img = container.querySelector('img');
+            if (img && img.src) {
+                // Extraer el fileId de la URL del thumbnail
+                const fileIdMatch = img.src.match(/id=([-\w]{25,})/);
+                if (fileIdMatch) {
+                    const fileId = fileIdMatch[1];
+                    // Construir la URL completa de Drive
+                    urls = [`https://drive.google.com/file/d/${fileId}/view`];
+                }
+            }
+        }
+        
+        if (urls.length === 0) {
+            console.warn('No se encontraron URLs para abrir el visor');
+            return;
+        }
+        
+        // Convertir URLs a formato de objetos para el visor
+        const photos = urls.map((url, index) => {
+            const fileIdMatch = url.match(/\/file\/d\/([-\w]{25,})/);
+            const fileId = fileIdMatch ? fileIdMatch[1] : '';
+            return {
+                url: url,
+                downloadUrl: url,
+                thumbnailUrl: fileId ? `https://drive.google.com/thumbnail?id=${fileId}&sz=w800` : url,
+                nombre: `Archivo ${index + 1}`
+            };
+        });
+        
+        // Abrir el visor con navegación
+        const currentPhoto = photos[currentIndex];
+        openImageViewer(currentPhoto.thumbnailUrl || currentPhoto.downloadUrl, currentPhoto.nombre, photos, currentIndex);
     }
     
     // ✅ FUNCIONES PARA CONTROLAR EL CARRUSEL DE ARCHIVOS MÚLTIPLES
@@ -12569,8 +12646,14 @@
 
     // ✅ FUNCIÓN PARA MOSTRAR TEXTO DE SOLICITUD EN FORMATO EMAIL (COPIAR)
     // ✅ FUNCIÓN PARA ABRIR VISOR DE IMÁGENES
-    function openImageViewer(imageUrl, imageName) {
+    function openImageViewer(imageUrl, imageName, allPhotos = null, startIndex = 0) {
         console.log("🔍 Abriendo visor de imágenes:", imageUrl, imageName);
+        
+        // Si se proporcionan todas las fotos, usar el visor con navegación
+        if (allPhotos && allPhotos.length > 1) {
+            openImageViewerWithNavigation(allPhotos, startIndex);
+            return;
+        }
         
         const viewerHTML = `
             <div id="image-viewer-overlay" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 10000; display: flex; align-items: center; justify-content: center; cursor: pointer;" onclick="closeImageViewer()">
@@ -12590,12 +12673,117 @@
         document.body.style.overflow = 'hidden'; // Prevenir scroll
     }
     
+    // ✅ FUNCIÓN PARA ABRIR VISOR DE IMÁGENES CON NAVEGACIÓN (similar al visor del panel lateral)
+    function openImageViewerWithNavigation(photos, startIndex = 0) {
+        let currentIndex = startIndex;
+        
+        const viewerHTML = `
+            <div id="image-viewer-overlay" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 10000; display: flex; flex-direction: column;">
+                <div style="flex: 1; display: flex; align-items: center; justify-content: center; position: relative;">
+                    <!-- Flecha izquierda -->
+                    <button id="viewer-prev-btn" style="position: absolute; left: 20px; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,0.2); border: none; color: white; font-size: 2rem; padding: 20px; cursor: pointer; border-radius: 50%; transition: background 0.2s; z-index: 10001;" ${currentIndex === 0 ? 'disabled' : ''}>◀</button>
+                    
+                    <!-- Imagen -->
+                    <img id="viewer-image" src="${photos[currentIndex].thumbnailUrl || photos[currentIndex].downloadUrl}" alt="${photos[currentIndex].nombre}" style="max-width: 90%; max-height: 85vh; object-fit: contain; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.5);">
+                    
+                    <!-- Flecha derecha -->
+                    <button id="viewer-next-btn" style="position: absolute; right: 20px; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,0.2); border: none; color: white; font-size: 2rem; padding: 20px; cursor: pointer; border-radius: 50%; transition: background 0.2s; z-index: 10001;" ${currentIndex === photos.length - 1 ? 'disabled' : ''}>▶</button>
+                </div>
+                
+                <!-- Info y controles -->
+                <div style="padding: 20px; background: rgba(0,0,0,0.8); display: flex; justify-content: space-between; align-items: center;">
+                    <div style="color: white;">
+                        <div style="font-size: 1.1rem; font-weight: 600;">${photos[currentIndex].nombre}</div>
+                        <div style="font-size: 0.9rem; color: rgba(255,255,255,0.7); margin-top: 5px;">${currentIndex + 1} de ${photos.length}</div>
+                    </div>
+                    <div style="display: flex; gap: 10px;">
+                        <a id="viewer-download-btn" href="${photos[currentIndex].downloadUrl}" download="${photos[currentIndex].nombre}" style="padding: 10px 20px; background: var(--verde); color: white; border-radius: 6px; text-decoration: none; font-weight: 600;">📥 Descargar</a>
+                        <a id="viewer-drive-btn" href="${photos[currentIndex].url}" target="_blank" style="padding: 10px 20px; background: #1a73e8; color: white; border-radius: 6px; text-decoration: none; font-weight: 600;">🔗 Ver en Drive</a>
+                        <button onclick="closeImageViewer()" style="padding: 10px 20px; background: #dc3545; color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer;">✕ Cerrar</button>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        document.body.insertAdjacentHTML('beforeend', viewerHTML);
+        document.body.style.overflow = 'hidden';
+        
+        // Event listeners para navegación
+        const prevBtn = document.getElementById('viewer-prev-btn');
+        const nextBtn = document.getElementById('viewer-next-btn');
+        const viewerImage = document.getElementById('viewer-image');
+        const downloadBtn = document.getElementById('viewer-download-btn');
+        const driveBtn = document.getElementById('viewer-drive-btn');
+        
+        function updateViewer() {
+            const photo = photos[currentIndex];
+            viewerImage.src = photo.thumbnailUrl || photo.downloadUrl;
+            viewerImage.alt = photo.nombre;
+            downloadBtn.href = photo.downloadUrl;
+            downloadBtn.download = photo.nombre;
+            driveBtn.href = photo.url;
+            
+            // Actualizar info
+            const infoDiv = viewerImage.parentElement.nextElementSibling.querySelector('div');
+            infoDiv.innerHTML = `
+                <div style="font-size: 1.1rem; font-weight: 600;">${photo.nombre}</div>
+                <div style="font-size: 0.9rem; color: rgba(255,255,255,0.7); margin-top: 5px;">${currentIndex + 1} de ${photos.length}</div>
+            `;
+            
+            // Actualizar estado de botones
+            prevBtn.disabled = currentIndex === 0;
+            nextBtn.disabled = currentIndex === photos.length - 1;
+            prevBtn.style.opacity = currentIndex === 0 ? '0.3' : '1';
+            nextBtn.style.opacity = currentIndex === photos.length - 1 ? '0.3' : '1';
+        }
+        
+        prevBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (currentIndex > 0) {
+                currentIndex--;
+                updateViewer();
+            }
+        });
+        
+        nextBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (currentIndex < photos.length - 1) {
+                currentIndex++;
+                updateViewer();
+            }
+        });
+        
+        // Navegación con teclado
+        document.addEventListener('keydown', handleKeyDown);
+        
+        function handleKeyDown(e) {
+            if (e.key === 'ArrowLeft' && currentIndex > 0) {
+                currentIndex--;
+                updateViewer();
+            } else if (e.key === 'ArrowRight' && currentIndex < photos.length - 1) {
+                currentIndex++;
+                updateViewer();
+            } else if (e.key === 'Escape') {
+                closeImageViewer();
+            }
+        }
+        
+        // Guardar referencia para limpieza
+        window.currentImageViewerHandler = handleKeyDown;
+    }
+    
     // ✅ FUNCIÓN PARA CERRAR VISOR DE IMÁGENES
     function closeImageViewer() {
         const viewer = document.getElementById('image-viewer-overlay');
         if (viewer) {
             viewer.remove();
             document.body.style.overflow = ''; // Restaurar scroll
+            
+            // Limpiar event listener de teclado si existe
+            if (window.currentImageViewerHandler) {
+                document.removeEventListener('keydown', window.currentImageViewerHandler);
+                window.currentImageViewerHandler = null;
+            }
 
             // Reabrir el modal de extraer información
             if (window.currentRequestData && window.currentFormattedHTML) {
@@ -12631,24 +12819,52 @@
                 const hasPhotos = requestData.Fotos && requestData.Fotos.length > 0;
                 
                 if (hasPhotos) {
-                    const fotosHTML = requestData.Fotos.map((foto, index) => `
-                        <div style="margin: 10px 0; padding: 10px; background: #f5f5f5; border-radius: 8px;">
-                            <div style="position: relative; width: 100%; height: 300px; background: #e0e0e0; border-radius: 6px; overflow: hidden; margin-bottom: 8px; cursor: pointer;" onclick="Swal.close(); openImageViewer('${foto.thumbnailUrl || foto.downloadUrl}', '${foto.nombre}')">
-                                <img src="${foto.thumbnailUrl || foto.downloadUrl}" alt="Foto ${index + 1}" style="width: 100%; height: 100%; object-fit: contain; object-position: center;" onerror="console.error('Error cargando imagen, intentando con downloadUrl'); this.src='${foto.downloadUrl}';">
-                                <div style="position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.7); color: white; padding: 8px; text-align: center; font-size: 0.85rem;">
-                                    🔍 Clic para ampliar
+                    // Guardar fotos globalmente para el visor con navegación
+                    window.currentRequestPhotos = requestData.Fotos;
+                    
+                    const fotosHTML = requestData.Fotos.map((foto, index) => {
+                        const isVideo = foto.isVideo || foto.nombre.startsWith('VIDEO_RRSS_');
+                        if (isVideo) {
+                            // ✅ Reproductor de video para Copy RRSS usando iframe de Drive con formato correcto
+                            const fileId = foto.fileId || foto.url.match(/\/d\/([a-zA-Z0-9_-]+)/)[1];
+                            const embedUrl = `https://drive.google.com/file/d/${fileId}/preview`;
+                            return `
+                                <div style="margin: 10px 0; padding: 10px; background: #f5f5f5; border-radius: 8px;">
+                                    <div style="position: relative; width: 100%; height: 300px; background: #000; border-radius: 6px; overflow: hidden; margin-bottom: 8px;">
+                                        <iframe src="${embedUrl}" style="width: 100%; height: 100%; border: none;" allowfullscreen></iframe>
+                                    </div>
+                                    <div style="display: flex; gap: 8px; justify-content: center;">
+                                        <a href="${foto.downloadUrl}" download="${foto.nombre}" style="padding: 8px 16px; background: var(--verde); color: white; border-radius: 6px; text-decoration: none; font-size: 0.9rem; border: 2px solid var(--verde); display: inline-block; text-align: center; min-width: 100px;">
+                                            📥 Descargar
+                                        </a>
+                                        <a href="${foto.url}" target="_blank" style="padding: 8px 16px; background: #1a73e8; color: white; border-radius: 6px; text-decoration: none; font-size: 0.9rem; border: 2px solid #1a73e8; display: inline-block; text-align: center; min-width: 100px;">
+                                            🔗 Ver en Drive
+                                        </a>
+                                    </div>
                                 </div>
-                            </div>
-                            <div style="display: flex; gap: 8px; justify-content: center;">
-                                <a href="${foto.downloadUrl}" download="${foto.nombre}" style="padding: 8px 16px; background: var(--verde); color: white; border-radius: 6px; text-decoration: none; font-size: 0.9rem; border: 2px solid var(--verde); display: inline-block; text-align: center; min-width: 100px;">
-                                    📥 Descargar
-                                </a>
-                                <a href="${foto.url}" target="_blank" style="padding: 8px 16px; background: #1a73e8; color: white; border-radius: 6px; text-decoration: none; font-size: 0.9rem; border: 2px solid #1a73e8; display: inline-block; text-align: center; min-width: 100px;">
-                                    🔗 Ver en Drive
-                                </a>
-                            </div>
-                        </div>
-                    `).join('');
+                            `;
+                        } else {
+                            // ✅ Imagen normal con visor con navegación
+                            return `
+                                <div style="margin: 10px 0; padding: 10px; background: #f5f5f5; border-radius: 8px;">
+                                    <div style="position: relative; width: 100%; height: 300px; background: #e0e0e0; border-radius: 6px; overflow: hidden; margin-bottom: 8px; cursor: pointer;" onclick="Swal.close(); openImageViewer('${foto.thumbnailUrl || foto.downloadUrl}', '${foto.nombre}', window.currentRequestPhotos, ${index})">
+                                        <img src="${foto.thumbnailUrl || foto.downloadUrl}" alt="Foto ${index + 1}" style="width: 100%; height: 100%; object-fit: contain; object-position: center;" onerror="console.error('Error cargando imagen, intentando con downloadUrl'); this.src='${foto.downloadUrl}';">
+                                        <div style="position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.7); color: white; padding: 8px; text-align: center; font-size: 0.85rem;">
+                                            🔍 Clic para ampliar (${index + 1}/${requestData.Fotos.length})
+                                        </div>
+                                    </div>
+                                    <div style="display: flex; gap: 8px; justify-content: center;">
+                                        <a href="${foto.downloadUrl}" download="${foto.nombre}" style="padding: 8px 16px; background: var(--verde); color: white; border-radius: 6px; text-decoration: none; font-size: 0.9rem; border: 2px solid var(--verde); display: inline-block; text-align: center; min-width: 100px;">
+                                            📥 Descargar
+                                        </a>
+                                        <a href="${foto.url}" target="_blank" style="padding: 8px 16px; background: #1a73e8; color: white; border-radius: 6px; text-decoration: none; font-size: 0.9rem; border: 2px solid #1a73e8; display: inline-block; text-align: center; min-width: 100px;">
+                                            🔗 Ver en Drive
+                                        </a>
+                                    </div>
+                                </div>
+                            `;
+                        }
+                    }).join('');
                     
                     const fotosContainer = document.createElement('div');
                     fotosContainer.id = 'fotos-container';
@@ -12885,6 +13101,9 @@
                     const hasPhotos = requestData.Fotos && requestData.Fotos.length > 0;
                     
                     if (hasPhotos) {
+                        // Guardar fotos globalmente para el visor con navegación
+                        window.currentRequestPhotos = requestData.Fotos;
+                        
                         // Mostrar sección de fotos con visor interactivo
                         const fotosHTML = requestData.Fotos.map((foto, index) => {
                             const isVideo = foto.isVideo || foto.nombre.startsWith('VIDEO_RRSS_');
@@ -12908,13 +13127,13 @@
                                     </div>
                                 `;
                             } else {
-                                // ✅ Imagen normal
+                                // ✅ Imagen normal con visor con navegación
                                 return `
                                     <div style="margin: 10px 0; padding: 10px; background: #f5f5f5; border-radius: 8px;">
-                                        <div style="position: relative; width: 100%; height: 300px; background: #e0e0e0; border-radius: 6px; overflow: hidden; margin-bottom: 8px; cursor: pointer;" onclick="Swal.close(); openImageViewer('${foto.thumbnailUrl || foto.downloadUrl}', '${foto.nombre}')">
+                                        <div style="position: relative; width: 100%; height: 300px; background: #e0e0e0; border-radius: 6px; overflow: hidden; margin-bottom: 8px; cursor: pointer;" onclick="Swal.close(); openImageViewer('${foto.thumbnailUrl || foto.downloadUrl}', '${foto.nombre}', window.currentRequestPhotos, ${index})">
                                             <img src="${foto.thumbnailUrl || foto.downloadUrl}" alt="Foto ${index + 1}" style="width: 100%; height: 100%; object-fit: contain; object-position: center;" onerror="console.error('Error cargando imagen, intentando con downloadUrl'); this.src='${foto.downloadUrl}';">
                                             <div style="position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.7); color: white; padding: 8px; text-align: center; font-size: 0.85rem;">
-                                                🔍 Clic para ampliar
+                                                🔍 Clic para ampliar (${index + 1}/${requestData.Fotos.length})
                                             </div>
                                         </div>
                                         <div style="display: flex; gap: 8px; justify-content: center;">
@@ -14856,6 +15075,246 @@
         }
     }
 
+    // ═══════════════════════════════════════════════════════════════
+    // ✅ SISTEMA DE LOG DE ERRORES - PANEL ADMIN
+    // ═══════════════════════════════════════════════════════════════
+    
+    let errorLogsListener = null;
+    let unseenErrorLogs = 0;
+    let lastSeenLogTimestamp = 0;
+    
+    // Cargar último timestamp visto desde localStorage
+    function loadLastSeenTimestamp() {
+        const saved = localStorage.getItem('sira_last_seen_error_log');
+        if (saved) {
+            lastSeenLogTimestamp = parseInt(saved, 10);
+        }
+    }
+    
+    // Guardar último timestamp visto en localStorage
+    function saveLastSeenTimestamp(timestamp) {
+        lastSeenLogTimestamp = timestamp;
+        localStorage.setItem('sira_last_seen_error_log', timestamp.toString());
+    }
+    
+    // Iniciar listener de logs de errores (solo para admin)
+    function startErrorLogsListener() {
+        if (!isAdmin || !window.dbRT) return;
+        
+        loadLastSeenTimestamp();
+        
+        const logsRef = window.ref(window.dbRT, 'logs_errores');
+        
+        errorLogsListener = window.onValue(logsRef, (snapshot) => {
+            const logs = snapshot.val();
+            if (!logs) {
+                unseenErrorLogs = 0;
+                updateErrorLogsBadge();
+                return;
+            }
+            
+            // Contar logs no vistos
+            unseenErrorLogs = 0;
+            Object.values(logs).forEach(log => {
+                if (log.timestamp > lastSeenLogTimestamp) {
+                    unseenErrorLogs++;
+                }
+            });
+            
+            updateErrorLogsBadge();
+        });
+    }
+    
+    // Detener listener de logs de errores
+    function stopErrorLogsListener() {
+        if (errorLogsListener) {
+            errorLogsListener();
+            errorLogsListener = null;
+        }
+        unseenErrorLogs = 0;
+        updateErrorLogsBadge();
+    }
+    
+    // Actualizar badge del botón
+    function updateErrorLogsBadge() {
+        const badge = document.getElementById('errorLogsBadge');
+        const btn = document.getElementById('btnViewErrorLogs');
+        if (!badge || !btn) return;
+        
+        if (unseenErrorLogs > 0) {
+            badge.textContent = unseenErrorLogs > 99 ? '99+' : unseenErrorLogs;
+            badge.classList.remove('hidden');
+            btn.classList.add('has-new-logs');
+        } else {
+            badge.classList.add('hidden');
+            btn.classList.remove('has-new-logs');
+        }
+    }
+    
+    // Abrir modal de logs de errores
+    async function openErrorLogsModal() {
+        if (!isAdmin) {
+            showToast("Solo los administradores pueden ver los logs de errores.", "error");
+            return;
+        }
+        
+        if (!window.dbRT) {
+            showToast("Firebase RTDB no está disponible.", "error");
+            return;
+        }
+        
+        try {
+            // Obtener logs desde RTDB
+            const snapshot = await window.get(window.ref(window.dbRT, 'logs_errores'));
+            const logs = snapshot.val();
+            
+            if (!logs || Object.keys(logs).length === 0) {
+                Swal.fire({
+                    icon: 'info',
+                    title: '📋 Log de Errores',
+                    text: 'No hay logs de errores registrados.',
+                    confirmButtonColor: '#2196f3'
+                });
+                return;
+            }
+            
+            // Convertir a array y ordenar por timestamp (más reciente primero)
+            const logsArray = Object.values(logs).sort((a, b) => b.timestamp - a.timestamp);
+            
+            // Generar HTML de logs
+            const logsHTML = logsArray.map(log => {
+                const isUnseen = log.timestamp > lastSeenLogTimestamp;
+                const bgColor = isUnseen ? '#fff3cd' : '#ffffff';
+                const borderColor = isUnseen ? '#ffc107' : '#dee2e6';
+                
+                return `
+                    <div style="background: ${bgColor}; border: 1px solid ${borderColor}; border-radius: 6px; padding: 12px; margin-bottom: 10px;">
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+                            <div>
+                                <strong style="color: #dc3545;">🔴 ID: ${log.id_falla}</strong>
+                                <span style="color: #666; font-size: 0.85rem; margin-left: 10px;">${log.fecha_hora}</span>
+                                ${isUnseen ? '<span style="background: #ffc107; color: #000; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; margin-left: 10px; font-weight: bold;">NUEVO</span>' : ''}
+                            </div>
+                            <button onclick="deleteErrorLog('${log.id_falla}')" style="background: #dc3545; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 0.75rem;">🗑️ Eliminar</button>
+                        </div>
+                        <div style="margin-bottom: 6px;">
+                            <strong>Unidad:</strong> ${log.unidad} | 
+                            <strong>Usuario:</strong> ${log.usuario_email} |
+                            <strong>Operación:</strong> ${log.operacion}
+                        </div>
+                        <div style="margin-bottom: 6px;">
+                            <strong>Error:</strong> <span style="color: #dc3545;">${log.error_mensaje}</span>
+                        </div>
+                        ${log.tipo_solicitud ? `<div style="margin-bottom: 6px;"><strong>Tipo Solicitud:</strong> ${log.tipo_solicitud}</div>` : ''}
+                        ${log.conexion_detectada ? `<div style="margin-bottom: 6px;"><strong>Conexión:</strong> ${log.conexion_detectada}</div>` : ''}
+                        ${log.detalles_adicionales ? `<div style="margin-bottom: 6px;"><strong>Detalles:</strong> <pre style="background: #f5f5f5; padding: 6px; border-radius: 4px; font-size: 0.8rem; overflow-x: auto;">${JSON.stringify(log.detalles_adicionales, null, 2)}</pre></div>` : ''}
+                    </div>
+                `;
+            }).join('');
+            
+            Swal.fire({
+                title: '📋 Log de Errores',
+                html: `
+                    <div style="max-height: 500px; overflow-y: auto; padding: 10px;">
+                        <div style="margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
+                            <span>Total logs: ${logsArray.length}</span>
+                            <button onclick="markAllLogsAsSeen()" style="background: var(--verde); color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer;">✅ Marcar todos como vistos</button>
+                        </div>
+                        ${logsHTML}
+                    </div>
+                    <div style="margin-top: 15px; display: flex; gap: 10px; justify-content: center;">
+                        <button onclick="deleteAllErrorLogs()" style="background: #dc3545; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer;">🗑️ Eliminar todos los logs</button>
+                    </div>
+                `,
+                width: '700px',
+                showConfirmButton: false,
+                showCancelButton: true,
+                cancelButtonText: 'Cerrar',
+                cancelButtonColor: '#6c757d'
+            });
+            
+            // Marcar como vistos al abrir el modal
+            if (logsArray.length > 0) {
+                const latestTimestamp = logsArray[0].timestamp;
+                saveLastSeenTimestamp(latestTimestamp);
+                unseenErrorLogs = 0;
+                updateErrorLogsBadge();
+            }
+            
+        } catch (error) {
+            console.error('Error al cargar logs:', error);
+            showToast("Error al cargar logs de errores.", "error");
+        }
+    }
+    
+    // Marcar todos los logs como vistos
+    function markAllLogsAsSeen() {
+        const now = Date.now();
+        saveLastSeenTimestamp(now);
+        unseenErrorLogs = 0;
+        updateErrorLogsBadge();
+        showToast("Todos los logs marcados como vistos.", "success");
+        
+        // Recargar el modal
+        Swal.close();
+        setTimeout(() => openErrorLogsModal(), 300);
+    }
+    
+    // Eliminar un log específico
+    async function deleteErrorLog(logId) {
+        try {
+            await Swal.fire({
+                title: '¿Eliminar este log?',
+                text: `Esta acción eliminará el log ${logId} permanentemente.`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#dc3545',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Sí, eliminar',
+                cancelButtonText: 'Cancelar'
+            });
+            
+            await window.remove(window.ref(window.dbRT, 'logs_errores/' + logId));
+            showToast("Log eliminado correctamente.", "success");
+            
+            // Recargar el modal
+            Swal.close();
+            setTimeout(() => openErrorLogsModal(), 300);
+            
+        } catch (error) {
+            if (error.isDismissed) return; // Usuario canceló
+            console.error('Error al eliminar log:', error);
+            showToast("Error al eliminar el log.", "error");
+        }
+    }
+    
+    // Eliminar todos los logs
+    async function deleteAllErrorLogs() {
+        try {
+            await Swal.fire({
+                title: '¿Eliminar TODOS los logs?',
+                text: 'Esta acción eliminará TODOS los logs de errores permanentemente. Esta acción no se puede deshacer.',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#dc3545',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Sí, eliminar todos',
+                cancelButtonText: 'Cancelar'
+            });
+            
+            await window.remove(window.ref(window.dbRT, 'logs_errores'));
+            showToast("Todos los logs eliminados correctamente.", "success");
+            unseenErrorLogs = 0;
+            updateErrorLogsBadge();
+            Swal.close();
+            
+        } catch (error) {
+            if (error.isDismissed) return; // Usuario canceló
+            console.error('Error al eliminar logs:', error);
+            showToast("Error al eliminar los logs.", "error");
+        }
+    }
+
     /**
      * Muestra un toast notification de forma independiente
      * @param {string} message - Mensaje a mostrar
@@ -15841,6 +16300,11 @@
             isAdmin = window.isAdmin;
             isDesigner = window.isDesigner;
             
+            // ✅ Iniciar listener de logs de errores si es admin
+            if (isAdmin) {
+                startErrorLogsListener();
+            }
+            
             // Actualizar userCredentials con datos de ambos sistemas
             userCredentials = {
                 username: usuarioInput,
@@ -16100,6 +16564,11 @@
                 isAdmin = data.data.isAdmin || false;
                 isDesigner = data.data.isDesigner || false;
                 
+                // ✅ Iniciar listener de logs de errores si es admin
+                if (isAdmin) {
+                    startErrorLogsListener();
+                }
+                
                 // ✅ ACTUALIZAR INTERFAZ INMEDIATAMENTE CON NUEVOS PERMISOS
                 updateTableHeaders();
                 // ✅ LIMPIAR CACHÉ DE PÁGINAS PARA REGENERAR CON NUEVOS PERMISOS
@@ -16239,6 +16708,9 @@
             unsubscribeTable();
             unsubscribeTable = null;
         }
+        
+        // ✅ DETENER LISTENER DE LOGS DE ERRORES
+        stopErrorLogsListener();
         
         // ✅ RESETEAR VARIABLES DE PERMISOS Y DATOS (CRÍTICO)
         isAdmin = false;
