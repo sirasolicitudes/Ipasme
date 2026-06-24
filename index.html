@@ -20603,6 +20603,49 @@
     }
 
     /**
+     * Subida por chunks como fallback cuando subida directa falla
+     * Reutiliza la lógica existente de chunks para máxima compatibilidad
+     */
+    async function uploadConChunksFallback(file, auth, fileName, CHUNK_SIZE, progressFill, progressText, index, totalFiles) {
+        const uploadUrl = await iniciarSesionResumableGeneric(file, auth, fileName);
+        
+        let offset = 0;
+        let fileId = null;
+        
+        while (offset < file.size) {
+            const chunk = file.slice(offset, Math.min(offset + CHUNK_SIZE, file.size));
+            const response = await uploadBinaryChunk(uploadUrl, chunk, offset, file.size);
+            
+            // ✅ ACTUALIZAR offset DESPUÉS de subir el chunk
+            offset += chunk.size;
+            
+            // ✅ ACTUALIZAR PROGRESO con el offset actualizado (progreso monotónico)
+            if (progressFill) {
+                const chunkProgress = (offset / file.size) * 100;
+                const totalProgress = ((index + chunkProgress / 100) / totalFiles) * 100;
+                progressFill.style.width = totalProgress + '%';
+            }
+            if (progressText) {
+                const chunkProgress = (offset / file.size) * 100;
+                const totalProgress = ((index + chunkProgress / 100) / totalFiles) * 100;
+                progressText.textContent = Math.round(totalProgress) + '%';
+            }
+            
+            if (offset >= file.size && response.ok) {
+                const responseText = await response.text();
+                try {
+                    const responseData = JSON.parse(responseText);
+                    fileId = responseData.id;
+                } catch (e) {
+                    console.warn("⚠️ No se pudo extraer fileId de la respuesta");
+                }
+            }
+        }
+        
+        return fileId;
+    }
+
+    /**
      * Subida directa (multipart) para archivos pequeños (< 3MB)
      * Más robusta que chunks para conexiones inestables con archivos pequeñas
      */
@@ -20937,17 +20980,23 @@
                 
                 if (usarSubidaDirecta) {
                     console.log(`🚀 Usando subida directa para archivo pequeño (${fileSizeMB.toFixed(2)}MB)`);
-                    // ✅ Subida directa (multipart) para archivos pequeños
-                    fileId = await uploadDirecto(file, authData, fileName);
-                    
-                    // ✅ Actualizar progreso para subida directa (progreso por archivo, no por chunk)
-                    if (progressFill) {
-                        const totalProgress = ((index + 1) / fotosBlobs.length) * 100;
-                        progressFill.style.width = totalProgress + '%';
-                    }
-                    if (progressText) {
-                        const totalProgress = ((index + 1) / fotosBlobs.length) * 100;
-                        progressText.textContent = Math.round(totalProgress) + '%';
+                    try {
+                        // ✅ Subida directa (multipart) para archivos pequeños
+                        fileId = await uploadDirecto(file, authData, fileName);
+                        
+                        // ✅ Actualizar progreso para subida directa (progreso por archivo, no por chunk)
+                        if (progressFill) {
+                            const totalProgress = ((index + 1) / fotosBlobs.length) * 100;
+                            progressFill.style.width = totalProgress + '%';
+                        }
+                        if (progressText) {
+                            const totalProgress = ((index + 1) / fotosBlobs.length) * 100;
+                            progressText.textContent = Math.round(totalProgress) + '%';
+                        }
+                    } catch (directUploadError) {
+                        console.warn(`⚠️ Subida directa falló: ${directUploadError.message}. Intentando con chunks como fallback...`);
+                        // ✅ FALLBACK: Si subida directa falla (permisos, compatibilidad, etc.), usar chunks
+                        fileId = await uploadConChunksFallback(file, authData, fileName, CHUNK_SIZE, progressFill, progressText, index, fotosBlobs.length);
                     }
                 } else {
                     console.log(`📦 Usando subida por chunks (archivo: ${fileSizeMB.toFixed(2)}MB, video: ${isVideo}, admin: ${isAdmin})`);
