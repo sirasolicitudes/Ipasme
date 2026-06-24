@@ -4794,7 +4794,7 @@
     ⚙️ Procesando
     <span class="btn-status-indicator" id="indProc"></span>
     </button>
-    <button class="panel-btn panel-btn-finalizada" id="btnStatusFin" onclick="modStatus(selectedRequestId, 'FINALIZADA')" disabled>
+    <button class="panel-btn panel-btn-finalizada" id="btnStatusFin" onclick="handleFinalizarClick()" disabled>
     ✅ Finalizada
     <span class="btn-status-indicator" id="indFin"></span>
     </button>
@@ -4942,11 +4942,6 @@
         border: 2px solid var(--gris);
         font-size: 1rem;
         font-family: 'Georama', sans-serif;
-        background: #fdfdfd;
-        color: var(--azul-deep);
-        outline: none;
-        transition: all 0.3s;
-        margin-bottom: 10px;
     }
     .banner-date-input:focus {
         border-color: var(--turquesa);
@@ -14320,14 +14315,15 @@
     // Actualizar estado del botón para deshabilitarlo
     updateReportButtonStatus();
     } else {
-    throw new Error(data.error || "Error al generar el reporte");
+    openModal("❌ Error", data.message || "No se pudo generar el reporte mensual.", "📊");
     }
     })
-    .catch(err => {
-    console.error("Error en reporte mensual:", err);
-    openModal(" Error", "No se pudo generar el reporte mensual: " + err.message, "");
-    })
+    .catch(error => {
+    console.error("Error generando reporte mensual:", error);
+    openModal("❌ Error de Conexión", "No se pudo conectar con el servidor para generar el reporte.", "📊");
+    });
     }
+
     // FUNCIÓN PARA ACTUALIZAR EL ESTADO DEL BOTÓN DE REPORTE (PANEL)
     function updateReportButtonStatus() {
         const today = new Date();
@@ -25099,6 +25095,302 @@
             document.getElementById('btn-guardar-banner').disabled = true;
         }
 
+        // Funciones para modal de COPY RRSS usando SweetAlert2
+        function handleFinalizarClick() {
+            if (!selectedRequestId || !selectedRequestData) {
+                showToast('⚠️ No hay solicitud seleccionada', 'error', 3000);
+                return;
+            }
+            
+            // Verificar si es COPY RRSS
+            const solicitudLimpia = (selectedRequestData.Solicitud || "").toLowerCase();
+            const esCopyRRSS = solicitudLimpia.includes("copy rrss");
+            
+            if (esCopyRRSS) {
+                // Mostrar modal SweetAlert2 con selección de redes
+                openModalFinalizarCopyRRSS(selectedRequestId);
+            } else {
+                // Proceder con finalización normal
+                modStatus(selectedRequestId, 'FINALIZADA');
+            }
+        }
+
+        async function openModalFinalizarCopyRRSS(reqId) {
+            const { value: selectedNetworks } = await Swal.fire({
+                title: '<i class="fas fa-share-alt" style="color: var(--turquesa);"></i> Finalizar COPY RRSS',
+                html: `
+                    <div style="text-align: left; margin-bottom: 15px;">
+                        <p style="color: #666; font-size: 0.9rem; margin-bottom: 15px;">
+                            Para finalizar el <strong>${reqId}</strong> debe marcar las siguientes opciones (mínimo una):
+                        </p>
+                        <div id="copy-rrss-options" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;">
+                            <label class="copy-rrss-option-swal">
+                                <input type="checkbox" value="HS" class="copy-rrss-checkbox-swal">
+                                <span class="copy-rrss-option-content-swal">
+                                    <i class="fab fa-instagram" style="color: #E1306C;"></i> HS
+                                </span>
+                            </label>
+                            <label class="copy-rrss-option-swal">
+                                <input type="checkbox" value="Instagram" class="copy-rrss-checkbox-swal">
+                                <span class="copy-rrss-option-content-swal">
+                                    <i class="fab fa-instagram" style="color: #E1306C;"></i> Instagram
+                                </span>
+                            </label>
+                            <label class="copy-rrss-option-swal">
+                                <input type="checkbox" value="Facebook" class="copy-rrss-checkbox-swal">
+                                <span class="copy-rrss-option-content-swal">
+                                    <i class="fab fa-facebook" style="color: #1877F2;"></i> Facebook
+                                </span>
+                            </label>
+                            <label class="copy-rrss-option-swal">
+                                <input type="checkbox" value="Threads" class="copy-rrss-checkbox-swal">
+                                <span class="copy-rrss-option-content-swal">
+                                    <i class="fab fa-threads" style="color: #000000;"></i> Threads
+                                </span>
+                            </label>
+                            <label class="copy-rrss-option-swal">
+                                <input type="checkbox" value="X" class="copy-rrss-checkbox-swal">
+                                <span class="copy-rrss-option-content-swal">
+                                    <i class="fab fa-x-twitter" style="color: #000000;"></i> X
+                                </span>
+                            </label>
+                            <label class="copy-rrss-option-swal">
+                                <input type="checkbox" value="Telegram" class="copy-rrss-checkbox-swal">
+                                <span class="copy-rrss-option-content-swal">
+                                    <i class="fab fa-telegram" style="color: #0088cc;"></i> Telegram
+                                </span>
+                            </label>
+                            <label class="copy-rrss-option-swal">
+                                <input type="checkbox" value="Tiktok" class="copy-rrss-checkbox-swal">
+                                <span class="copy-rrss-option-content-swal">
+                                    <i class="fab fa-tiktok" style="color: #000000;"></i> Tiktok
+                                </span>
+                            </label>
+                            <label class="copy-rrss-option-swal">
+                                <input type="checkbox" value="Youtube" class="copy-rrss-checkbox-swal">
+                                <span class="copy-rrss-option-content-swal">
+                                    <i class="fab fa-youtube" style="color: #FF0000;"></i> Youtube
+                                </span>
+                            </label>
+                        </div>
+                    </div>
+                `,
+                confirmButtonText: '<i class="fas fa-check"></i> FINALIZAR',
+                confirmButtonColor: '#0799b6',
+                cancelButtonText: 'CANCELAR',
+                cancelButtonColor: '#6c757d',
+                showCancelButton: true,
+                focusConfirm: false,
+                preConfirm: () => {
+                    const checkboxes = document.querySelectorAll('.copy-rrss-checkbox-swal:checked');
+                    if (checkboxes.length === 0) {
+                        Swal.showValidationMessage('Debe seleccionar al menos una opción');
+                        return false;
+                    }
+                    return Array.from(checkboxes).map(cb => cb.value);
+                },
+                didOpen: () => {
+                    // Agregar estilos CSS para las opciones dentro del modal SweetAlert2
+                    const style = document.createElement('style');
+                    style.textContent = `
+                        .copy-rrss-option-swal {
+                            display: flex;
+                            align-items: center;
+                            padding: 12px 15px;
+                            background: #f8f9fa;
+                            border: 2px solid #dee2e6;
+                            border-radius: 10px;
+                            cursor: pointer;
+                            transition: all 0.2s;
+                            user-select: none;
+                        }
+                        .copy-rrss-option-swal:hover {
+                            border-color: #0799b6;
+                            background: rgba(7,153,182,0.05);
+                            transform: translateY(-2px);
+                        }
+                        .copy-rrss-option-swal input[type="checkbox"] {
+                            display: none;
+                        }
+                        .copy-rrss-option-content-swal {
+                            display: flex;
+                            align-items: center;
+                            gap: 10px;
+                            font-weight: 600;
+                            color: #212529;
+                            font-size: 0.95rem;
+                        }
+                        .copy-rrss-option-content-swal i {
+                            font-size: 1.3rem;
+                        }
+                        .copy-rrss-option-swal:has(input[type="checkbox"]:checked) {
+                            border-color: #0799b6;
+                            background: rgba(7,153,182,0.1);
+                            box-shadow: 0 0 0 3px rgba(7,153,182,0.2);
+                        }
+                        .copy-rrss-option-swal:has(input[type="checkbox"]:checked) .copy-rrss-option-content-swal {
+                            color: #0799b6;
+                        }
+                    `;
+                    document.head.appendChild(style);
+                }
+            });
+
+            if (selectedNetworks && selectedNetworks.length > 0) {
+                console.log('Finalizando COPY RRSS:', reqId, 'Redes:', selectedNetworks);
+                
+                // Mostrar modal de carga bloqueante
+                Swal.fire({
+                    title: 'Finalizando solicitud...',
+                    html: `
+                        <div style="text-align: center; padding: 20px;">
+                            <div style="margin-bottom: 20px;">
+                                <i class="fas fa-spinner fa-spin" style="font-size: 3rem; color: var(--turquesa);"></i>
+                            </div>
+                            <div style="background: #f0f0f0; border-radius: 10px; overflow: hidden; height: 8px; margin: 20px 0;">
+                                <div id="loading-bar" style="background: linear-gradient(90deg, var(--turquesa), #00b4d8); height: 100%; width: 0%; transition: width 0.3s ease;"></div>
+                            </div>
+                            <p style="color: #666; font-size: 0.9rem; margin: 0;">Guardando en hoja Copy RRSS...</p>
+                        </div>
+                    `,
+                    allowOutsideClick: false,
+                    allowEscapeKey: false,
+                    showConfirmButton: false,
+                    didOpen: () => {
+                        // Animación de la barra de carga
+                        const loadingBar = document.getElementById('loading-bar');
+                        let progress = 0;
+                        const interval = setInterval(() => {
+                            progress += Math.random() * 15;
+                            if (progress > 90) progress = 90;
+                            loadingBar.style.width = progress + '%';
+                        }, 200);
+                        
+                        // Guardar el intervalo para limpiarlo después
+                        Swal.loadingIntervalHandle = interval;
+                    }
+                });
+                
+                // Proceder con la finalización normal enviando las redes seleccionadas
+                await modStatusWithNetworks(reqId, 'FINALIZADA', selectedNetworks);
+                
+                // Limpiar intervalo de animación
+                if (Swal.loadingIntervalHandle) {
+                    clearInterval(Swal.loadingIntervalHandle);
+                }
+                
+                // Completar la barra de carga
+                const loadingBar = document.getElementById('loading-bar');
+                if (loadingBar) {
+                    loadingBar.style.width = '100%';
+                }
+                
+                // Cerrar modal de carga después de un breve delay
+                setTimeout(() => {
+                    Swal.close();
+                }, 500);
+            }
+        }
+
+        async function modStatusWithNetworks(id, status, networks) {
+            if (!id || !status) return;
+            
+            const estatusGuardar = status.toUpperCase().trim();
+            const esFinalizacion = estatusGuardar === "FINALIZADA" || estatusGuardar === "RECHAZADA";
+            
+            // 1. ACTUALIZACIÓN VISUAL INMEDIATA
+            const pill = document.getElementById('pill-' + id);
+            const oldClass = pill ? pill.className : "";
+            const oldText = pill ? pill.innerText : "";
+            
+            if (pill) {
+                const newStatusClass = estatusGuardar.toLowerCase().replace(/\s+/g, '');
+                pill.className = `status-circle status-${newStatusClass}`;
+                pill.innerText = getShortStatus(estatusGuardar);
+            }
+            
+            // 2. ACTUALIZAR RTDB (Solo si no es finalización)
+            if (!esFinalizacion) {
+                cambiarEstadoRTDB(id, estatusGuardar, null);
+            }
+
+            try {
+                // 3. ENVIAR A GAS (Fuente de verdad)
+                const params = new URLSearchParams();
+                params.append("action", "updateStatus");
+                params.append("id", id);
+                params.append("status", estatusGuardar);
+                params.append("username", userCredentials.username);
+                params.append("password", userCredentials.password);
+
+                if (esFinalizacion) {
+                    const ahora = new Date();
+                    params.append("fechaFinalizacion", ahora.toLocaleString('es-VE', {
+                        day: '2-digit', month: '2-digit', year: 'numeric',
+                        hour: '2-digit', minute: '2-digit'
+                    }));
+                    
+                    // Enviar redes seleccionadas para COPY RRSS
+                    if (networks && networks.length > 0) {
+                        params.append("redesSeleccionadas", JSON.stringify(networks));
+                    }
+                }
+
+                const response = await fetch(SCRIPT_URL, { method: 'POST', body: params });
+                const data = await response.json();
+
+                if (data.success) {
+                    // 4. SI GAS CONFIRMA Y ES FINALIZACIÓN, ELIMINAR DE RTDB
+                    if (esFinalizacion) {
+                        // Obtenemos la solicitud ANTES de que los listeners la borren
+                        const solicitudOriginal = localData.find(x => x.id == id);
+                        const numeroRequerimiento = id;
+                        
+                        // ✅ MARCAR COMO FINALIZADA 
+                        const nombreAdmin = userCredentials.displayName || userCredentials.username;
+                        recentlyFinalizedRequests.set(id, {
+                            finalizadoPor: nombreAdmin,
+                            timestamp: Date.now()
+                        });
+
+                        // ✅ PASO CRÍTICO: 1. PREPARAMOS EL HISTORIAL PRIMERO
+                        if (solicitudOriginal) {
+                            // Clonamos el objeto para evitar problemas de referencias cruzadas
+                            const solicitudClonada = JSON.parse(JSON.stringify(solicitudOriginal));
+                            solicitudClonada.Estatus = estatusGuardar;
+                            solicitudClonada.isPlaceholder = true;
+                            solicitudClonada.source = "gas";
+
+                            // La agregamos al historial local para que el Caza-fantasmas sepa que es legítima
+                            listaHistoricaGAS.push(solicitudClonada);
+                        }
+
+                        // ✅ PASO CRÍTICO: 2. AHORA SÍ DISPARAMOS EL BORRADO EN RTDB
+                        // Al hacer esto después, los listeners se activarán y reconstruirán localData correctamente
+                        // sin que nosotros hagamos `splice` manualmente.
+                        await limpiarSolicitudDeRTDB(numeroRequerimiento);
+                    }
+
+                    showToast(`✅ Estado actualizado a ${estatusGuardar}`, "success", 3000);
+                } else {
+                    // REVERTIR CAMBIO VISUAL SI FALLA
+                    if (pill) {
+                        pill.className = oldClass;
+                        pill.innerText = oldText;
+                    }
+                    showToast(`⚠️ Error: ${data.message || "No se pudo actualizar el estado"}`, "error", 4000);
+                }
+            } catch (error) {
+                console.error("Error en modStatusWithNetworks:", error);
+                // REVERTIR CAMBIO VISUAL SI FALLA
+                if (pill) {
+                    pill.className = oldClass;
+                    pill.innerText = oldText;
+                }
+                showToast(`❌ Error de conexión: ${error.message}`, "error", 4000);
+            }
+        }
+
         function onBannerFileSelected(input) {
             const file = input.files[0];
             if (!file) return;
@@ -25557,6 +25849,7 @@
             </div>
         </div>
     </div>
+
 
     </body>
     </html>
