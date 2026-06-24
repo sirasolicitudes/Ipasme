@@ -20558,12 +20558,11 @@
     async function uploadBinaryChunk(uploadUrl, chunk, start, totalSize) {
         const end = start + chunk.size;
         
-        // ✅ DETERMINAR NÚMERO MÁXIMO DE REINTENTOS SEGÚN VELOCIDAD DE CONEXIÓN
+        // ✅ REINTENTOS AGRESIVOS con límite máximo de espera
+        // Conexiones lentas: 8 reintentos, Conexiones rápidas: 3 reintentos
         const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
         const downlink = connection?.downlink || 10;
-        
-        // Conexiones lentas: más reintentos (15), Conexiones rápidas: menos reintentos (5)
-        const maxIntentos = downlink < 5 ? 15 : 5;
+        const maxIntentos = downlink < 5 ? 8 : 3;
         
         let intentos = 0;
         
@@ -20595,8 +20594,8 @@
                     throw new Error(`Conexión perdida tras ${maxIntentos} intentos. Último error: ${err.message}`);
                 }
                 
-                // ✅ EXPONENTIAL BACKOFF: 2^intentos segundos (2s, 4s, 8s, 16s, 32s, 64s...)
-                const waitTime = Math.pow(2, intentos) * 1000;
+                // ✅ BACKOFF LINEAL CON LÍMITE MÁXIMO: 2s, 4s, 6s, 8s, 10s (máximo)
+                const waitTime = Math.min(intentos * 2000, 10000);
                 console.log(`⏳ Esperando ${waitTime/1000}s antes de reintentar...`);
                 await new Promise(r => setTimeout(r, waitTime));
             }
