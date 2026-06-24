@@ -19688,13 +19688,22 @@
 
             if (fotosUrls.length > 0) {
                 const loadMainTxt = document.getElementById('loadMainTxt');
+                const loadSubTxt = document.getElementById('loadSubTxt');
                 const loadConnectionTxt = document.getElementById('loadConnectionTxt');
                 const totalSizeMB = fotosUrls.reduce((sum, f) => sum + f.blob.size, 0) / (1024 * 1024);
                 const connectionType = getConnectionType();
+                const isMobile = isMobileDevice();
                 
                 if (loadMainTxt) {
                     loadMainTxt.innerHTML = `<span style="font-size: 1.4rem; font-weight: 700; text-shadow: 0 2px 10px rgba(0,0,0,0.3);">Subiendo adjuntos multimedia (${totalSizeMB.toFixed(1)}MB)...</span>`;
                 }
+                
+                // ✅ MENSAJE ESPECÍFICO PARA MÓVILES
+                if (loadSubTxt && isMobile) {
+                    loadSubTxt.style.display = 'block';
+                    loadSubTxt.innerHTML = `<span style="font-size: 1rem; color: #ff6b6b; font-weight: 600;">⚠️ SUBIENDO FOTOS DE ALTA CALIDAD. Por favor, NO apagues la pantalla ni cambies de aplicación hasta que termine.</span>`;
+                }
+                
                 if (loadConnectionTxt) {
                     loadConnectionTxt.style.display = 'block';
                     loadConnectionTxt.textContent = `📡 ${connectionType} | 📦 ${totalSizeMB.toFixed(2)}MB`;
@@ -19727,13 +19736,22 @@
         if (fotosUrls.length > 0) {
             // ✅ Actualizar estado inicial del loadingOverlay
             const loadMainTxt = document.getElementById('loadMainTxt');
+            const loadSubTxt = document.getElementById('loadSubTxt');
             const loadConnectionTxt = document.getElementById('loadConnectionTxt');
             const totalSizeMB = fotosUrls.reduce((sum, f) => sum + f.blob.size, 0) / (1024 * 1024);
             const connectionType = getConnectionType();
+            const isMobile = isMobileDevice();
             
             if (loadMainTxt) {
                 loadMainTxt.innerHTML = `<span style="font-size: 1.4rem; font-weight: 700; text-shadow: 0 2px 10px rgba(0,0,0,0.3);">Subiendo ${fotosUrls.length} fotos...</span>`;
             }
+            
+            // ✅ MENSAJE ESPECÍFICO PARA MÓVILES
+            if (loadSubTxt && isMobile) {
+                loadSubTxt.style.display = 'block';
+                loadSubTxt.innerHTML = `<span style="font-size: 1rem; color: #ff6b6b; font-weight: 600;">⚠️ SUBIENDO FOTOS DE ALTA CALIDAD. Por favor, NO apagues la pantalla ni cambies de aplicación hasta que termine.</span>`;
+            }
+            
             if (loadConnectionTxt) {
                 loadConnectionTxt.style.display = 'block';
                 loadConnectionTxt.textContent = `📡 ${connectionType} | 📦 ${totalSizeMB.toFixed(2)}MB`;
@@ -20439,9 +20457,14 @@
     async function uploadBinaryChunk(uploadUrl, chunk, start, totalSize) {
         const end = start + chunk.size;
         
-        // Intentar la subida con reintentos automáticos para conexiones inestables
+        // ✅ DETERMINAR NÚMERO MÁXIMO DE REINTENTOS SEGÚN VELOCIDAD DE CONEXIÓN
+        const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+        const downlink = connection?.downlink || 10;
+        
+        // Conexiones lentas: más reintentos (15), Conexiones rápidas: menos reintentos (5)
+        const maxIntentos = downlink < 5 ? 15 : 5;
+        
         let intentos = 0;
-        const maxIntentos = 5;
         
         while (intentos < maxIntentos) {
             try {
@@ -20471,8 +20494,9 @@
                     throw new Error(`Conexión perdida tras ${maxIntentos} intentos. Último error: ${err.message}`);
                 }
                 
-                // Espera progresiva entre reintentos (3s, 6s, 9s, 12s)
-                const waitTime = 3000 * intentos;
+                // ✅ EXPONENTIAL BACKOFF: 2^intentos segundos (2s, 4s, 8s, 16s, 32s, 64s...)
+                const waitTime = Math.pow(2, intentos) * 1000;
+                console.log(`⏳ Esperando ${waitTime/1000}s antes de reintentar...`);
                 await new Promise(r => setTimeout(r, waitTime));
             }
         }
@@ -20556,79 +20580,163 @@
     }
 
     /**
+     * Calcula CHUNK_SIZE dinámico según velocidad de conexión
+     * Conexiones lentas: chunks más pequeños para mayor tolerancia a fallos
+     * Conexiones rápidas: chunks más grandes para mayor eficiencia
+     */
+    function getDynamicChunkSize() {
+        const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+        if (!connection) return 256 * 1024; // Default: 256KB
+        
+        const downlink = connection.downlink || 10; // Mbps, default 10 si no disponible
+        const effectiveType = connection.effectiveType || '4g';
+        
+        // Estrategia de tamaño de chunk según velocidad
+        if (downlink < 2) {
+            // Conexión muy lenta (< 2 Mbps): 64KB
+            console.log(`📡 Conexión muy lenta (${downlink} Mbps). Usando chunks de 64KB`);
+            return 64 * 1024;
+        } else if (downlink < 5) {
+            // Conexión lenta (2-5 Mbps): 128KB
+            console.log(`📡 Conexión lenta (${downlink} Mbps). Usando chunks de 128KB`);
+            return 128 * 1024;
+        } else if (downlink < 10) {
+            // Conexión media (5-10 Mbps): 192KB
+            console.log(`📡 Conexión media (${downlink} Mbps). Usando chunks de 192KB`);
+            return 192 * 1024;
+        } else {
+            // Conexión rápida (> 10 Mbps): 256KB (original)
+            console.log(`📡 Conexión rápida (${downlink} Mbps). Usando chunks de 256KB`);
+            return 256 * 1024;
+        }
+    }
+
+    /**
+     * Detecta si el usuario está en un dispositivo móvil
+     */
+    function isMobileDevice() {
+        return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    }
+
+    /**
+     * Solicita Wake Lock para mantener la pantalla encendida (solo móviles)
+     */
+    let wakeLock = null;
+    async function requestWakeLock() {
+        if (!isMobileDevice()) {
+            console.log("💻 No es móvil, no se necesita Wake Lock");
+            return;
+        }
+        
+        if ('wakeLock' in navigator) {
+            try {
+                wakeLock = await navigator.wakeLock.request('screen');
+                console.log("✅ Wake Lock activado - pantalla permanecerá encendida");
+                
+                // Escuchar cuando el sistema libera el lock
+                wakeLock.addEventListener('release', () => {
+                    console.log("⚠️ Wake Lock liberado por el sistema");
+                    wakeLock = null;
+                });
+            } catch (err) {
+                console.error("❌ Error activando Wake Lock:", err);
+            }
+        } else {
+            console.warn("⚠️ Wake Lock API no soportado en este navegador");
+        }
+    }
+
+    /**
+     * Libera Wake Lock cuando termina la subida
+     */
+    function releaseWakeLock() {
+        if (wakeLock !== null) {
+            wakeLock.release();
+            wakeLock = null;
+            console.log("🔓 Wake Lock liberado manualmente");
+        }
+    }
+
+    /**
      * Sube fotos optimizadas a Google Drive usando Resumable Upload
      * Usa WELCOME_IMAGES_FOLDER_URL para almacenar fotos de usuarios
      * @param {string} idSolicitud - ID de la solicitud
      * @param {Array} fotosBlobs - Array de objetos {nombre, blob} con las fotos a subir
      */
     async function uploadFotosOptimizadas(idSolicitud, fotosBlobs = null) {
-        // Si no se pasan blobs, intentar leer del input (compatibilidad)
-        if (!fotosBlobs) {
-            const fotoInput = document.getElementById('input-fotos');
-            if (!fotoInput || fotoInput.files.length === 0) return [];
-            
-            fotosBlobs = [];
-            for (let i = 0; i < Math.min(fotoInput.files.length, 5); i++) {
-                fotosBlobs.push({
-                    nombre: fotoInput.files[i].name,
-                    blob: fotoInput.files[i]
-                });
-            }
-        }
+        // ✅ ACTIVAR WAKE LOCK PARA MANTENER PANTALLA ENCENDIDA (solo móviles)
+        await requestWakeLock();
         
-        if (!fotosBlobs || fotosBlobs.length === 0) return [];
-        
-        const CHUNK_SIZE = 256 * 1024; // 256KB (Máxima estabilidad para conexiones móviles)
-        
-        // Obtener autorización para carpeta de fotos (una sola vez para todas las fotos)
-        const authParams = new URLSearchParams();
-        authParams.append("action", "getUploadAuth");
-        authParams.append("folderType", "fotos"); // ✅ Usar WELCOME_IMAGES_FOLDER_URL
-        authParams.append("username", userCredentials.username);
-        authParams.append("password", userCredentials.password);
-        
-        // ✅ TIMEOUT para móviles: 30 segundos para obtener autorización
-        const authController = new AbortController();
-        const authTimeout = setTimeout(() => authController.abort(), 30000);
-        
-        let authRes;
         try {
-            authRes = await fetch(SCRIPT_URL, { 
-                method: 'POST', 
-                body: authParams,
-                signal: authController.signal
-            });
-            clearTimeout(authTimeout);
-        } catch (fetchError) {
-            if (fetchError.name === 'AbortError') {
-                throw new Error("Timeout obteniendo autorización. Tu conexión es muy lenta. Intenta con WiFi o mejor señal.");
+            // Si no se pasan blobs, intentar leer del input (compatibilidad)
+            if (!fotosBlobs) {
+                const fotoInput = document.getElementById('input-fotos');
+                if (!fotoInput || fotoInput.files.length === 0) return [];
+                
+                fotosBlobs = [];
+                for (let i = 0; i < Math.min(fotoInput.files.length, 5); i++) {
+                    fotosBlobs.push({
+                        nombre: fotoInput.files[i].name,
+                        blob: fotoInput.files[i]
+                    });
+                }
             }
-            throw new Error("Error de conexión al obtener autorización: " + fetchError.message);
-        }
-        
-        if (!authRes.ok) {
-            throw new Error(`Error del servidor (${authRes.status}): ${authRes.statusText}`);
-        }
-        
-        const auth = await authRes.json();
-        
-        // ✅ VALIDACIÓN: Verificar que la respuesta sea exitosa
-        if (!auth.success) {
-            console.error("❌ Error obteniendo autorización de Drive:", auth.error);
-            throw new Error(auth.error || "Error obteniendo autorización de Drive");
-        }
-        
-        const authData = auth.data || auth;
-        const resultados = [];
-        
-        // ✅ FIX: Subida secuencial usando for...of en lugar de Promise.all
-        // Esto evita saturación de red y rate limiting de Google Drive
-        for (let index = 0; index < fotosBlobs.length; index++) {
-            const { nombre, blob } = fotosBlobs[index];
-            const ext = nombre.split('.').pop().toLowerCase();
-            const fileName = nombre || `FOTO_${idSolicitud}_${index + 1}.${ext}`;
             
-            console.log(`📸 Subiendo foto ${index + 1}/${fotosBlobs.length}: ${fileName}`);
+            if (!fotosBlobs || fotosBlobs.length === 0) return [];
+            
+            // ✅ CHUNK_SIZE DINÁMICO SEGÚN VELOCIDAD DE CONEXIÓN
+            const CHUNK_SIZE = getDynamicChunkSize();
+            console.log(`📦 CHUNK_SIZE configurado: ${(CHUNK_SIZE / 1024).toFixed(0)}KB`);
+            
+            // Obtener autorización para carpeta de fotos (una sola vez para todas las fotos)
+            const authParams = new URLSearchParams();
+            authParams.append("action", "getUploadAuth");
+            authParams.append("folderType", "fotos"); // ✅ Usar WELCOME_IMAGES_FOLDER_URL
+            authParams.append("username", userCredentials.username);
+            authParams.append("password", userCredentials.password);
+            
+            // ✅ TIMEOUT para móviles: 30 segundos para obtener autorización
+            const authController = new AbortController();
+            const authTimeout = setTimeout(() => authController.abort(), 30000);
+            
+            let authRes;
+            try {
+                authRes = await fetch(SCRIPT_URL, { 
+                    method: 'POST', 
+                    body: authParams,
+                    signal: authController.signal
+                });
+                clearTimeout(authTimeout);
+            } catch (fetchError) {
+                if (fetchError.name === 'AbortError') {
+                    throw new Error("Timeout obteniendo autorización. Tu conexión es muy lenta. Intenta con WiFi o mejor señal.");
+                }
+                throw new Error("Error de conexión al obtener autorización: " + fetchError.message);
+            }
+            
+            if (!authRes.ok) {
+                throw new Error(`Error del servidor (${authRes.status}): ${authRes.statusText}`);
+            }
+            
+            const auth = await authRes.json();
+            
+            // ✅ VALIDACIÓN: Verificar que la respuesta sea exitosa
+            if (!auth.success) {
+                console.error("❌ Error obteniendo autorización de Drive:", auth.error);
+                throw new Error(auth.error || "Error obteniendo autorización de Drive");
+            }
+            
+            const authData = auth.data || auth;
+            const resultados = [];
+            
+            // ✅ FIX: Subida secuencial usando for...of en lugar de Promise.all
+            // Esto evita saturación de red y rate limiting de Google Drive
+            for (let index = 0; index < fotosBlobs.length; index++) {
+                const { nombre, blob } = fotosBlobs[index];
+                const ext = nombre.split('.').pop().toLowerCase();
+                const fileName = nombre || `FOTO_${idSolicitud}_${index + 1}.${ext}`;
+                
+                console.log(`📸 Subiendo foto ${index + 1}/${fotosBlobs.length}: ${fileName}`);
             showToast(`📸 Subiendo foto ${index + 1} de ${fotosBlobs.length}...`, "info", 3000);
             
             // ✅ ACTUALIZAR BARRA DE PROGRESO DEL LOADING OVERLAY (modal que ve el usuario)
@@ -20721,6 +20829,10 @@
         }
         
         return fotosUrls;
+        } finally {
+            // ✅ LIBERAR WAKE LOCK SIEMPRE (éxito o error)
+            releaseWakeLock();
+        }
     }
 
     /**
