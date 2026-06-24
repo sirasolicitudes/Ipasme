@@ -20603,6 +20603,94 @@
     }
 
     /**
+     * Subida directa (multipart) para archivos pequeños (< 3MB)
+     * Más robusta que chunks para conexiones inestables con archivos pequeñas
+     */
+    async function uploadDirecto(file, auth, customFileName) {
+        const ext = file.name.split('.').pop().toLowerCase();
+        const fileName = customFileName || `FOTO_${Date.now()}.${ext}`;
+        
+        const metadata = {
+            name: fileName,
+            mimeType: file.type,
+            parents: [auth.folderId]
+        };
+
+        // ✅ TIMEOUT para móviles: 60 segundos para subida directa (más tiempo que chunks)
+        const driveController = new AbortController();
+        const driveTimeout = setTimeout(() => driveController.abort(), 60000);
+        
+        let response;
+        try {
+            // Crear multipart body manualmente según especificación de Google Drive API
+            const boundary = '-------314159265358979323846';
+            const metadataPart = '--' + boundary + '\r\n';
+            metadataPart += 'Content-Type: application/json; charset=UTF-8\r\n\r\n';
+            metadataPart += JSON.stringify(metadata) + '\r\n';
+            
+            const mediaPart = '--' + boundary + '\r\n';
+            mediaPart += `Content-Type: ${file.type}\r\n\r\n`;
+            
+            const footer = '\r\n--' + boundary + '--';
+            
+            // Leer archivo como ArrayBuffer
+            const fileBuffer = await file.arrayBuffer();
+            
+            // Combinar todas las partes
+            const multipartBody = new Uint8Array(
+                metadataPart.length + 
+                mediaPart.length + 
+                fileBuffer.byteLength + 
+                footer.length
+            );
+            
+            let offset = 0;
+            const encoder = new TextEncoder();
+            
+            // Escribir metadata
+            const metadataBytes = encoder.encode(metadataPart);
+            multipartBody.set(metadataBytes, offset);
+            offset += metadataBytes.length;
+            
+            // Escribir media header
+            const mediaBytes = encoder.encode(mediaPart);
+            multipartBody.set(mediaBytes, offset);
+            offset += mediaBytes.length;
+            
+            // Escribir archivo
+            multipartBody.set(new Uint8Array(fileBuffer), offset);
+            offset += fileBuffer.byteLength;
+            
+            // Escribir footer
+            const footerBytes = encoder.encode(footer);
+            multipartBody.set(footerBytes, offset);
+            
+            response = await fetch(`https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': 'Bearer ' + auth.token,
+                    'Content-Type': 'multipart/related; boundary=' + boundary
+                },
+                body: multipartBody
+            });
+            clearTimeout(driveTimeout);
+        } catch (fetchError) {
+            if (fetchError.name === 'AbortError') {
+                throw new Error("Timeout en subida directa. Tu conexión es muy lenta. Intenta con WiFi o mejor señal.");
+            }
+            throw new Error("Error de conexión a Google Drive: " + fetchError.message);
+        }
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error("No se pudo subir archivo directamente: " + errorText);
+        }
+        
+        const responseData = await response.json();
+        return responseData.id;
+    }
+
+    /**
      * Inicia sesión resumable con Google Drive API (versión genérica con nombre personalizado)
      */
     async function iniciarSesionResumableGeneric(file, auth, customFileName) {
@@ -20834,37 +20922,67 @@
             
             try {
                 const file = blob instanceof File ? blob : new File([blob], fileName, { type: blob.type || 'image/jpeg' });
-                const uploadUrl = await iniciarSesionResumableGeneric(file, authData, fileName);
+                const fileSizeMB = file.size / (1024 * 1024);
+                const isVideo = file.type.startsWith('video/') || nombre.toLowerCase().includes('video');
+                const isSmallFile = fileSizeMB < 3; // Archivos < 3MB
                 
-                let offset = 0;
+                // ✅ ESTRATEGIA DE SUBIDA:
+                // - Admin/Diseñadores: SIEMPRE chunks (sin cambios)
+                // - Videos: SIEMPRE chunks (archivos grandes)
+                // - Usuarios regulares con archivos < 3MB: Subida directa (más robusta para conexiones inestables)
+                // - Usuarios regulares con archivos >= 3MB: Chunks (resumable)
+                const usarSubidaDirecta = !isAdmin && !isDesigner && isSmallFile && !isVideo;
+                
                 let fileId = null;
                 
-                while (offset < file.size) {
-                    const chunk = file.slice(offset, Math.min(offset + CHUNK_SIZE, file.size));
-                    const response = await uploadBinaryChunk(uploadUrl, chunk, offset, file.size);
+                if (usarSubidaDirecta) {
+                    console.log(`🚀 Usando subida directa para archivo pequeño (${fileSizeMB.toFixed(2)}MB)`);
+                    // ✅ Subida directa (multipart) para archivos pequeños
+                    fileId = await uploadDirecto(file, authData, fileName);
                     
-                    // ✅ ACTUALIZAR offset DESPUÉS de subir el chunk
-                    offset += chunk.size;
-                    
-                    // ✅ ACTUALIZAR PROGRESO con el offset actualizado (progreso monotónico)
+                    // ✅ Actualizar progreso para subida directa (progreso por archivo, no por chunk)
                     if (progressFill) {
-                        const chunkProgress = (offset / file.size) * 100;
-                        const totalProgress = ((index + chunkProgress / 100) / fotosBlobs.length) * 100;
+                        const totalProgress = ((index + 1) / fotosBlobs.length) * 100;
                         progressFill.style.width = totalProgress + '%';
                     }
                     if (progressText) {
-                        const chunkProgress = (offset / file.size) * 100;
-                        const totalProgress = ((index + chunkProgress / 100) / fotosBlobs.length) * 100;
+                        const totalProgress = ((index + 1) / fotosBlobs.length) * 100;
                         progressText.textContent = Math.round(totalProgress) + '%';
                     }
+                } else {
+                    console.log(`📦 Usando subida por chunks (archivo: ${fileSizeMB.toFixed(2)}MB, video: ${isVideo}, admin: ${isAdmin})`);
+                    // ✅ Subida por chunks (resumable) para archivos grandes o admin/diseñadores
+                    const uploadUrl = await iniciarSesionResumableGeneric(file, authData, fileName);
                     
-                    if (offset >= file.size && response.ok) {
-                        const responseText = await response.text();
-                        try {
-                            const responseData = JSON.parse(responseText);
-                            fileId = responseData.id;
-                        } catch (e) {
-                            console.warn("⚠️ No se pudo extraer fileId de la respuesta");
+                    let offset = 0;
+                    
+                    while (offset < file.size) {
+                        const chunk = file.slice(offset, Math.min(offset + CHUNK_SIZE, file.size));
+                        const response = await uploadBinaryChunk(uploadUrl, chunk, offset, file.size);
+                        
+                        // ✅ ACTUALIZAR offset DESPUÉS de subir el chunk
+                        offset += chunk.size;
+                        
+                        // ✅ ACTUALIZAR PROGRESO con el offset actualizado (progreso monotónico)
+                        if (progressFill) {
+                            const chunkProgress = (offset / file.size) * 100;
+                            const totalProgress = ((index + chunkProgress / 100) / fotosBlobs.length) * 100;
+                            progressFill.style.width = totalProgress + '%';
+                        }
+                        if (progressText) {
+                            const chunkProgress = (offset / file.size) * 100;
+                            const totalProgress = ((index + chunkProgress / 100) / fotosBlobs.length) * 100;
+                            progressText.textContent = Math.round(totalProgress) + '%';
+                        }
+                        
+                        if (offset >= file.size && response.ok) {
+                            const responseText = await response.text();
+                            try {
+                                const responseData = JSON.parse(responseText);
+                                fileId = responseData.id;
+                            } catch (e) {
+                                console.warn("⚠️ No se pudo extraer fileId de la respuesta");
+                            }
                         }
                     }
                 }
@@ -20878,6 +20996,13 @@
                         downloadUrl: `https://drive.google.com/uc?export=download&id=${fileId}`,
                         thumbnailUrl: `https://drive.google.com/thumbnail?id=${fileId}&sz=w1000`
                     });
+                }
+                
+                // ✅ PAUSA DE 2 SEGUNDOS ENTRE CADA SUBIDA para evitar saturación de red
+                // Solo si hay más archivos por subir
+                if (index < fotosBlobs.length - 1) {
+                    console.log(`⏸️ Pausa de 2s antes de subir siguiente archivo...`);
+                    await new Promise(r => setTimeout(r, 2000));
                 }
             } catch (errorFile) {
                 console.error(`❌ Error subiendo la foto ${index + 1}:`, errorFile);
