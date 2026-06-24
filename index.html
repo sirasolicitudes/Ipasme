@@ -20581,34 +20581,14 @@
 
     /**
      * Calcula CHUNK_SIZE dinámico según velocidad de conexión
-     * Conexiones lentas: chunks más pequeños para mayor tolerancia a fallos
-     * Conexiones rápidas: chunks más grandes para mayor eficiencia
+     * NOTA: Google Drive API requiere mínimo 256KB para chunks en resumable uploads
+     * Conexiones lentas: usamos más reintentos y espera exponencial en lugar de chunks pequeños
      */
     function getDynamicChunkSize() {
-        const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
-        if (!connection) return 256 * 1024; // Default: 256KB
-        
-        const downlink = connection.downlink || 10; // Mbps, default 10 si no disponible
-        const effectiveType = connection.effectiveType || '4g';
-        
-        // Estrategia de tamaño de chunk según velocidad
-        if (downlink < 2) {
-            // Conexión muy lenta (< 2 Mbps): 64KB
-            console.log(`📡 Conexión muy lenta (${downlink} Mbps). Usando chunks de 64KB`);
-            return 64 * 1024;
-        } else if (downlink < 5) {
-            // Conexión lenta (2-5 Mbps): 128KB
-            console.log(`📡 Conexión lenta (${downlink} Mbps). Usando chunks de 128KB`);
-            return 128 * 1024;
-        } else if (downlink < 10) {
-            // Conexión media (5-10 Mbps): 192KB
-            console.log(`📡 Conexión media (${downlink} Mbps). Usando chunks de 192KB`);
-            return 192 * 1024;
-        } else {
-            // Conexión rápida (> 10 Mbps): 256KB (original)
-            console.log(`📡 Conexión rápida (${downlink} Mbps). Usando chunks de 256KB`);
-            return 256 * 1024;
-        }
+        // ✅ Google Drive requiere mínimo 256KB para resumable uploads
+        // No podemos usar chunks más pequeños, así que siempre usamos 256KB
+        // La tolerancia a fallos se maneja con más reintentos en uploadBinaryChunk
+        return 256 * 1024;
     }
 
     /**
@@ -20684,7 +20664,7 @@
             
             if (!fotosBlobs || fotosBlobs.length === 0) return [];
             
-            // ✅ CHUNK_SIZE DINÁMICO SEGÚN VELOCIDAD DE CONEXIÓN
+            // ✅ CHUNK_SIZE DINÁMICO (ajustado: Google Drive requiere mínimo 256KB)
             const CHUNK_SIZE = getDynamicChunkSize();
             console.log(`📦 CHUNK_SIZE configurado: ${(CHUNK_SIZE / 1024).toFixed(0)}KB`);
             
