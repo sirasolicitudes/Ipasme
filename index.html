@@ -20624,11 +20624,11 @@
         try {
             // Crear multipart body manualmente según especificación de Google Drive API
             const boundary = '-------314159265358979323846';
-            const metadataPart = '--' + boundary + '\r\n';
+            let metadataPart = '--' + boundary + '\r\n';
             metadataPart += 'Content-Type: application/json; charset=UTF-8\r\n\r\n';
             metadataPart += JSON.stringify(metadata) + '\r\n';
             
-            const mediaPart = '--' + boundary + '\r\n';
+            let mediaPart = '--' + boundary + '\r\n';
             mediaPart += `Content-Type: ${file.type}\r\n\r\n`;
             
             const footer = '\r\n--' + boundary + '--';
