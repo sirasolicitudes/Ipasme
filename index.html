@@ -21252,6 +21252,7 @@
 
     /**
      * Detecta el tipo de conexión de red (WiFi o móvil)
+     * NOTA: downlink mide descarga, no subida. Usamos RTT para latencia que afecta más la subida.
      */
     function getConnectionType() {
         const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
@@ -21259,23 +21260,37 @@
         
         const type = connection.type; // 'cellular', 'wifi', 'ethernet', etc.
         const effectiveType = connection.effectiveType; // 'slow-2g', '2g', '3g', '4g'
-        const downlink = connection.downlink; // Mbps
+        const rtt = connection.rtt; // Round-trip time en ms (latencia)
+        const saveData = connection.saveData; // Si modo ahorro de datos está activo
         
+        let info = '';
         if (type === 'cellular') {
-            return `Móvil (${effectiveType.toUpperCase()}, ${downlink} Mbps)`;
+            info = `Móvil (${effectiveType.toUpperCase()})`;
         } else if (type === 'wifi') {
-            return `WiFi (${downlink} Mbps)`;
+            info = 'WiFi';
         } else if (type === 'ethernet') {
-            return `Ethernet (${downlink} Mbps)`;
+            info = 'Ethernet';
         } else if (effectiveType) {
-            // Si type no está disponible, usar effectiveType como fallback
             if (effectiveType.includes('2g') || effectiveType.includes('3g') || effectiveType.includes('4g')) {
-                return `Móvil (${effectiveType.toUpperCase()}, ${downlink} Mbps)`;
+                info = `Móvil (${effectiveType.toUpperCase()})`;
+            } else {
+                info = effectiveType.toUpperCase();
             }
-            return effectiveType.toUpperCase();
+        } else {
+            info = 'Desconocido';
         }
         
-        return 'Desconocido';
+        // Agregar latencia (RTT) - más relevante para subida que downlink
+        if (rtt !== undefined) {
+            info += ` | RTT: ${rtt}ms`;
+        }
+        
+        // Agregar si modo ahorro de datos está activo (afecta subida)
+        if (saveData) {
+            info += ' | Ahorro de datos: ON';
+        }
+        
+        return info;
     }
 
     /**
