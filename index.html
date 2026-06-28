@@ -21291,6 +21291,27 @@
     }
 
     /**
+     * Decide el método de subida basado en la velocidad de conexión
+     * @returns {string} 'base64' para conexiones lentas (<3Mbps), 'drive' para conexiones buenas
+     */
+    function getUploadMethod() {
+        const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+        if (!connection) return 'drive'; // Fallback a Drive si no hay detección
+        
+        const downlink = connection.downlink || 10; // Mbps
+        const effectiveType = connection.effectiveType; // 'slow-2g', '2g', '3g', '4g'
+        
+        // Usar Base64 para conexiones muy lentas (<3Mbps) o tipos de red lentos
+        if (downlink < 3 || effectiveType === 'slow-2g' || effectiveType === '2g') {
+            console.log(`📊 Conexión lenta detectada (${downlink}Mbps, ${effectiveType}): Usando Base64`);
+            return 'base64';
+        }
+        
+        console.log(`📊 Conexión buena detectada (${downlink}Mbps, ${effectiveType}): Usando Drive directo`);
+        return 'drive';
+    }
+
+    /**
      * Detecta si el usuario está en un dispositivo móvil
      */
     function isMobileDevice() {
@@ -21302,27 +21323,97 @@
      */
     let wakeLock = null;
     async function requestWakeLock() {
-        if (!isMobileDevice()) {
-            console.log("💻 No es móvil, no se necesita Wake Lock");
-            return;
+        // ✅ ACTIVAR WAKE LOCK PARA MANTENER PANTALLA ENCENDIDA (solo móviles)
+        try {
+            if ('wakeLock' in navigator) {
+                wakeLock = await navigator.wakeLock.request('screen');
+                console.log('✅ Wake Lock activado');
+            }
+        } catch (err) {
+            console.log('⚠️ Wake Lock no disponible:', err);
+        }
+    }
+
+    /**
+     * Sube fotos usando Base64 para conexiones lentas
+     * @param {string} idSolicitud - ID de la solicitud
+     * @param {Array} fotosBlobs - Array de objetos {nombre, blob}
+     * @returns {Array} Array de objetos con URLs de Drive
+     */
+    async function uploadFotosBase64(idSolicitud, fotosBlobs) {
+        console.log(`📤 Usando subida por Base64 para ${fotosBlobs.length} fotos (conexión lenta)`);
+        
+        const resultados = [];
+        
+        for (let index = 0; index < fotosBlobs.length; index++) {
+            const { nombre, blob } = fotosBlobs[index];
+            const ext = nombre.split('.').pop().toLowerCase();
+            const fileName = nombre || `FOTO_${idSolicitud}_${index + 1}.${ext}`;
+            
+            console.log(`📸 Procesando foto ${index + 1}/${fotosBlobs.length}: ${fileName}`);
+            showToast(`📸 Procesando foto ${index + 1} de ${fotosBlobs.length}...`, "info", 3000);
+            
+            try {
+                // Convertir blob a Base64
+                const base64 = await convertFileToBase64(blob);
+                
+                // Enviar al backend
+                const params = new URLSearchParams();
+                params.append("action", "uploadPhotoBase64");
+                params.append("username", userCredentials.username);
+                params.append("password", userCredentials.password);
+                params.append("idSolicitud", idSolicitud);
+                params.append("fileName", fileName);
+                params.append("fileData", base64);
+                params.append("fileType", blob.type || 'image/jpeg');
+                
+                const response = await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    body: params
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`Error del servidor (${response.status}): ${response.statusText}`);
+                }
+                
+                const result = await response.json();
+                
+                if (!result.success) {
+                    throw new Error(result.error || "Error subiendo foto por Base64");
+                }
+                
+                console.log(`✅ Foto ${index + 1} subida por Base64: ${fileName}`);
+                resultados.push({
+                    nombre: fileName,
+                    url: result.url,
+                    fileId: result.fileId,
+                    downloadUrl: result.downloadUrl,
+                    thumbnailUrl: result.thumbnailUrl
+                });
+                
+                // Actualizar progreso
+                const progressFill = document.getElementById('loadingProgressFill');
+                const progressText = document.getElementById('loadingProgressText');
+                if (progressFill) {
+                    const totalProgress = ((index + 1) / fotosBlobs.length) * 100;
+                    progressFill.style.width = totalProgress + '%';
+                }
+                if (progressText) {
+                    const totalProgress = ((index + 1) / fotosBlobs.length) * 100;
+                    progressText.textContent = Math.round(totalProgress) + '%';
+                }
+                
+            } catch (error) {
+                console.error(`❌ Error subiendo foto ${index + 1} por Base64:`, error);
+                registrarFallaEnvioRTDB(error.message || error.toString(), {
+                    operacion: "uploadFotosBase64",
+                    detalles: `Fallo al subir foto ${index + 1} de ${fotosBlobs.length}. Archivo: ${fileName}`
+                });
+                throw new Error(`Fallo al subir la foto ${index + 1}. Verifica tu conexión e intenta de nuevo.`);
+            }
         }
         
-        if ('wakeLock' in navigator) {
-            try {
-                wakeLock = await navigator.wakeLock.request('screen');
-                console.log("✅ Wake Lock activado - pantalla permanecerá encendida");
-                
-                // Escuchar cuando el sistema libera el lock
-                wakeLock.addEventListener('release', () => {
-                    console.log("⚠️ Wake Lock liberado por el sistema");
-                    wakeLock = null;
-                });
-            } catch (err) {
-                console.error("❌ Error activando Wake Lock:", err);
-            }
-        } else {
-            console.warn("⚠️ Wake Lock API no soportado en este navegador");
-        }
+        return resultados;
     }
 
     /**
@@ -21362,6 +21453,17 @@
             }
             
             if (!fotosBlobs || fotosBlobs.length === 0) return [];
+            
+            // ✅ SISTEMA HÍBRIDO: Decidir método de subida según velocidad de conexión
+            const uploadMethod = getUploadMethod();
+            
+            if (uploadMethod === 'base64') {
+                console.log(`📤 Usando subida por Base64 (conexión lenta detectada)`);
+                return await uploadFotosBase64(idSolicitud, fotosBlobs);
+            }
+            
+            // ✅ SUBIDA DIRECTA A DRIVE (conexión buena)
+            console.log(`📤 Usando subida directa a Drive (conexión buena detectada)`);
             
             // ✅ CHUNK_SIZE DINÁMICO (ajustado: Google Drive requiere mínimo 256KB)
             const CHUNK_SIZE = getDynamicChunkSize();
