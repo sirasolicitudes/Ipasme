@@ -21365,6 +21365,10 @@
                     throw new Error(`Imagen demasiado grande para subida por Base64 (${(base64.length / 1024 / 1024).toFixed(2)}MB). Usa subida directa a Drive.`);
                 }
                 
+                // ✅ TIMEOUT MÁS LARGO PARA MÓVILES (120 segundos)
+                const controller = new AbortController();
+                const timeout = setTimeout(() => controller.abort(), 120000); // 2 minutos
+                
                 // Enviar al backend
                 const params = new URLSearchParams();
                 params.append("action", "uploadPhotoBase64");
@@ -21376,10 +21380,21 @@
                 params.append("fileType", blob.type || 'image/jpeg');
                 console.log(`📤 Enviando foto ${index + 1} al backend...`);
                 
-                const response = await fetch(SCRIPT_URL, {
-                    method: 'POST',
-                    body: params
-                });
+                let response;
+                try {
+                    response = await fetch(SCRIPT_URL, {
+                        method: 'POST',
+                        body: params,
+                        signal: controller.signal
+                    });
+                    clearTimeout(timeout);
+                } catch (fetchError) {
+                    clearTimeout(timeout);
+                    if (fetchError.name === 'AbortError') {
+                        throw new Error(`Timeout de conexión (120s). Tu conexión es muy lenta (${getConnectionType()}). Intenta con WiFi mejor o reduce el tamaño de las imágenes.`);
+                    }
+                    throw new Error(`Error de conexión: ${fetchError.message}. Verifica tu conexión a internet.`);
+                }
                 
                 if (!response.ok) {
                     throw new Error(`Error del servidor (${response.status}): ${response.statusText}`);
