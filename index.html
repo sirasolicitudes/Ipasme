@@ -21366,8 +21366,14 @@
                 }
                 
                 // ✅ TIMEOUT MÁS LARGO PARA MÓVILES (120 segundos)
-                const controller = new AbortController();
-                const timeout = setTimeout(() => controller.abort(), 120000); // 2 minutos
+                let controller;
+                let timeout;
+                const supportsAbortController = typeof AbortController !== 'undefined';
+                
+                if (supportsAbortController) {
+                    controller = new AbortController();
+                    timeout = setTimeout(() => controller.abort(), 120000); // 2 minutos
+                }
                 
                 // Enviar al backend
                 const params = new URLSearchParams();
@@ -21382,14 +21388,21 @@
                 
                 let response;
                 try {
-                    response = await fetch(SCRIPT_URL, {
+                    const fetchOptions = {
                         method: 'POST',
-                        body: params,
-                        signal: controller.signal
-                    });
-                    clearTimeout(timeout);
+                        body: params
+                    };
+                    if (supportsAbortController) {
+                        fetchOptions.signal = controller.signal;
+                    }
+                    response = await fetch(SCRIPT_URL, fetchOptions);
+                    if (supportsAbortController) {
+                        clearTimeout(timeout);
+                    }
                 } catch (fetchError) {
-                    clearTimeout(timeout);
+                    if (supportsAbortController) {
+                        clearTimeout(timeout);
+                    }
                     if (fetchError.name === 'AbortError') {
                         throw new Error(`Timeout de conexión (120s). Tu conexión es muy lenta (${getConnectionType()}). Intenta con WiFi mejor o reduce el tamaño de las imágenes.`);
                     }
@@ -21440,6 +21453,14 @@
                 let tipoError = "Desconocido";
                 let causaProbable = "Error general de conexión";
                 
+                // ✅ Capturar información completa del error para RTDB
+                const errorDiagnostico = {
+                    name: error.name,
+                    message: error.message,
+                    toString: error.toString(),
+                    stack: error.stack
+                };
+                
                 if (error.name === 'AbortError') {
                     tipoError = "Timeout";
                     causaProbable = "La conexión tardó más de 120 segundos. Posible saturación o microcortes.";
@@ -21452,18 +21473,38 @@
                 } else if (error.message && error.message.includes('NetworkError')) {
                     tipoError = "Error de red";
                     causaProbable = "Saturación de red o pérdida de paquetes.";
+                } else if (error.name === 'ProgressEvent') {
+                    tipoError = "Error de progreso";
+                    causaProbable = "Error en la transferencia de datos (posible interrupción de red).";
+                } else if (error.message && error.message.includes('progress')) {
+                    tipoError = "Error de progreso";
+                    causaProbable = "Error en la transferencia de datos.";
+                } else if (error.message && error.message.includes('timeout')) {
+                    tipoError = "Timeout";
+                    causaProbable = "La conexión excedió el tiempo límite.";
+                } else if (error.message && error.message.includes('ECONNRESET')) {
+                    tipoError = "Conexión reseteada";
+                    causaProbable = "La conexión fue cerrada abruptamente por el servidor.";
+                } else if (error.message && error.message.includes('ETIMEDOUT')) {
+                    tipoError = "Timeout de red";
+                    causaProbable = "El servidor no respondió en el tiempo esperado.";
+                } else {
+                    tipoError = error.name || "Desconocido";
+                    causaProbable = error.message || "Error sin descripción detallada";
                 }
                 
-                // ✅ Agregar detalles al log
+                // ✅ Agregar detalles al log (dentro de 'detalles' para que se guarde en detalles_adicionales)
+                const navegadorInfo = {
+                    userAgent: navigator.userAgent,
+                    platform: navigator.platform,
+                    language: navigator.language,
+                    supportsAbortController: typeof AbortController !== 'undefined',
+                    supportsFetch: typeof fetch !== 'undefined'
+                };
+                
                 const detallesError = {
                     operacion: "uploadFotosBase64",
-                    tipo_error: tipoError,
-                    causa_probable: causaProbable,
-                    conexion: getConnectionType(),
-                    archivo: fileName,
-                    foto_numero: index + 1,
-                    total_fotos: fotosBlobs.length,
-                    error_raw: error.message || error.toString()
+                    detalles: `Fallo al subir foto ${index + 1} de ${fotosBlobs.length}. Archivo: ${fileName}. Tipo error: ${tipoError}. Causa: ${causaProbable}. Conexión: ${getConnectionType()}. Error completo: ${JSON.stringify(errorDiagnostico)}. Navegador: ${JSON.stringify(navegadorInfo)}`
                 };
                 
                 registrarFallaEnvioRTDB(`${tipoError}: ${causaProbable}`, detallesError);
