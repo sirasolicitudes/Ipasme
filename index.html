@@ -21435,11 +21435,39 @@
                 
             } catch (error) {
                 console.error(`❌ Error subiendo foto ${index + 1} por Base64:`, error);
-                registrarFallaEnvioRTDB(error.message || error.toString(), {
+                
+                // ✅ Detectar tipo de error de red para mejor diagnóstico
+                let tipoError = "Desconocido";
+                let causaProbable = "Error general de conexión";
+                
+                if (error.name === 'AbortError') {
+                    tipoError = "Timeout";
+                    causaProbable = "La conexión tardó más de 120 segundos. Posible saturación o microcortes.";
+                } else if (error.name === 'TypeError' && error.message.includes('fetch')) {
+                    tipoError = "Error de red";
+                    causaProbable = "Microcorte de conexión o red inestable.";
+                } else if (error.message && error.message.includes('Failed to fetch')) {
+                    tipoError = "Fallo de red";
+                    causaProbable = "Conexión interrumpida o servidor no accesible.";
+                } else if (error.message && error.message.includes('NetworkError')) {
+                    tipoError = "Error de red";
+                    causaProbable = "Saturación de red o pérdida de paquetes.";
+                }
+                
+                // ✅ Agregar detalles al log
+                const detallesError = {
                     operacion: "uploadFotosBase64",
-                    detalles: `Fallo al subir foto ${index + 1} de ${fotosBlobs.length}. Archivo: ${fileName}`
-                });
-                throw new Error(`Fallo al subir la foto ${index + 1}. Verifica tu conexión e intenta de nuevo.`);
+                    tipo_error: tipoError,
+                    causa_probable: causaProbable,
+                    conexion: getConnectionType(),
+                    archivo: fileName,
+                    foto_numero: index + 1,
+                    total_fotos: fotosBlobs.length,
+                    error_raw: error.message || error.toString()
+                };
+                
+                registrarFallaEnvioRTDB(`${tipoError}: ${causaProbable}`, detallesError);
+                throw new Error(`Fallo al subir la foto ${index + 1}. ${causaProbable}`);
             }
         }
         
