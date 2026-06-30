@@ -4783,26 +4783,6 @@
 
     <div class="file-preview-info" id="filePreviewInfo"></div>
     </div>
-    <!-- Acciones de Estado -->
-    <div class="panel-actions" id="statusActions">
-    <div class="panel-section-title">🔄 Cambiar Estado</div>
-    <button class="panel-btn panel-btn-pendiente" id="btnStatusPend" onclick="modStatus(selectedRequestId, 'PENDIENTE')" disabled>
-    ⏳ Pendiente
-    <span class="btn-status-indicator" id="indPend"></span>
-    </button>
-    <button class="panel-btn panel-btn-procesando" id="btnStatusProc" onclick="modStatus(selectedRequestId, 'PROCESANDO')" disabled>
-    ⚙️ Procesando
-    <span class="btn-status-indicator" id="indProc"></span>
-    </button>
-    <button class="panel-btn panel-btn-finalizada" id="btnStatusFin" onclick="handleFinalizarClick()" disabled>
-    ✅ Finalizada
-    <span class="btn-status-indicator" id="indFin"></span>
-    </button>
-    <button class="panel-btn panel-btn-rechazada" id="btnStatusRec" onclick="modStatus(selectedRequestId, 'RECHAZADA')" disabled>
-    ❌ Rechazada
-    <span class="btn-status-indicator" id="indRec"></span>
-    </button>
-    </div>
     <!-- Asignación de Diseñador (Solo Admin) -->
     <div class="designer-assign-section hidden" id="designerAssignSection">
     <div class="panel-section-title">👨‍🎨 Asignar Diseñador</div>
@@ -4839,6 +4819,26 @@
             <span>📝</span> Post It
         </button>
     </div>
+    </div>
+    <!-- Acciones de Estado -->
+    <div class="panel-actions" id="statusActions">
+    <div class="panel-section-title">🔄 Cambiar Estado</div>
+    <button class="panel-btn panel-btn-pendiente" id="btnStatusPend" onclick="modStatus(selectedRequestId, 'PENDIENTE')" disabled>
+    ⏳ Pendiente
+    <span class="btn-status-indicator" id="indPend"></span>
+    </button>
+    <button class="panel-btn panel-btn-procesando" id="btnStatusProc" onclick="modStatus(selectedRequestId, 'PROCESANDO')" disabled>
+    ⚙️ Procesando
+    <span class="btn-status-indicator" id="indProc"></span>
+    </button>
+    <button class="panel-btn panel-btn-finalizada" id="btnStatusFin" onclick="handleFinalizarClick()" disabled>
+    ✅ Finalizada
+    <span class="btn-status-indicator" id="indFin"></span>
+    </button>
+    <button class="panel-btn panel-btn-rechazada" id="btnStatusRec" onclick="modStatus(selectedRequestId, 'RECHAZADA')" disabled>
+    ❌ Rechazada
+    <span class="btn-status-indicator" id="indRec"></span>
+    </button>
     </div>
     <!-- Acciones Especiales (Solo Admin) -->
     <div class="panel-actions hidden" id="adminActions">
@@ -10008,8 +10008,6 @@
     const container = document.getElementById('designerGrid');
     if (!container) return;
     container.innerHTML = '';
-    const grid = document.createElement('div');
-    grid.className = 'admin-grid-buttons';
     
     // ✅ SOLO LOS 4 DISEÑADORES PRINCIPALES - USAR FORMATO ESTÁNDAR (PRIMERA LETRA MAYÚSCULA)
     const designers = [
@@ -10026,10 +10024,8 @@
         btn.innerHTML = `<span>${designer.icon}</span> <span>${designer.name}</span>`;
         btn.onclick = () => assignDesigner(designer.name);
         btn.disabled = true; 
-        grid.appendChild(btn);
+        container.appendChild(btn);
     });
-    
-    container.appendChild(grid);
     }
     // NUEVA VARIABLE GLOBAL PARA ID DE SOLICITUD EN MODAL DE DISEÑADOR
     // VARIABLE ELIMINADA - Ya no se usa modal de diseñador, se usa el panel lateral
@@ -15182,28 +15178,29 @@
                 const isUnseen = log.timestamp > lastSeenLogTimestamp;
                 const bgColor = isUnseen ? '#fff3cd' : '#ffffff';
                 const borderColor = isUnseen ? '#ffc107' : '#dee2e6';
+                const textColor = isUnseen ? '#333333' : '#333333';
                 
                 return `
-                    <div style="background: ${bgColor}; border: 1px solid ${borderColor}; border-radius: 6px; padding: 12px; margin-bottom: 10px;">
+                    <div style="background: ${bgColor}; border: 1px solid ${borderColor}; border-radius: 6px; padding: 12px; margin-bottom: 10px; color: ${textColor};">
                         <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
                             <div>
                                 <strong style="color: #dc3545;">🔴 ID: ${log.id_falla}</strong>
-                                <span style="color: #666; font-size: 0.85rem; margin-left: 10px;">${log.fecha_hora}</span>
+                                <span style="color: #333; font-size: 0.85rem; margin-left: 10px;">${log.fecha_hora}</span>
                                 ${isUnseen ? '<span style="background: #ffc107; color: #000; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; margin-left: 10px; font-weight: bold;">NUEVO</span>' : ''}
                             </div>
                             <button onclick="deleteErrorLog('${log.id_falla}')" style="background: #dc3545; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 0.75rem;">🗑️ Eliminar</button>
                         </div>
-                        <div style="margin-bottom: 6px;">
+                        <div style="margin-bottom: 6px; color: #333;">
                             <strong>Unidad:</strong> ${log.unidad} | 
                             <strong>Usuario:</strong> ${log.usuario_email} |
                             <strong>Operación:</strong> ${log.operacion}
                         </div>
-                        <div style="margin-bottom: 6px;">
+                        <div style="margin-bottom: 6px; color: #333;">
                             <strong>Error:</strong> <span style="color: #dc3545;">${log.error_mensaje}</span>
                         </div>
-                        ${log.tipo_solicitud ? `<div style="margin-bottom: 6px;"><strong>Tipo Solicitud:</strong> ${log.tipo_solicitud}</div>` : ''}
-                        ${log.conexion_detectada ? `<div style="margin-bottom: 6px;"><strong>Conexión:</strong> ${log.conexion_detectada}</div>` : ''}
-                        ${log.detalles_adicionales ? `<div style="margin-bottom: 6px;"><strong>Detalles:</strong> <pre style="background: #f5f5f5; padding: 6px; border-radius: 4px; font-size: 0.8rem; overflow-x: auto;">${JSON.stringify(log.detalles_adicionales, null, 2)}</pre></div>` : ''}
+                        ${log.tipo_solicitud ? `<div style="margin-bottom: 6px; color: #333;"><strong>Tipo Solicitud:</strong> ${log.tipo_solicitud}</div>` : ''}
+                        ${log.conexion_detectada ? `<div style="margin-bottom: 6px; color: #333;"><strong>Conexión:</strong> ${log.conexion_detectada}</div>` : ''}
+                        ${log.detalles_adicionales ? `<div style="margin-bottom: 6px; color: #333;"><strong>Detalles:</strong> <pre style="background: #f5f5f5; color: #333; padding: 6px; border-radius: 4px; font-size: 0.8rem; overflow-x: auto;">${JSON.stringify(log.detalles_adicionales, null, 2)}</pre></div>` : ''}
                     </div>
                 `;
             }).join('');
@@ -15298,7 +15295,18 @@
                 cancelButtonText: 'Cancelar'
             });
             
-            await window.remove(window.ref(window.dbRT, 'logs_errores'));
+            // Obtener todos los logs primero
+            const snapshot = await window.get(window.ref(window.dbRT, 'logs_errores'));
+            const logs = snapshot.val();
+            
+            if (logs) {
+                // Eliminar cada log individualmente
+                const logIds = Object.keys(logs);
+                for (const logId of logIds) {
+                    await window.remove(window.ref(window.dbRT, 'logs_errores/' + logId));
+                }
+            }
+            
             showToast("Todos los logs eliminados correctamente.", "success");
             unseenErrorLogs = 0;
             updateErrorLogsBadge();
