@@ -4877,6 +4877,9 @@
             <button class="panel-btn panel-btn-primary compact-btn" onclick="openModalProgramadorMultiple()" style="font-size: 0.75rem; padding: 8px 10px;">
                 <i class="fas fa-calendar-check"></i> Programador Múltiple
             </button>
+            <button class="panel-btn panel-btn-danger compact-btn" onclick="eliminarImagenesAnteriores()" style="font-size: 0.75rem; padding: 8px 10px;">
+                <i class="fas fa-trash-alt"></i> Eliminar Imágenes Anteriores
+            </button>
         </div>
     </div>
     
@@ -25803,11 +25806,20 @@
             const files = Array.from(input.files);
             if (files.length === 0) return;
 
-            bannerFilesToUpload = files;
+            // Agregar archivos a la lista existente (permitir duplicados)
+            bannerFilesToUpload = [...bannerFilesToUpload, ...files];
+            actualizarListaProgramador();
+            document.getElementById('btn-guardar-multiple').style.display = 'block';
+            
+            // Limpiar el input para permitir seleccionar el mismo archivo nuevamente
+            input.value = '';
+        }
+
+        function actualizarListaProgramador() {
             const lista = document.getElementById('programador-lista');
             const hoy = new Date();
 
-            lista.innerHTML = files.map((file, index) => {
+            lista.innerHTML = bannerFilesToUpload.map((file, index) => {
                 // Calcular fecha sugerida (hoy + index + 1)
                 const sugerencia = new Date(hoy);
                 sugerencia.setDate(hoy.getDate() + (index + 1));
@@ -25826,25 +25838,11 @@
                     </div>
                 `;
             }).join('');
-
-            document.getElementById('btn-guardar-multiple').style.display = 'block';
         }
 
         function removeBannerFile(index) {
             bannerFilesToUpload.splice(index, 1);
-            
-            // Actualizar lista visual
-            const rows = document.querySelectorAll('.banner-program-row');
-            rows.forEach((row, i) => {
-                if (i > index) {
-                    const dateInput = row.querySelector('.date-input');
-                    dateInput.dataset.index = i - 1;
-                }
-            });
-            
-            if (rows[index]) {
-                rows[index].remove();
-            }
+            actualizarListaProgramador();
 
             if (bannerFilesToUpload.length === 0) {
                 document.getElementById('programador-lista').innerHTML = `
@@ -25974,6 +25972,45 @@
             if (bannerCleanupInterval) {
                 clearInterval(bannerCleanupInterval);
                 bannerCleanupInterval = null;
+            }
+        }
+
+        // ═══════════════════════════════════════════════════════════════════════════
+        // ELIMINAR IMÁGENES ANTERIORES A FECHA ACTUAL
+        // ═══════════════════════════════════════════════════════════════════════════
+        async function eliminarImagenesAnteriores() {
+            if (!confirm("¿Estás seguro de eliminar todas las imágenes programadas con fecha anterior a hoy? Esta acción no se puede deshacer.")) {
+                return;
+            }
+
+            try {
+                const hoy = new Date();
+                const fechaHoy = hoy.toISOString().split('T')[0];
+
+                const collectionRef = window.collection(window.db, "configuracion");
+                const snapshot = await window.getDocs(collectionRef);
+                
+                let eliminados = 0;
+                
+                for (const doc of snapshot.docs) {
+                    const data = doc.data();
+                    const fechaProgramada = data.fechaProgramada || data.uploadedDate;
+                    
+                    // Eliminar solo si la fecha es anterior a hoy
+                    if (fechaProgramada && fechaProgramada < fechaHoy) {
+                        await window.deleteDoc(doc.ref);
+                        eliminados++;
+                    }
+                }
+
+                if (eliminados > 0) {
+                    showToast(`✅ Se eliminaron ${eliminados} imágenes anteriores a hoy`, "success", 5000);
+                } else {
+                    showToast("ℹ️ No hay imágenes anteriores a hoy para eliminar", "info", 3000);
+                }
+            } catch (error) {
+                console.error('Error eliminando imágenes anteriores:', error);
+                showToast("❌ Error al eliminar imágenes: " + error.message, "error", 5000);
             }
         }
 
@@ -26123,7 +26160,7 @@
 
             <div style="background: rgba(7,153,182,0.08); padding: 12px; border-radius: 10px; margin-bottom: 15px; font-size: 0.8rem; color: var(--azul-deep);">
                 <i class="fas fa-info-circle" style="color: var(--turquesa);"></i> 
-                Selecciona varias imágenes y asigna una fecha única a cada una. Se comprimirán automáticamente antes de guardar.
+                Selecciona varias imágenes y asigna una fecha única a cada una. Puedes seleccionar la misma imagen varias veces para usarla en diferentes fechas. Se comprimirán automáticamente antes de guardar.
             </div>
 
             <input type="file" id="multiple-banner-files" class="banner-file-input-hidden" accept="image/*" multiple onchange="onMultipleBannersSelected(this)">
