@@ -5627,7 +5627,7 @@
     </div>
     <div style="margin-bottom: 15px;">
     <label class="section-title">📎 Adjuntar documento *</label>
-    <input type="file" id="correccion-documento" class="modern-input" style="width: 100%;" accept=".doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" placeholder="Seleccione el documento .DOC o .DOCX a adjuntar">
+    <input type="file" id="correccion-documento" class="modern-input" style="width: 100%;" accept=".doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,*/*" placeholder="Seleccione el documento .DOC o .DOCX a adjuntar" onchange="handleCorreccionDocumento(this)">
     <small style="color: #666; font-size: 0.8rem; margin-top: 5px; display: block;">⚠️ Solo se permiten archivos .DOC y .DOCX (máximo 10MB)</small>
     </div>
     <div style="margin-bottom: 15px;">
@@ -14565,6 +14565,33 @@
             document.getElementById('copy-rrss-media-section').classList.remove('field-error');
         };
         reader.readAsDataURL(file);
+    }
+
+    function handleCorreccionDocumento(input) {
+        const file = input.files[0];
+        if (!file) return;
+
+        // Validar tamaño máximo (10MB)
+        const maxSize = 10 * 1024 * 1024; // 10MB en bytes
+        if (file.size > maxSize) {
+            showToast('error', '📏 Tamaño Excedido', 'El documento excede los 10MB permitidos. Por favor comprime el archivo o usa uno más pequeño.');
+            input.value = ''; // Limpiar el input
+            return;
+        }
+
+        // Validar extensión del archivo
+        const fileName = file.name.toLowerCase();
+        const validExtensions = ['.doc', '.docx'];
+        const hasValidExtension = validExtensions.some(ext => fileName.endsWith(ext));
+
+        if (!hasValidExtension) {
+            showToast('error', '📄 Formato No Válido', 'Solo se permiten archivos .DOC y .DOCX. Por favor selecciona un documento válido.');
+            input.value = ''; // Limpiar el input
+            return;
+        }
+
+        // Mostrar confirmación visual
+        showToast('success', '✅ Documento Seleccionado', `Archivo: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`);
     }
 
     function clearCopyPhoto(inputId, imgId, btnId) {
