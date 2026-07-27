@@ -9974,24 +9974,24 @@
         "Bermina": "#fb8500",
         "Jorsy": "#2908f1",
         "Xamir": "#572364",
-        "Fulan@": "#9d0208",
+        "Ángel": "#9d0208",
         // MANTENER COMPATIBILIDAD CON MINÚSCULAS
         "bermina": "#fb8500",
         "jorsy": "#2908f1",
         "xamir": "#572364",
-        "fulan@": "#9d0208"
+        "ángel": "#9d0208"
     };
     // NUEVO: Emojis de diseñadores globales - FORMATO ESTÁNDAR
     const designerIcons = {
         "Bermina": "🦋",
         "Jorsy": "😎", 
         "Xamir": "🐲",
-        "Fulan@": "👋",
+        "Ángel": "👼",
         // MANTENER COMPATIBILIDAD CON MINÚSCULAS
         "bermina": "🦋",
         "jorsy": "😎", 
         "xamir": "🐲",
-        "fulan@": "👋"
+        "ángel": "👼"
     };
     // NUEVO: Función para acortar el estado en los círculos
     function getShortStatus(status) {
@@ -10017,7 +10017,7 @@
         { name: "Bermina", color: "#fb8500", icon: "🦋" },
         { name: "Jorsy", color: "#2908f1", icon: "😎" },
         { name: "Xamir", color: "#572364", icon: "🐲" },
-        { name: "Fulan@", color: "#9d0208", icon: "👋" }
+        { name: "Ángel", color: "#9d0208", icon: "👼" }
     ];
     
     designers.forEach(designer => {
@@ -12017,6 +12017,9 @@
 
     // ✅ FUNCIÓN AUXILIAR PARA PROCESAR LA ASIGNACIÓN/DESASIGNACIÓN
     async function proceedWithDesignerAssignment(designerName, designerNameOnly, panelStatus) {
+        // Guardar contenido original del panel para restaurarlo después
+        const originalContent = panelStatus ? panelStatus.innerHTML : '';
+        
         // Mostrar progreso en el panel en lugar de loadingOverlay
         if (panelStatus) {
             panelStatus.innerHTML = `
@@ -17156,7 +17159,7 @@
                         let designerName = userCredentials.displayName || userCredentials.username;
                         
                         // Asegurar formato estandarizado si fue un fallback (ej: bermina_dg -> Bermina)
-                        if (!["Bermina", "Jorsy", "Xamir", "Fulan@"].includes(designerName)) {
+                        if (!["Bermina", "Jorsy", "Xamir", "Ángel"].includes(designerName)) {
                             const parts = designerName.split('_');
                             if (parts.length > 0) {
                                 designerName = parts[0].charAt(0).toUpperCase() + parts[0].slice(1).toLowerCase();
@@ -22338,7 +22341,7 @@
         // Preparar datos
         const designers = Object.keys(data);
         const values = designers.map(designer => data[designer].finalizadas || 0);
-        const colors = ['#fb8500', '#2908f1', '#572364', '#9d0208']; // Bermina, Jorsy, Xamir, Fulan@
+        const colors = ['#fb8500', '#2908f1', '#572364', '#9d0208']; // Bermina, Jorsy, Xamir, Ángel
         // Crear nuevo gráfico
         statsCharts.designerPerformance = new Chart(ctx, {
             type: 'doughnut',
@@ -22484,7 +22487,7 @@
     function standardizeDesignerName(name) {
         if (!name || typeof name !== 'string') return '';
         
-        // Convertir diferentes formatos a formato estándar: "Bermina", "Jorsy", "Xamir", "Fulan@"
+        // Convertir diferentes formatos a formato estándar: "Bermina", "Jorsy", "Xamir", "Ángel"
         const standardName = name
             .toString()
             .trim()
@@ -22492,7 +22495,7 @@
             .replace(/bermina|bérmina/gi, 'Bermina')
             .replace(/jorsy|jorsí/gi, 'Jorsy')
             .replace(/xamir|jamir/gi, 'Xamir')
-            .replace(/fulan@|fulan/gi, 'Fulan@')
+            .replace(/ángel|angel/gi, 'Ángel')
             .replace(/maría|maria/gi, 'María F.')
             .replace(/\b\w/g, l => l.toUpperCase()); // Primera letra mayúscula
         
@@ -22892,7 +22895,7 @@
         if (statsData.porDisenador && Object.keys(statsData.porDisenador).length > 0) {
             // ✅ CORREGIDO: Combinar ambos conjuntos de datos (totales + finalizadas)
             const combinedDesignerData = {};
-            const designers = ['Bermina', 'Jorsy', 'Xamir', 'Fulan@'];
+            const designers = ['Bermina', 'Jorsy', 'Xamir', 'Ángel'];
 
             for (const designer of designers) {
                 // El backend puede enviar porDisenador de dos formas:
@@ -22918,7 +22921,7 @@
             const processedDesigners = processDesignerData(combinedDesignerData, 'renderActiveStatsTab');
 
             // Asegurar que siempre mostremos los 4 diseñadores fijos - FORMATO ESTÁNDAR
-            const fixedDesigners = ['Bermina', 'Jorsy', 'Xamir', 'Fulan@'];
+            const fixedDesigners = ['Bermina', 'Jorsy', 'Xamir', 'Ángel'];
             const dataMap = new Map(processedDesigners.map(d => [d.name, d]));
 
             const completeData = fixedDesigners.map(name => {
@@ -22937,7 +22940,7 @@
             console.log("⚠️ No hay datos de diseñadores para mostrar");
             showEmptyChart('designerPerformanceChart', 'No hay datos de diseñadores');
             // Mostrar tarjetas vacías con los 5 diseñadores fijos
-            const emptyDesigners = ['Bermina', 'Jorsy', 'Xamir', 'Fulan@'].map(name => ({
+            const emptyDesigners = ['Bermina', 'Jorsy', 'Xamir', 'Ángel'].map(name => ({
                 nombre: name,
                 finalizadas: 0,
                 color: designerColors[name] || '#666'
@@ -23677,7 +23680,7 @@
         container.style.cssText = 'display: flex; flex-direction: column; gap: 10px;';
 
         // Definir los 5 diseñadores específicos que siempre deben mostrarse - FORMATO ESTÁNDAR
-        const fixedDesigners = ['Bermina', 'Jorsy', 'Xamir', 'Fulan@'];
+        const fixedDesigners = ['Bermina', 'Jorsy', 'Xamir', 'Ángel'];
         
         // Mapear datos de diseñadores (usando TOTAL = asignadas, no finalizadas)
         const map = new Map();
@@ -23707,7 +23710,7 @@
         // Usar designerIcons global ya definido anteriormente
         const designerColors = {
             'Bermina': '#fb8500', 'Jorsy': '#2908f1', 
-            'Xamir': '#572364', 'Fulan@': '#9d0208'
+            'Xamir': '#572364', 'Ángel': '#9d0208'
         };
 
         // Generar panel simple por diseñador
@@ -24164,7 +24167,7 @@
                 fill: true
             },
             {
-                label: 'Fulan@',
+                label: 'Ángel',
                 data: [],
                 borderColor: '#f5576c',
                 backgroundColor: 'rgba(245, 87, 108, 0.1)',
@@ -24179,7 +24182,7 @@
             datasets[1].data.push(porHora.Bermina ? (porHora.Bermina[h] || 0) : 0);
             datasets[2].data.push(porHora.Jorsy ? (porHora.Jorsy[h] || 0) : 0);
             datasets[3].data.push(porHora.Xamir ? (porHora.Xamir[h] || 0) : 0);
-            datasets[4].data.push(porHora["Fulan@"] ? (porHora["Fulan@"][h] || 0) : 0);
+            datasets[4].data.push(porHora["Ángel"] ? (porHora["Ángel"][h] || 0) : 0);
         }
         
         if (statsCharts.activityByHour) {
@@ -24248,7 +24251,7 @@
         if (!ctx) return;
         
         // ✅ Asegurar que siempre mostremos los 4 diseñadores fijos - FORMATO ESTÁNDAR
-        const fixedDesigners = ['Bermina', 'Jorsy', 'Xamir', 'Fulan@'];
+        const fixedDesigners = ['Bermina', 'Jorsy', 'Xamir', 'Ángel'];
         
         // ✅ CORRECCIÓN: Crear Map con nombres en formato estándar
         const dataMap = new Map();
@@ -24319,7 +24322,7 @@
         if (!container) return;
         
         // ✅ Asegurar que siempre mostremos los 5 diseñadores fijos
-        const fixedDesigners = ['Bermina', 'Jorsy', 'Xamir', 'Fulan@'];
+        const fixedDesigners = ['Bermina', 'Jorsy', 'Xamir', 'Ángel'];
         
         // ✅ CORRECCIÓN: Crear Map insensible a mayúsculas/minúsculas
         const dataMap = new Map();
@@ -24351,7 +24354,7 @@
                 if (name === 'Bermina') return '🦋';
                 if (name === 'Jorsy') return '😎';
                 if (name === 'Xamir') return '🐲';
-                if (name === 'Fulan@') return '👋';
+                if (name === 'Ángel') return '👼';
                 return '👤';
             };
             return `
@@ -24553,7 +24556,7 @@
             } else {
                 console.warn("⚠️ Datos de diseñadores vacíos o formato incorrecto:", responseData);
                 // Si no hay datos, crear array vacío con los 5 diseñadores fijos en 0
-                const emptyDesigners = ['Bermina', 'Jorsy', 'Xamir', 'Fulan@'].map(name => ({
+                const emptyDesigners = ['Bermina', 'Jorsy', 'Xamir', 'Ángel'].map(name => ({
                     nombre: name,
                     finalizadas: 0,
                     total: 0,
@@ -24565,7 +24568,7 @@
         } catch (e) {
             console.error("❌ Error cargando datos de diseñadores:", e);
             // Si hay error, mostrar array vacío con los diseñadores fijos
-            const emptyDesigners = ['Bermina', 'Jorsy', 'Xamir', 'Fulan@'].map(name => ({
+            const emptyDesigners = ['Bermina', 'Jorsy', 'Xamir', 'Ángel'].map(name => ({
                 nombre: name,
                 finalizadas: 0,
                 total: 0,
@@ -24713,7 +24716,7 @@
         let datosBermina = [0, 0, 0, 0, 0, 0, 0];
         let datosJorsy = [0, 0, 0, 0, 0, 0, 0];
         let datosXamir = [0, 0, 0, 0, 0, 0, 0];
-        let datosFulan = [0, 0, 0, 0, 0, 0, 0];
+        let datosAngel = [0, 0, 0, 0, 0, 0, 0];
         
         // Procesar datos por día - filtrar solo semana actual
         if (weekData.porDia && Array.isArray(weekData.porDia)) {
@@ -24759,7 +24762,7 @@
                                 datosBermina[i] += item.disenadores.Bermina || 0;
                                 datosJorsy[i] += item.disenadores.Jorsy || 0;
                                 datosXamir[i] += item.disenadores.Xamir || 0;
-                                datosFulan[i] += item.disenadores['Fulan@'] || 0;
+                                datosAngel[i] += item.disenadores['Ángel'] || 0;
                             }
                             break;
                         }
@@ -24858,8 +24861,8 @@
                         borderRadius: 4
                     },
                     {
-                        label: 'Fulan@',
-                        data: datosFulan,
+                        label: 'Ángel',
+                        data: datosAngel,
                         backgroundColor: '#9d0208',
                         borderColor: '#7a0106',
                         borderWidth: 1,
