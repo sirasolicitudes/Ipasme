@@ -22487,17 +22487,19 @@
     function standardizeDesignerName(name) {
         if (!name || typeof name !== 'string') return '';
         
+        // Normalizar string para manejar acentos correctamente
+        const normalized = name.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        
         // Convertir diferentes formatos a formato estándar: "Bermina", "Jorsy", "Xamir", "Ángel"
-        const standardName = name
+        const standardName = normalized
             .toString()
             .trim()
             .toLowerCase()
             .replace(/bermina|bérmina/gi, 'Bermina')
             .replace(/jorsy|jorsí/gi, 'Jorsy')
             .replace(/xamir|jamir/gi, 'Xamir')
-            .replace(/ángel|angel/gi, 'Ángel')
-            .replace(/maría|maria/gi, 'María F.')
-            .replace(/\b\w/g, l => l.toUpperCase()); // Primera letra mayúscula
+            .replace(/angel/gi, 'Ángel')
+            .replace(/maría|maria/gi, 'María F.');
         
         return standardName;
     }
@@ -23705,7 +23707,6 @@
             return { name, curr: data.curr, prev: data.prev };
         });
 
-        console.log("✅ Diseñadores procesados para comparación:", designers);
 
         // Usar designerIcons global ya definido anteriormente
         const designerColors = {
@@ -23714,76 +23715,6 @@
         };
 
         // Generar panel simple por diseñador
-        container.innerHTML = designers.map(d => {
-            const icon = designerIcons[d.name] || '👤';
-            const color = designerColors[d.name] || '#6c757d';
-
-            // Calcular diferencia y porcentaje
-            const diff = d.curr - d.prev;
-            let trendText = '';
-            let trendColor = '';
-            if (d.prev === 0 && d.curr === 0) {
-                trendText = 'Sin cambios';
-                trendColor = '#6c757d';
-            } else if (d.prev === 0) {
-                trendText = `+${d.curr} nuevas`;
-                trendColor = '#28a745';
-            } else {
-                const pct = Math.round((diff / d.prev) * 100);
-                if (diff > 0) { trendText = `+${diff} (${pct}%)`; trendColor = '#28a745'; }
-                else if (diff < 0) { trendText = `${diff} (${pct}%)`; trendColor = '#dc3545'; }
-                else { trendText = 'Sin cambios'; trendColor = '#6c757d'; }
-            }
-
-            return `
-                <div style="
-                    background: linear-gradient(90deg, #fff 0%, ${color}08 100%);
-                    border-radius: 12px;
-                    padding: 15px 20px;
-                    border: 2px solid ${color}20;
-                    box-shadow: 0 2px 6px rgba(0,0,0,0.05);
-                    transition: all 0.3s ease;
-                    display: flex;
-                    align-items: center;
-                    gap: 15px;
-                " onmouseover="this.style.transform='translateX(4px)'; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.1)'; this.style.borderColor='${color}40';" 
-                onmouseout="this.style.transform='translateX(0)'; this.style.boxShadow='0 2px 6px rgba(0,0,0,0.05)'; this.style.borderColor='${color}20';">
-
-                    <!-- 1. ICONO Y NOMBRE -->
-                    <div style="display: flex; align-items: center; gap: 12px; min-width: 140px;">
-                        <div style="
-                            width: 40px; height: 40px; border-radius: 50%;
-                            background: linear-gradient(135deg, ${color} 0%, ${color}dd 100%);
-                            display: flex; align-items: center; justify-content: center;
-                            font-size: 1.2rem; box-shadow: 0 2px 8px ${color}30;
-                        ">${icon}</div>
-                        <div style="font-weight: 700; color: #334155; font-size: 0.95rem;">${d.name}</div>
-                    </div>
-
-                    <!-- 2. COMPARACIÓN DE CONTADORES -->
-                    <div style="display: flex; align-items: center; gap: 20px; flex: 1;">
-                        <div style="text-align: center;">
-                            <div style="font-size: 0.7rem; color: #64748b; text-transform: uppercase; font-weight: 600; margin-bottom: 2px;">${prevMonthName}</div>
-                            <div style="font-size: 1.3rem; font-weight: 800; color: #4a6eb0;">${d.prev}</div>
-                        </div>
-                        <div style="font-size: 1.2rem; color: #adb5bd;">→</div>
-                        <div style="text-align: center;">
-                            <div style="font-size: 0.7rem; color: ${color}; text-transform: uppercase; font-weight: 600; margin-bottom: 2px;">${currMonthName}</div>
-                            <div style="font-size: 1.3rem; font-weight: 800; color: ${color};">${d.curr}</div>
-                        </div>
-                    </div>
-
-                    <!-- 3. TENDENCIA -->
-                    <div style="
-                        padding: 6px 14px; border-radius: 20px;
-                        font-size: 0.8rem; font-weight: 700;
-                        background: ${trendColor}15; color: ${trendColor};
-                        white-space: nowrap; min-width: 100px; text-align: center;
-                    ">${trendText}</div>
-                </div>
-            `;
-        }).join('');
-
         const htmlContent = designers.map(d => {
             const icon = designerIcons[d.name] || '👤';
             const color = designerColors[d.name] || '#6c757d';
