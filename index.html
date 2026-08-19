@@ -19292,6 +19292,14 @@
     function showConfirmationModal() {
     if (!validateForm()) return;
     const preview = document.getElementById('previewContent');
+    
+    // Helper function to convert date from yyyy-mm-dd to dd/mm/yyyy
+    const convertirFechaFormato = (fecha) => {
+        if (!fecha) return '';
+        const [year, month, day] = fecha.split('-');
+        return `${day}/${month}/${year}`;
+    };
+    
     let html = `
     <p><b><i class="fas fa-map-marker-alt"></i> Región:</b> ${getNombreRegionLimpio(selectedRegionKey)}</p>
     <p><b><i class="fas fa-hospital"></i> Unidad:</b> ${selectedUnidad}</p>
@@ -19305,10 +19313,10 @@
         if (servicioJurisdiccion) html += `<p><b><i class="fas fa-hospital"></i> Servicio o Jurisdicción:</b> ${servicioJurisdiccion}</p>`;
         const infoAdicional = document.getElementById('obituario-info').value.trim();
         if (infoAdicional) html += `<p><b><i class="fas fa-clipboard-list"></i> Información Adicional:</b> ${infoAdicional}</p>`;
-        html += `<p><b><i class="fas fa-calendar-alt"></i> Fecha:</b> ${document.getElementById('obituario-fecha').value}</p>`;
+        html += `<p><b><i class="fas fa-calendar-alt"></i> Fecha:</b> ${convertirFechaFormato(document.getElementById('obituario-fecha').value)}</p>`;
     } else if (catType === 'efemerides') {
         // ✅ PREVISUALIZACIÓN PARA EFEMÉRIDES
-        html += `<p><b><i class="fas fa-calendar-alt"></i> Fecha esperada:</b> ${document.getElementById('fecha')?.value}</p>`;
+        html += `<p><b><i class="fas fa-calendar-alt"></i> Fecha esperada:</b> ${convertirFechaFormato(document.getElementById('fecha')?.value)}</p>`;
         html += `<p><b><i class="fas fa-pen"></i> Nombre:</b> ${document.getElementById('efemerides-nombre')?.value.trim()}</p>`;
         const contexto = document.getElementById('efemerides-contexto')?.value.trim();
         if (contexto) html += `<p><b><i class="fas fa-scroll"></i> Contexto:</b> ${contexto}</p>`;
@@ -19325,7 +19333,7 @@
             }
         });
         if (firmantes.length > 0) html += `<p><b><i class="fas fa-pen-nib"></i> Firmantes:</b> ${firmantes.join(', ')}</p>`;
-        html += `<p><b><i class="fas fa-calendar-alt"></i> Fecha del evento:</b> ${document.getElementById('fecha').value}</p>`;
+        html += `<p><b><i class="fas fa-calendar-alt"></i> Fecha del evento:</b> ${convertirFechaFormato(document.getElementById('fecha').value)}</p>`;
     } else if (catType === 'textiles') {
         html += `<p><b><i class="fas fa-tshirt"></i> Prenda seleccionada:</b> ${window.tipoPrendaSeleccionada || 'No seleccionada'}</p>`;
         const descripcion = document.getElementById('textiles-descripcion')?.value.trim();
@@ -19339,7 +19347,7 @@
         const fecha = document.getElementById('fecha')?.value;
         const hora = document.getElementById('hora')?.value;
         const ampm = document.querySelector('.btn-time.selected')?.innerText || 'a. m.';
-        if (fecha) html += `<p><b><i class="fas fa-calendar-alt"></i> Fecha:</b> ${fecha}</p>`;
+        if (fecha) html += `<p><b><i class="fas fa-calendar-alt"></i> Fecha:</b> ${convertirFechaFormato(fecha)}</p>`;
         if (hora) html += `<p><b><i class="fas fa-clock"></i> Hora:</b> ${hora} ${ampm}</p>`;
         // ✅ INSTITUCIÓN Y DIRECCIÓN PARA CHARLAS
         const institucion = document.getElementById('institucion')?.value.trim();
@@ -19365,7 +19373,7 @@
         const nombreNota = document.getElementById('correccion-nombre')?.value.trim();
         if (nombreNota) html += `<p><b><i class="fas fa-file"></i> Título de la Nota:</b> ${nombreNota}</p>`;
         const fecha = document.getElementById('correccion-fecha')?.value;
-        if (fecha) html += `<p><b><i class="fas fa-calendar-alt"></i> Fecha:</b> ${fecha}</p>`;
+        if (fecha) html += `<p><b><i class="fas fa-calendar-alt"></i> Fecha:</b> ${convertirFechaFormato(fecha)}</p>`;
         const documento = document.getElementById('correccion-documento')?.value;
         html += `<p><b><i class="fas fa-paperclip"></i> Documento adjunto:</b> ${documento ? 'Sí' : 'No'}</p>`;
     } else if (catType === 'correccion-diseno') {
@@ -19376,7 +19384,7 @@
     } else if (catType === 'copy-rrss') {
         const copy = document.getElementById('copy-rrss-text')?.value.trim();
         if (copy) html += `<p><b><i class="fas fa-file-alt"></i> Copy:</b> ${copy.substring(0, 100)}${copy.length > 100 ? '...' : ''}</p>`;
-        html += `<p><b><i class="fas fa-calendar-alt"></i> Fecha:</b> ${document.getElementById('copy-rrss-fecha').value}</p>`;
+        html += `<p><b><i class="fas fa-calendar-alt"></i> Fecha:</b> ${convertirFechaFormato(document.getElementById('copy-rrss-fecha').value)}</p>`;
         
         const mediaType = document.getElementById('copy-media-type')?.value;
         if (mediaType === 'fotos') {
@@ -21224,9 +21232,24 @@
             parents: [auth.folderId]
         };
 
-        // ✅ TIMEOUT para móviles: 120 segundos para subida directa (conexiones lentas venezolanas)
+        // ✅ TIMEOUT ADAPTATIVO según tamaño de archivo y dispositivo
+        const isMobile = isMobileDevice();
+        const fileMB = file.size / (1024 * 1024);
+        
+        // Timeout base: 4 min móvil, 3 min desktop
+        let timeoutDuration = isMobile ? 240000 : 180000;
+        
+        // Timeout extendido para archivos grandes (hasta 10MB puede necesitar más tiempo)
+        if (fileMB > 5) {
+            timeoutDuration = isMobile ? 480000 : 360000; // 8 min móvil, 6 min desktop
+        }
+        if (fileMB > 10) {
+            timeoutDuration = isMobile ? 600000 : 480000; // 10 min móvil, 8 min desktop
+        }
+        
         const driveController = new AbortController();
-        const driveTimeout = setTimeout(() => driveController.abort(), 120000);
+        const driveTimeout = setTimeout(() => driveController.abort(), timeoutDuration);
+        console.log(`⏱️ Timeout subida directa: ${timeoutDuration/1000}s (archivo: ${fileMB.toFixed(1)}MB, móvil: ${isMobile})`);
         
         let response;
         try {
@@ -21284,7 +21307,10 @@
             clearTimeout(driveTimeout);
         } catch (fetchError) {
             if (fetchError.name === 'AbortError') {
-                throw new Error("Timeout en subida directa. Tu conexión es muy lenta. Intenta con WiFi o mejor señal.");
+                const tips = fileMB > 10 
+                    ? "Archivo muy grande para tu conexión actual. Intenta: 1) Conexión más rápida (WiFi), 2) Comprimir el video, 3) Usar chunks (intenta de nuevo, el sistema intentará chunks automáticamente)"
+                    : "Tu conexión es muy inestable. Intenta: 1) Conectar a WiFi, 2) Moverte a zona con mejor señal, 3) Usar archivos más pequeños.";
+                throw new Error(`Timeout en subida directa (${timeoutDuration/1000}s, archivo: ${fileMB.toFixed(1)}MB). ${tips}`);
             }
             throw new Error("Error de conexión a Google Drive: " + fetchError.message);
         }
@@ -21355,9 +21381,17 @@
         const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
         if (!connection) return 'Desconocido';
         
+        const isAndroid = /Android/i.test(navigator.userAgent);
+        const rtt = connection?.rtt || 100;
+        
+        // ✅ DETECCIÓN ESPECÍFICA PARA PATRONES DE FALLO EN ANDROID
+        if (isAndroid && rtt > 100) {
+            return `Android Inestable (RTT: ${rtt}ms)`;
+        }
+        
         const type = connection.type; // 'cellular', 'wifi', 'ethernet', etc.
         const effectiveType = connection.effectiveType; // 'slow-2g', '2g', '3g', '4g'
-        const rtt = connection.rtt; // Round-trip time en ms (latencia)
+        // rtt ya está declarado arriba con valor por defecto
         const saveData = connection.saveData; // Si modo ahorro de datos está activo
         
         let info = '';
@@ -21397,26 +21431,29 @@
      */
     function getDynamicChunkSize() {
         // ✅ Google Drive requiere mínimo 256KB para resumable uploads
-        // ✅ ESTRATEGIA ADAPTATIVA: Usar chunks más grandes para conexiones buenas
+        // ✅ ESTRATEGIA MEJORADA: Considerar RTT (latencia) para detectar conexiones inestables como en los logs
         const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
         const downlink = connection?.downlink || 10; // Mbps
         const effectiveType = connection?.effectiveType || '4g';
+        const rtt = connection?.rtt || 100; // RTT en ms (latencia)
+        const isAndroid = /Android/i.test(navigator.userAgent);
         
-        // Conexión buena (4G/WiFi >= 5Mbps): chunks de 1MB (menos peticiones)
-        if (downlink >= 5 && (effectiveType === '4g' || effectiveType === 'wifi')) {
-            console.log(`📊 Conexión buena (${downlink}Mbps, ${effectiveType}): CHUNK_SIZE = 1MB`);
-            return 1024 * 1024; // 1MB - 15MB = 15 peticiones (vs 60 con 256KB)
+        // ✅ Conexión excelente (>= 5Mbps, RTT < 50ms, no Android lento): chunks de 1MB
+        if (downlink >= 5 && rtt < 50 && !isAndroid) {
+            console.log(`📊 Conexión excelente (${downlink}Mbps, RTT: ${rtt}ms): CHUNK_SIZE = 1MB`);
+            return 1024 * 1024; // 1MB
         }
         
-        // Conexión promedio (>= 2Mbps): chunks de 512KB
-        if (downlink >= 2) {
-            console.log(`📊 Conexión promedio (${downlink}Mbps, ${effectiveType}): CHUNK_SIZE = 512KB`);
-            return 512 * 1024; // 512KB - 15MB = 30 peticiones
+        // ✅ Conexión buena pero con RTT medio (como WiFi con 100-150ms): chunks de 512KB
+        if (downlink >= 2 && rtt < 150) {
+            console.log(`📊 Conexión buena con RTT medio (${downlink}Mbps, RTT: ${rtt}ms): CHUNK_SIZE = 512KB`);
+            return 512 * 1024; // 512KB
         }
         
-        // Conexión lenta (< 2Mbps): mantener 256KB (más tolerancia a fallos)
-        console.log(`📊 Conexión lenta (${downlink}Mbps, ${effectiveType}): CHUNK_SIZE = 256KB`);
-        return 256 * 1024; // 256KB - 15MB = 60 peticiones
+        // ✅ Conexión inestable (RTT >= 150ms como en los logs) o Android: chunks de 256KB
+        // Esto da más tolerancia a fallos de red como los reportados en los logs
+        console.log(`📊 Conexión inestable/Android (${downlink}Mbps, RTT: ${rtt}ms, Android: ${isAndroid}): CHUNK_SIZE = 256KB`);
+        return 256 * 1024; // 256KB - máxima tolerancia a fallos
     }
 
     /**
@@ -21470,7 +21507,11 @@
      * @returns {Array} Array de objetos con URLs de Drive
      */
     async function uploadFotosBase64(idSolicitud, fotosBlobs) {
-        console.log(`📤 Usando subida por Base64 para ${fotosBlobs.length} fotos (conexión lenta)`);
+        const isAndroid = /Android/i.test(navigator.userAgent);
+        const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+        const rtt = connection?.rtt || 150; // Default 150ms como en los logs
+        
+        console.log(`📤 Usando subida por Base64 para ${fotosBlobs.length} fotos (Android: ${isAndroid}, RTT: ${rtt}ms)`);
         
         const resultados = [];
         
@@ -21480,7 +21521,13 @@
             const fileName = nombre || `FOTO_${idSolicitud}_${index + 1}.${ext}`;
             
             console.log(`📸 Procesando foto ${index + 1}/${fotosBlobs.length}: ${fileName}`);
-            showToast(`📸 Procesando foto ${index + 1} de ${fotosBlobs.length}...`, "info", 3000);
+            
+            // ✅ MENSAJE ESPECÍFICO PARA ANDROID SEGÚN RTT
+            if (isAndroid && rtt > 100) {
+                showToast(`📸 Subiendo foto ${index + 1} de ${fotosBlobs.length}... (Conexión inestable, no cierres la app)`, "warning", 5000);
+            } else {
+                showToast(`📸 Procesando foto ${index + 1} de ${fotosBlobs.length}...`, "info", 3000);
+            }
             
             try {
                 // Convertir blob a Base64
@@ -21494,14 +21541,26 @@
                     throw new Error(`Imagen demasiado grande para subida por Base64 (${(base64.length / 1024 / 1024).toFixed(2)}MB). Usa subida directa a Drive.`);
                 }
                 
-                // ✅ TIMEOUT MÁS LARGO PARA MÓVILES (120 segundos)
+                // ✅ TIMEOUT AUMENTADO PARA CONEXIONES INESTABLES (240 segundos = 4 minutos)
                 let controller;
                 let timeout;
                 const supportsAbortController = typeof AbortController !== 'undefined';
+                const isMobile = isMobileDevice();
+                const isAndroid = /Android/i.test(navigator.userAgent);
+                const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+                const rtt = connection?.rtt || 150;
+                
+                // ✅ TIMEOUT EXTENDIDO PARA ANDROID CON RTT ALTO (conexiones muy inestables)
+                let timeoutDuration = isMobile ? 240000 : 180000; // 4 min móvil, 3 min desktop
+                if (isAndroid && rtt > 100) {
+                    timeoutDuration = 300000; // 5 minutos para Android con RTT alto
+                    console.log(`⚠️ Android con RTT alto (${rtt}ms): Timeout extendido a 5 minutos`);
+                }
                 
                 if (supportsAbortController) {
                     controller = new AbortController();
-                    timeout = setTimeout(() => controller.abort(), 120000); // 2 minutos
+                    timeout = setTimeout(() => controller.abort(), timeoutDuration);
+                    console.log(`⏱️ Timeout configurado: ${timeoutDuration/1000}s (móvil: ${isMobile})`);
                 }
                 
                 // Enviar al backend
@@ -21524,7 +21583,10 @@
                     if (supportsAbortController) {
                         fetchOptions.signal = controller.signal;
                     }
+                    
+                    console.log(`📤 Enviando foto ${index + 1} al backend...`);
                     response = await fetch(SCRIPT_URL, fetchOptions);
+                    
                     if (supportsAbortController) {
                         clearTimeout(timeout);
                     }
@@ -21533,7 +21595,10 @@
                         clearTimeout(timeout);
                     }
                     if (fetchError.name === 'AbortError') {
-                        throw new Error(`Timeout de conexión (120s). Tu conexión es muy lenta (${getConnectionType()}). Intenta con WiFi mejor o reduce el tamaño de las imágenes.`);
+                        const connectionTips = isAndroid && rtt > 100 
+                            ? "Tu conexión Android es muy inestable (RTT: " + rtt + "ms). Intenta: 1) Cambiar a WiFi, 2) Moverte cerca del router, 3) Desactivar datos móviles y usar solo WiFi, 4) Cerrar otras apps."
+                            : "Tu conexión es muy inestable. Intenta: 1) Conectar a WiFi, 2) Moverte a zona con mejor señal, 3) Reducir tamaño de imágenes.";
+                        throw new Error(`Timeout de conexión (${timeoutDuration/1000}s). ${connectionTips}`);
                     }
                     throw new Error(`Error de conexión: ${fetchError.message}. Verifica tu conexión a internet.`);
                 }
@@ -21706,9 +21771,12 @@
             authParams.append("username", userCredentials.username);
             authParams.append("password", userCredentials.password);
             
-            // ✅ TIMEOUT para móviles: 60 segundos para obtener autorización (conexiones lentas)
+            // ✅ TIMEOUT AUMENTADO para obtener autorización: 180 segundos (3 minutos)
+            const isMobile = isMobileDevice();
+            const authTimeoutDuration = isMobile ? 180000 : 120000; // 3 min móvil, 2 min desktop
             const authController = new AbortController();
-            const authTimeout = setTimeout(() => authController.abort(), 60000);
+            const authTimeout = setTimeout(() => authController.abort(), authTimeoutDuration);
+            console.log(`⏱️ Timeout autorización: ${authTimeoutDuration/1000}s (móvil: ${isMobile})`);
             
             let authRes;
             try {
@@ -21720,7 +21788,7 @@
                 clearTimeout(authTimeout);
             } catch (fetchError) {
                 if (fetchError.name === 'AbortError') {
-                    throw new Error("Timeout obteniendo autorización. Tu conexión es muy lenta. Intenta con WiFi o mejor señal.");
+                    throw new Error(`Timeout obteniendo autorización (${authTimeoutDuration/1000}s). Tu conexión es muy inestable. Intenta: 1) Conectar a WiFi, 2) Moverte a zona con mejor señal, 3) Recargar la página.`);
                 }
                 throw new Error("Error de conexión al obtener autorización: " + fetchError.message);
             }
@@ -21767,14 +21835,27 @@
                 const file = blob instanceof File ? blob : new File([blob], fileName, { type: blob.type || 'image/jpeg' });
                 const fileSizeMB = file.size / (1024 * 1024);
                 const isVideo = file.type.startsWith('video/') || nombre.toLowerCase().includes('video');
-                const isSmallFile = fileSizeMB < 3; // Archivos < 3MB
                 
-                // ✅ ESTRATEGIA DE SUBIDA:
+                // ✅ EVALUACIÓN DE CALIDAD DE CONEXIÓN PARA DECIDIR MÉTODO DE SUBIDA
+                const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+                const downlink = connection?.downlink || 10; // Mbps
+                const rtt = connection?.rtt || 100; // RTT en ms
+                const effectiveType = connection?.effectiveType || '4g';
+                
+                // ✅ CRITERIOS PARA SUBIDA DIRECTA (incluso archivos grandes):
+                // - Conexión excelente: downlink >= 5Mbps, RTT < 100ms, efectiva 4g/wifi
+                // - Archivos medianos: < 10MB (para evitar timeouts extremadamente largos)
+                const isExcellentConnection = downlink >= 5 && rtt < 100 && (effectiveType === '4g' || effectiveType === 'wifi');
+                const isMediumFile = fileSizeMB < 10; // Hasta 10MB para subida directa
+                const canUseDirectUpload = isExcellentConnection || isMediumFile;
+                
+                // ✅ ESTRATEGIA DE SUBIDA MEJORADA:
                 // - Admin/Diseñadores: SIEMPRE chunks (sin cambios)
-                // - Videos: SIEMPRE chunks (archivos grandes)
-                // - Usuarios regulares con archivos < 3MB: Subida directa (más robusta para conexiones inestables)
-                // - Usuarios regulares con archivos >= 3MB: Chunks (resumable)
-                const usarSubidaDirecta = !isAdmin && !isDesigner && isSmallFile && !isVideo;
+                // - Usuarios regulares: Subida directa si conexión es excelente O archivo < 10MB
+                // - Usuarios regulares: Chunks si conexión es mala Y archivo >= 10MB
+                // - Esto permite videos grandes (500MB) usar subida directa cuando la conexión lo permita
+                const usarSubidaDirecta = !isAdmin && !isDesigner && canUseDirectUpload;
+                console.log(`📦 Estrategia: ${usarSubidaDirecta ? 'Subida directa mejorada' : 'Chunks'} (archivo: ${fileSizeMB.toFixed(2)}MB, video: ${isVideo}, conexión: ${downlink}Mbps RTT:${rtt}ms)`);
                 
                 let fileId = null;
                 
@@ -21795,7 +21876,8 @@
                         }
                     } catch (directUploadError) {
                         console.warn(`⚠️ Subida directa falló: ${directUploadError.message}. Intentando con chunks como fallback...`);
-                        // ✅ FALLBACK: Si subida directa falla (permisos, compatibilidad, etc.), usar chunks
+                        // ✅ FALLBACK: Si subida directa falla (permisos, compatibilidad, timeout), usar chunks
+                        console.log(`📦 Cambiando a subida por chunks para archivo grande (${fileSizeMB.toFixed(1)}MB)`);
                         fileId = await uploadConChunksFallback(file, authData, fileName, CHUNK_SIZE, progressFill, progressText, index, fotosBlobs.length);
                     }
                 } else {
