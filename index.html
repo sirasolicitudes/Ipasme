@@ -10046,7 +10046,7 @@
     };
 
     // Arrays para tipos de cirugía y servicios
-    const especialidades = ["Alergología", "Cardiología", "Cirugía General", "Dermatología", "Fisiatría", "Foniatría", "Gastroenterología", "Geriatría", "Ginecología y Obstetricia", "Infectología", "Medicina Familiar", "Medicina General", "Medicina Interna", "Medicina Ocupacional", "Nefrología", "Neumología", "Neurología", "Nutrición", "Odontología", "Oftalmología", "Oncología", "Optometría", "Otorrinolaringología", "Pediatría", "Psicología", "Psiquiatría", "Reumatología", "Traumatología", "Urología"];
+    const especialidades = ["Alergología", "Cardiología", "Cirugía General", "Dermatología", "Epidemiología", "Fisiatría", "Foniatría", "Gastroenterología", "Geriatría", "Ginecología y Obstetricia", "Infectología", "Medicina Familiar", "Medicina General", "Medicina Interna", "Medicina Ocupacional", "Nefrología", "Neumología", "Neurología", "Nutrición", "Odontología", "Oftalmología", "Oncología", "Optometría", "Otorrinolaringología", "Pediatría", "Psicología", "Psiquiatría", "Reumatología", "Traumatología", "Urología"];
     const servicios = ["Actividades recreativas", "Afiliación", "Agudeza visual", "Aplicación de flúor", "Asesoría legal", "Bienestar social", "Captación odontológica", "Captación Quirúrgica", "Captación quirúrgica oftalmológica", "Charlas odontológicas", "Citología", "Control de glicemia", "Control de talla y peso", "Desparasitación", "Despistaje de glicemia capilar", "Despistaje HTA", "Ecografía", "Electrocardiograma", "Espirometría", "Farmacia", "Fisioterapia", "Fonoaudiología", "Gerontología", "Ingeniería Biomédica", "Inmunización", "Laboratorio", "Liberación de hipoteca", "Masoterapia", "Peluquería y barbería", "Podología", "Psicopedagogía", "Quiropraxia", "Registros médicos", "Sesión Educativa", "Servicios sociales", "Terapia de lenguaje (Logopedia)", "Terapia del dolor", "Terapia Ocupacional", "Tipiaje", "Trabajo Social"];
     const vacunas = ["Fiebre amarilla", "Pentavalente", "Polio IPV", "Polio oral", "Toxoide (tetánico/diftérico)", "Trivalente viral (SRP)"];
     const quirurgica = ["Bocio hiperfuncionante", "Cistocele", "Colectomía", "Enfermedad hemorroidal", "Esterilización", "Eventración", "Fibromatosis", "Fístula anal", "Fístula rectovaginal", "Fimosis", "Hernia abdominal", "Hernia epigástrica", "Hernia escrotal", "Hernia inguinal", "Hernia umbilical", "Hidrocele", "Histerectomía", "Lipomas", "Litiasis vesicular (Colecistectomía)", "Lunares", "Miomatosis uterina", "Nevus", "Nódulos mamarios simples", "Paridad satisfecha", "Prolapso", "Prolapso rectal", "Quiste (TU)", "Quiste de epidídimo", "Quiste sebáceo", "Quiste tirogloso", "Rectocele", "Tumores ováricos", "Varicocele", "Vasectomía", "Verrugas"];
@@ -14024,7 +14024,44 @@
 
             huerfanas.forEach(sol => {
                 if (sol && sol.id) {
-                    updates['solicitudes_vivas/' + sol.id] = sol;
+                    // 🔥 FIX BUG 2: Transformar al formato RTDB correcto con links de archivos
+                    const estatusRaw = (sol.Estatus || "").toUpperCase();
+                    const estatusLimpio = estatusRaw.split("|")[0].trim();
+                    
+                    // Extraer datos del diseñador (formato: "Nombre|Fecha")
+                    let disenadorLimpio = "Sin Asignar";
+                    if (sol.Disenador && sol.Disenador.includes("|")) {
+                        disenadorLimpio = sol.Disenador.split("|")[0].trim();
+                    } else if (sol.Disenador && sol.Disenador.trim() !== "") {
+                        disenadorLimpio = sol.Disenador.trim();
+                    }
+
+                    // Crear objeto para RTDB siguiendo el formato exacto del sistema
+                    const solicitudRTDB = {
+                        id: sol.id,
+                        Timestamp: sol.Timestamp || new Date().toISOString(),
+                        Unidad: sol.Unidad,
+                        Solicitud: sol.Solicitud,
+                        Otros: sol.Otros || "",
+                        Especialidades: sol.Especialidades || "",
+                        Servicios: sol.Servicios || "",
+                        Fecha: sol.Fecha,
+                        Hora: sol.Hora,
+                        Direccion: sol.Direccion || "",
+                        Telefono: sol.Telefono || "",
+                        Correo: sol.Correo || "",
+                        Observaciones: sol.Observaciones || "",
+                        Soportes: sol.Soportes || "",
+                        Fotos: sol.Fotos || [], // ✅ Array de {nombre, url, fileId, downloadUrl}
+                        DocumentoCorreccion: sol.DocumentoCorreccion || null, // ✅ {nombre, url, fileId, downloadUrl}
+                        Estatus: estatusLimpio,
+                        Disenador: disenadorLimpio,
+                        ArteFinal: sol.ArteFinal || "",
+                        UsuarioID: sol.UsuarioID || "ANONIMO",
+                        Dispositivo: sol.Dispositivo || "No detectado"
+                    };
+                    
+                    updates['solicitudes_vivas/' + sol.id] = solicitudRTDB;
                     idsToRecreate.add(sol.id); // Agregamos el ID al Set
                 }
             });
@@ -19832,7 +19869,7 @@
             params.append("Servicios", "");
             params.append("Direccion", datoUbicacionSeleccionado ? [institucion, direccionExacta].filter(part => part).join(", ") : "");
             params.append("Hora", datoHoraSeleccionado ? formatearHoraOtros(horaOtros, ampmOtrosSeleccionado) : "N/A");
-            params.append("Observaciones", "");
+            params.append("Observaciones", document.getElementById('observaciones').value.trim() || "");
             params.append("Fecha", fechaOtros);
 
         } else {
