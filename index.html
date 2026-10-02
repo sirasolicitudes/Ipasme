@@ -12186,8 +12186,8 @@
             return;
         }
         
-        if (input.files.length > 6) {
-            info.innerText = `❌ Has seleccionado ${input.files.length} archivos. El máximo permitido es 6.`;
+        if (input.files.length > 10) {
+            info.innerText = `❌ Has seleccionado ${input.files.length} archivos. El máximo permitido es 10.`;
             info.style.color = "#ff4757";
             mainBtn.disabled = true;
             return;
