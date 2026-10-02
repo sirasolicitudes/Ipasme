@@ -17047,9 +17047,8 @@
         if (loginProgressBar) {
             loginProgressBar.style.display = 'none';
         }
-        // Configurar botón principal
+        // Configurar botón principal (selectUploadMode ya configura el texto y onclick)
         mainBtn.classList.remove('hidden');
-        mainBtn.innerText = "SUBIR A DRIVE";
         mainBtn.onclick = uploadArte;
         mainBtn.style.display = 'block';
         
