@@ -11657,21 +11657,21 @@
             const fileIdMatch = urls[0].match(/\/file\/d\/([-\w]{25,})/) || urls[0].match(/[-\w]{25,}/);
             const firstFileId = fileIdMatch ? fileIdMatch[1] : '';
             const firstThumbnailUrl = firstFileId ? `https://drive.google.com/thumbnail?id=${firstFileId}&sz=w400` : '';
-            
+
             container.innerHTML = `
                 <div class="file-preview-carousel" style="position: relative; width: 100%;">
                     <button class="carousel-prev" onclick="carouselPrev()" style="position: absolute; left: 5px; top: 50%; transform: translateY(-50%); background: rgba(0,0,0,0.5); color: white; border: none; border-radius: 50%; width: 30px; height: 30px; cursor: pointer; z-index: 10; font-size: 16px;">❮</button>
-                    <img id="carousel-image" src="" class="file-preview-image-full" onclick="window.open(currentCarouselUrl, '_blank')" title="Click para ver en tamaño completo" style="width: 100%; height: auto; cursor: pointer;">
+                    <img id="carousel-image" src="" class="file-preview-image-full" onclick="openPanelImageViewer()" title="Click para ver en tamaño completo" style="width: 100%; height: auto; cursor: pointer;">
                     <button class="carousel-next" onclick="carouselNext()" style="position: absolute; right: 5px; top: 50%; transform: translateY(-50%); background: rgba(0,0,0,0.5); color: white; border: none; border-radius: 50%; width: 30px; height: 30px; cursor: pointer; z-index: 10; font-size: 16px;">❯</button>
                     <div class="carousel-indicators" style="position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); display: flex; gap: 5px; z-index: 10;"></div>
                 </div>
             `;
-            
+
             // Guardar URLs y estado del carrusel en el contenedor
             container.dataset.carouselUrls = JSON.stringify(urls);
             container.dataset.currentIndex = '0';
             window.currentCarouselUrl = urls[0];
-            
+
             // Crear indicadores
             const indicatorsContainer = container.querySelector('.carousel-indicators');
             urls.forEach((_, i) => {
@@ -11680,7 +11680,7 @@
                 dot.onclick = () => carouselGoTo(i);
                 indicatorsContainer.appendChild(dot);
             });
-            
+
             // Lazy loading para la imagen inicial
             const img = container.querySelector('#carousel-image');
             if (img) {
@@ -11696,7 +11696,7 @@
                 }, { rootMargin: '50px' });
                 observer.observe(img);
             }
-            
+
             info.innerHTML = `💾 ${urls.length} archivos adjuntos disponibles (${urls.length > 1 ? 'Usa las flechas para navegar' : ''})`;
             document.getElementById('admin-view-btn').disabled = false;
             document.getElementById('admin-telegram-btn').disabled = false;
@@ -11719,7 +11719,7 @@
         // Usar thumbnail de Google Drive - IMAGEN COMPLETA A ESCALA REDUCIDA
         const thumbnailUrl = `https://drive.google.com/thumbnail?id=${fileId}&sz=w400`;
         container.innerHTML = `
-        <img src="" class="file-preview-image-full" onclick="window.open('${urls[0]}', '_blank')" title="Click para ver en tamaño completo">
+        <img src="" class="file-preview-image-full" onclick="openPanelImageViewer()" title="Click para ver en tamaño completo" style="cursor: pointer;">
         `;
         // ✅ LAZY LOADING CON INTERSECTION OBSERVER
         const img = container.querySelector('img');
@@ -11743,7 +11743,61 @@
         document.getElementById('admin-telegram-btn').disabled = false;
         // El botón de correo se maneja en updatePanelContent() para validar el asterisco
     }
-    
+
+    // ✅ FUNCIÓN PARA ABRIR VISOR DESDE EL PANEL LATERAL
+    function openPanelImageViewer() {
+        const container = document.getElementById('filePreviewContainer');
+        if (!container) return;
+
+        let urls = [];
+        let currentIndex = 0;
+
+        // Verificar si hay carrusel (múltiples archivos)
+        if (container.dataset.carouselUrls) {
+            urls = JSON.parse(container.dataset.carouselUrls);
+            currentIndex = parseInt(container.dataset.currentIndex || '0');
+        } else {
+            // Si es un solo archivo, obtener la URL de la imagen actual
+            const img = container.querySelector('img');
+            if (img && img.src) {
+                const fileIdMatch = img.src.match(/id=([-\w]{25,})/);
+                if (fileIdMatch) {
+                    const fileId = fileIdMatch[1];
+                    urls = [`https://drive.google.com/file/d/${fileId}/view`];
+                }
+            }
+        }
+
+        if (urls.length === 0) {
+            console.warn('No se encontraron URLs para abrir el visor');
+            return;
+        }
+
+        // Función auxiliar para detectar si es video
+        function esVideo(url) {
+            const urlLower = String(url || '').toLowerCase();
+            const extensionesVideo = ['.mp4', '.mov', '.avi', '.mkv', '.webm', '.flv', '.wmv'];
+            return extensionesVideo.some(ext => urlLower.endsWith(ext));
+        }
+
+        // Convertir URLs a formato de objetos para el visor
+        const photos = urls.map((url, index) => {
+            const fileIdMatch = url.match(/\/file\/d\/([-\w]{25,})/);
+            const fileId = fileIdMatch ? fileIdMatch[1] : '';
+            const isVideo = esVideo(url);
+            return {
+                url: url,
+                downloadUrl: url,
+                thumbnailUrl: fileId ? `https://drive.google.com/thumbnail?id=${fileId}&sz=w800` : url,
+                nombre: `Archivo ${index + 1}`,
+                isVideo: isVideo
+            };
+        });
+
+        // Abrir el visor con navegación
+        openImageViewerWithNavigation(photos, currentIndex);
+    }
+
     // ✅ FUNCIONES PARA CONTROLAR EL CARRUSEL DE ARCHIVOS MÚLTIPLES
     function carouselPrev() {
         const container = document.getElementById('filePreviewContainer');
@@ -12332,24 +12386,16 @@
             return extensionesVideo.some(ext => urlLower.endsWith(ext));
         }
 
-        // Función para obtener URL de preview de Drive
-        function getPreviewUrl(url) {
-            const fileIdMatch = url.match(/\/file\/d\/([-\w]{25,})/);
-            if (fileIdMatch && esVideo(url)) {
-                return `https://drive.google.com/file/d/${fileIdMatch[1]}/preview`;
-            }
-            return url;
-        }
-
         if (urls.length === 1) {
-            const previewUrl = getPreviewUrl(urls[0]);
-            window.open(previewUrl, '_blank');
+            const isVideo = esVideo(urls[0]);
+            openImageViewer(urls[0], 'Archivo 1', isVideo);
         } else {
+            // Para múltiples archivos, mostrar lista con SweetAlert
             let html = '<div style="display:flex; flex-direction:column; gap:10px; margin-top: 15px;">';
             urls.forEach((url, i) => {
-                const previewUrl = getPreviewUrl(url);
-                const icon = esVideo(url) ? '🎬' : '📄';
-                html += `<button class="modal-btn" style="background:var(--turquesa);" onclick="window.open('${previewUrl}', '_blank')">${icon} Ver Archivo ${i+1}</button>`;
+                const isVideo = esVideo(url);
+                const icon = isVideo ? '🎬' : '📄';
+                html += `<button class="modal-btn" style="background:var(--turquesa);" onclick="openImageViewer('${url}', 'Archivo ${i+1}', ${isVideo})">${icon} Ver Archivo ${i+1}</button>`;
             });
             html += '</div>';
             Swal.fire({
@@ -12538,23 +12584,40 @@
 
     // ✅ FUNCIÓN PARA MOSTRAR TEXTO DE SOLICITUD EN FORMATO EMAIL (COPIAR)
     // ✅ FUNCIÓN PARA ABRIR VISOR DE IMÁGENES
-    function openImageViewer(imageUrl, imageName) {
+    function openImageViewer(imageUrl, imageName, isVideo = false) {
         console.log("🔍 Abriendo visor de imágenes:", imageUrl, imageName);
-        
+
+        // Detectar si es video por extensión si no se especificó
+        if (!isVideo) {
+            const urlLower = String(imageUrl || '').toLowerCase();
+            const extensionesVideo = ['.mp4', '.mov', '.avi', '.mkv', '.webm', '.flv', '.wmv'];
+            isVideo = extensionesVideo.some(ext => urlLower.endsWith(ext));
+        }
+
+        let mediaElement;
+        if (isVideo) {
+            const fileIdMatch = imageUrl.match(/\/file\/d\/([-\w]{25,})/);
+            const fileId = fileIdMatch ? fileIdMatch[1] : '';
+            const previewUrl = fileId ? `https://drive.google.com/file/d/${fileId}/preview` : imageUrl;
+            mediaElement = `<iframe src="${previewUrl}" style="max-width: 95%; max-height: 90vh; border: none; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.5);" allow="autoplay; fullscreen"></iframe>`;
+        } else {
+            mediaElement = `<img src="${imageUrl}" alt="${imageName}" style="max-width: 100%; max-height: 90vh; object-fit: contain; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.5);" onerror="console.error('Error cargando imagen en visor:', '${imageUrl}'); this.style.display='none'; this.parentElement.innerHTML='<div style=\\'color: white; padding: 20px; text-align: center;\\'>❌ Error cargando imagen<br><small>URL: ${imageUrl}</small></div>';">`;
+        }
+
         const viewerHTML = `
             <div id="image-viewer-overlay" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 10000; display: flex; align-items: center; justify-content: center; cursor: pointer;" onclick="closeImageViewer()">
                 <div style="max-width: 95%; max-height: 95%; display: flex; flex-direction: column; align-items: center;">
-                    <img src="${imageUrl}" alt="${imageName}" style="max-width: 100%; max-height: 90vh; object-fit: contain; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.5);" onerror="console.error('Error cargando imagen en visor:', '${imageUrl}'); this.style.display='none'; this.parentElement.innerHTML='<div style=\\'color: white; padding: 20px; text-align: center;\\'>❌ Error cargando imagen<br><small>URL: ${imageUrl}</small></div>';">
+                    ${mediaElement}
                     <div style="color: white; margin-top: 15px; font-size: 1rem; text-align: center;">
                         ${imageName}
                     </div>
                     <div style="color: rgba(255,255,255,0.7); margin-top: 8px; font-size: 0.85rem;">
-                        Clic fuera de la imagen para cerrar
+                        Clic fuera para cerrar
                     </div>
                 </div>
             </div>
         `;
-        
+
         document.body.insertAdjacentHTML('beforeend', viewerHTML);
         document.body.style.overflow = 'hidden'; // Prevenir scroll
     }
