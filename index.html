@@ -11730,21 +11730,25 @@
             const fileIdMatch = urls[0].match(/\/file\/d\/([-\w]{25,})/) || urls[0].match(/[-\w]{25,}/);
             const firstFileId = fileIdMatch ? fileIdMatch[1] : '';
             const firstThumbnailUrl = firstFileId ? `https://drive.google.com/thumbnail?id=${firstFileId}&sz=w400` : '';
-            
+            const firstIsVideo = esVideoArchivo('Archivo 1', urls[0]);
+
             container.innerHTML = `
                 <div class="file-preview-carousel" style="position: relative; width: 100%;">
                     <button class="carousel-prev" onclick="carouselPrev()" style="position: absolute; left: 5px; top: 50%; transform: translateY(-50%); background: rgba(0,0,0,0.5); color: white; border: none; border-radius: 50%; width: 30px; height: 30px; cursor: pointer; z-index: 10; font-size: 16px;">❮</button>
-                    <img id="carousel-image" src="" class="file-preview-image-full" onclick="openPanelImageViewer()" title="Click para ver en tamaño completo" style="width: 100%; height: auto; cursor: pointer;">
+                    <div style="position: relative; width: 100%;">
+                        <img id="carousel-image" src="" class="file-preview-image-full" onclick="openPanelImageViewer()" title="Click para ver en tamaño completo" style="width: 100%; height: auto; cursor: pointer;">
+                        ${firstIsVideo ? '<div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.7); color: white; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; font-size: 20px; pointer-events: none;">▶</div>' : ''}
+                    </div>
                     <button class="carousel-next" onclick="carouselNext()" style="position: absolute; right: 5px; top: 50%; transform: translateY(-50%); background: rgba(0,0,0,0.5); color: white; border: none; border-radius: 50%; width: 30px; height: 30px; cursor: pointer; z-index: 10; font-size: 16px;">❯</button>
                     <div class="carousel-indicators" style="position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); display: flex; gap: 5px; z-index: 10;"></div>
                 </div>
             `;
-            
+
             // Guardar URLs y estado del carrusel en el contenedor
             container.dataset.carouselUrls = JSON.stringify(urls);
             container.dataset.currentIndex = '0';
             window.currentCarouselUrl = urls[0];
-            
+
             // Crear indicadores
             const indicatorsContainer = container.querySelector('.carousel-indicators');
             urls.forEach((_, i) => {
@@ -11791,9 +11795,21 @@
         const fileId = fileIdMatch[1];
         // Usar thumbnail de Google Drive - IMAGEN COMPLETA A ESCALA REDUCIDA
         const thumbnailUrl = `https://drive.google.com/thumbnail?id=${fileId}&sz=w400`;
-        container.innerHTML = `
-        <img src="" class="file-preview-image-full" onclick="openPanelImageViewer()" title="Click para ver en tamaño completo">
-        `;
+        const isVideo = esVideoArchivo('Archivo 1', urls[0]);
+
+        if (isVideo) {
+            container.innerHTML = `
+            <div style="position: relative;" onclick="openPanelImageViewer()" title="Click para ver en tamaño completo" style="cursor: pointer;">
+                <img src="" class="file-preview-image-full" style="width: 100%; height: auto; cursor: pointer;">
+                <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.7); color: white; border-radius: 50%; width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; font-size: 24px; pointer-events: none;">▶</div>
+            </div>
+            `;
+        } else {
+            container.innerHTML = `
+            <img src="" class="file-preview-image-full" onclick="openPanelImageViewer()" title="Click para ver en tamaño completo" style="cursor: pointer;">
+            `;
+        }
+
         // ✅ LAZY LOADING CON INTERSECTION OBSERVER
         const img = container.querySelector('img');
         if (img) {
@@ -11821,10 +11837,10 @@
     function openPanelImageViewer() {
         const container = document.getElementById('filePreviewContainer');
         if (!container) return;
-        
+
         let urls = [];
         let currentIndex = 0;
-        
+
         // Verificar si hay carrusel (múltiples archivos)
         if (container.dataset.carouselUrls) {
             urls = JSON.parse(container.dataset.carouselUrls);
@@ -11842,24 +11858,26 @@
                 }
             }
         }
-        
+
         if (urls.length === 0) {
             console.warn('No se encontraron URLs para abrir el visor');
             return;
         }
-        
+
         // Convertir URLs a formato de objetos para el visor
         const photos = urls.map((url, index) => {
             const fileIdMatch = url.match(/\/file\/d\/([-\w]{25,})/);
             const fileId = fileIdMatch ? fileIdMatch[1] : '';
+            const isVideo = esVideoArchivo(`Archivo ${index + 1}`, url);
             return {
                 url: url,
                 downloadUrl: url,
                 thumbnailUrl: fileId ? `https://drive.google.com/thumbnail?id=${fileId}&sz=w800` : url,
-                nombre: `Archivo ${index + 1}`
+                nombre: `Archivo ${index + 1}`,
+                isVideo: isVideo
             };
         });
-        
+
         // Abrir el visor con navegación
         const currentPhoto = photos[currentIndex];
         openImageViewer(currentPhoto.thumbnailUrl || currentPhoto.downloadUrl, currentPhoto.nombre, photos, currentIndex);
@@ -11891,31 +11909,49 @@
     function carouselGoTo(index) {
         const container = document.getElementById('filePreviewContainer');
         if (!container || !container.dataset.carouselUrls) return;
-        
+
         const urls = JSON.parse(container.dataset.carouselUrls);
         if (index < 0 || index >= urls.length) return;
-        
+
         const url = urls[index];
         const fileIdMatch = url.match(/\/file\/d\/([-\w]{25,})/) || url.match(/[-\w]{25,}/);
         const fileId = fileIdMatch ? fileIdMatch[1] : '';
         const thumbnailUrl = fileId ? `https://drive.google.com/thumbnail?id=${fileId}&sz=w400` : '';
-        
-        // Actualizar imagen
+        const isVideo = esVideoArchivo(`Archivo ${index + 1}`, url);
+
+        // Actualizar imagen con indicador de video si corresponde
         const img = container.querySelector('#carousel-image');
         if (img) {
-            img.src = thumbnailUrl;
+            // Reconstruir el contenedor para incluir o quitar el indicador de video
+            const carouselDiv = container.querySelector('.file-preview-carousel');
+            if (carouselDiv) {
+                carouselDiv.innerHTML = `
+                    <button class="carousel-prev" onclick="carouselPrev()" style="position: absolute; left: 5px; top: 50%; transform: translateY(-50%); background: rgba(0,0,0,0.5); color: white; border: none; border-radius: 50%; width: 30px; height: 30px; cursor: pointer; z-index: 10; font-size: 16px;">❮</button>
+                    <div style="position: relative; width: 100%;">
+                        <img id="carousel-image" src="${thumbnailUrl}" class="file-preview-image-full" onclick="openPanelImageViewer()" title="Click para ver en tamaño completo" style="width: 100%; height: auto; cursor: pointer;">
+                        ${isVideo ? '<div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.7); color: white; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; font-size: 20px; pointer-events: none;">▶</div>' : ''}
+                    </div>
+                    <button class="carousel-next" onclick="carouselNext()" style="position: absolute; right: 5px; top: 50%; transform: translateY(-50%); background: rgba(0,0,0,0.5); color: white; border: none; border-radius: 50%; width: 30px; height: 30px; cursor: pointer; z-index: 10; font-size: 16px;">❯</button>
+                    <div class="carousel-indicators" style="position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); display: flex; gap: 5px; z-index: 10;"></div>
+                `;
+
+                // Recrear indicadores
+                const indicatorsContainer = carouselDiv.querySelector('.carousel-indicators');
+                urls.forEach((_, i) => {
+                    const dot = document.createElement('div');
+                    dot.style.cssText = `width: 8px; height: 8px; border-radius: 50%; background: ${i === index ? 'white' : 'rgba(255,255,255,0.5)'}; cursor: pointer;`;
+                    dot.onclick = () => carouselGoTo(i);
+                    indicatorsContainer.appendChild(dot);
+                });
+            }
         }
-        
+
         // Actualizar URL actual para el click
         window.currentCarouselUrl = url;
-        
+
         // Actualizar índice
         container.dataset.currentIndex = index.toString();
-        
-        // Actualizar indicadores
-        const indicators = container.querySelectorAll('.carousel-indicators div');
-        indicators.forEach((dot, i) => {
-            dot.style.background = i === index ? 'white' : 'rgba(255,255,255,0.5)';
+    }
         });
     }
     
@@ -12670,70 +12706,111 @@
         document.body.style.overflow = 'hidden'; // Prevenir scroll
     }
     
+    // ✅ FUNCIÓN AUXILIAR PARA DETECTAR SI ES VIDEO
+    function esVideoArchivo(nombre, url) {
+        const nombreLower = String(nombre || '').toLowerCase();
+        const urlLower = String(url || '').toLowerCase();
+        const extensionesVideo = ['.mp4', '.mov', '.avi', '.mkv', '.webm', '.flv', '.wmv'];
+        return extensionesVideo.some(ext => nombreLower.endsWith(ext) || urlLower.endsWith(ext));
+    }
+
     // ✅ FUNCIÓN PARA ABRIR VISOR DE IMÁGENES CON NAVEGACIÓN (similar al visor del panel lateral)
     function openImageViewerWithNavigation(photos, startIndex = 0) {
         let currentIndex = startIndex;
-        
+        const currentPhoto = photos[currentIndex];
+        const isVideo = currentPhoto.isVideo || esVideoArchivo(currentPhoto.nombre, currentPhoto.url);
+
+        // Generar el contenido del visor (img o video según corresponda)
+        let mediaElement;
+        if (isVideo) {
+            const fileIdMatch = currentPhoto.url.match(/\/file\/d\/([-\w]{25,})/);
+            const fileId = fileIdMatch ? fileIdMatch[1] : '';
+            const previewUrl = fileId ? `https://drive.google.com/file/d/${fileId}/preview` : currentPhoto.url;
+            mediaElement = `<iframe id="viewer-image" src="${previewUrl}" style="max-width: 90%; max-height: 85vh; border: none; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.5);" allow="autoplay; fullscreen"></iframe>`;
+        } else {
+            mediaElement = `<img id="viewer-image" src="${currentPhoto.thumbnailUrl || currentPhoto.downloadUrl}" alt="${currentPhoto.nombre}" style="max-width: 90%; max-height: 85vh; object-fit: contain; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.5);">`;
+        }
+
         const viewerHTML = `
             <div id="image-viewer-overlay" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 10000; display: flex; flex-direction: column;">
                 <div style="flex: 1; display: flex; align-items: center; justify-content: center; position: relative;">
                     <!-- Flecha izquierda -->
                     <button id="viewer-prev-btn" style="position: absolute; left: 20px; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,0.2); border: none; color: white; font-size: 2rem; padding: 20px; cursor: pointer; border-radius: 50%; transition: background 0.2s; z-index: 10001;" ${currentIndex === 0 ? 'disabled' : ''}>◀</button>
-                    
-                    <!-- Imagen -->
-                    <img id="viewer-image" src="${photos[currentIndex].thumbnailUrl || photos[currentIndex].downloadUrl}" alt="${photos[currentIndex].nombre}" style="max-width: 90%; max-height: 85vh; object-fit: contain; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.5);">
-                    
+
+                    <!-- Imagen o Video -->
+                    ${mediaElement}
+
                     <!-- Flecha derecha -->
                     <button id="viewer-next-btn" style="position: absolute; right: 20px; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,0.2); border: none; color: white; font-size: 2rem; padding: 20px; cursor: pointer; border-radius: 50%; transition: background 0.2s; z-index: 10001;" ${currentIndex === photos.length - 1 ? 'disabled' : ''}>▶</button>
                 </div>
-                
+
                 <!-- Info y controles -->
                 <div style="padding: 20px; background: rgba(0,0,0,0.8); display: flex; justify-content: space-between; align-items: center;">
                     <div style="color: white;">
-                        <div style="font-size: 1.1rem; font-weight: 600;">${photos[currentIndex].nombre}</div>
+                        <div style="font-size: 1.1rem; font-weight: 600;">${currentPhoto.nombre}</div>
                         <div style="font-size: 0.9rem; color: rgba(255,255,255,0.7); margin-top: 5px;">${currentIndex + 1} de ${photos.length}</div>
                     </div>
                     <div style="display: flex; gap: 10px;">
-                        <a id="viewer-download-btn" href="${photos[currentIndex].downloadUrl}" download="${photos[currentIndex].nombre}" style="padding: 10px 20px; background: var(--verde); color: white; border-radius: 6px; text-decoration: none; font-weight: 600;">📥 Descargar</a>
-                        <a id="viewer-drive-btn" href="${photos[currentIndex].url}" target="_blank" style="padding: 10px 20px; background: #1a73e8; color: white; border-radius: 6px; text-decoration: none; font-weight: 600;">🔗 Ver en Drive</a>
+                        <a id="viewer-download-btn" href="${currentPhoto.downloadUrl}" download="${currentPhoto.nombre}" style="padding: 10px 20px; background: var(--verde); color: white; border-radius: 6px; text-decoration: none; font-weight: 600;">📥 Descargar</a>
+                        <a id="viewer-drive-btn" href="${currentPhoto.url}" target="_blank" style="padding: 10px 20px; background: #1a73e8; color: white; border-radius: 6px; text-decoration: none; font-weight: 600;">🔗 Ver en Drive</a>
                         <button onclick="closeImageViewer()" style="padding: 10px 20px; background: #dc3545; color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer;">✕ Cerrar</button>
                     </div>
                 </div>
             </div>
         `;
-        
+
         document.body.insertAdjacentHTML('beforeend', viewerHTML);
         document.body.style.overflow = 'hidden';
-        
+
         // Event listeners para navegación
         const prevBtn = document.getElementById('viewer-prev-btn');
         const nextBtn = document.getElementById('viewer-next-btn');
-        const viewerImage = document.getElementById('viewer-image');
         const downloadBtn = document.getElementById('viewer-download-btn');
         const driveBtn = document.getElementById('viewer-drive-btn');
-        
+
         function updateViewer() {
             const photo = photos[currentIndex];
-            viewerImage.src = photo.thumbnailUrl || photo.downloadUrl;
-            viewerImage.alt = photo.nombre;
+            const isVideo = photo.isVideo || esVideoArchivo(photo.nombre, photo.url);
+            const viewerImage = document.getElementById('viewer-image');
+
+            if (isVideo) {
+                const fileIdMatch = photo.url.match(/\/file\/d\/([-\w]{25,})/);
+                const fileId = fileIdMatch ? fileIdMatch[1] : '';
+                const previewUrl = fileId ? `https://drive.google.com/file/d/${fileId}/preview` : photo.url;
+                if (viewerImage.tagName === 'IMG') {
+                    viewerImage.outerHTML = `<iframe id="viewer-image" src="${previewUrl}" style="max-width: 90%; max-height: 85vh; border: none; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.5);" allow="autoplay; fullscreen"></iframe>`;
+                } else {
+                    viewerImage.src = previewUrl;
+                }
+            } else {
+                if (viewerImage.tagName === 'IFRAME') {
+                    viewerImage.outerHTML = `<img id="viewer-image" src="${photo.thumbnailUrl || photo.downloadUrl}" alt="${photo.nombre}" style="max-width: 90%; max-height: 85vh; object-fit: contain; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.5);">`;
+                } else {
+                    viewerImage.src = photo.thumbnailUrl || photo.downloadUrl;
+                    viewerImage.alt = photo.nombre;
+                }
+            }
+
             downloadBtn.href = photo.downloadUrl;
             downloadBtn.download = photo.nombre;
             driveBtn.href = photo.url;
-            
+
             // Actualizar info
-            const infoDiv = viewerImage.parentElement.nextElementSibling.querySelector('div');
-            infoDiv.innerHTML = `
-                <div style="font-size: 1.1rem; font-weight: 600;">${photo.nombre}</div>
-                <div style="font-size: 0.9rem; color: rgba(255,255,255,0.7); margin-top: 5px;">${currentIndex + 1} de ${photos.length}</div>
-            `;
-            
+            const infoDiv = document.querySelector('#image-viewer-overlay > div:last-child > div:first-child');
+            if (infoDiv) {
+                infoDiv.innerHTML = `
+                    <div style="font-size: 1.1rem; font-weight: 600;">${photo.nombre}</div>
+                    <div style="font-size: 0.9rem; color: rgba(255,255,255,0.7); margin-top: 5px;">${currentIndex + 1} de ${photos.length}</div>
+                `;
+            }
+
             // Actualizar estado de botones
             prevBtn.disabled = currentIndex === 0;
             nextBtn.disabled = currentIndex === photos.length - 1;
             prevBtn.style.opacity = currentIndex === 0 ? '0.3' : '1';
             nextBtn.style.opacity = currentIndex === photos.length - 1 ? '0.3' : '1';
         }
-        
+
         prevBtn.addEventListener('click', (e) => {
             e.stopPropagation();
             if (currentIndex > 0) {
@@ -12741,7 +12818,7 @@
                 updateViewer();
             }
         });
-        
+
         nextBtn.addEventListener('click', (e) => {
             e.stopPropagation();
             if (currentIndex < photos.length - 1) {
@@ -12749,7 +12826,7 @@
                 updateViewer();
             }
         });
-        
+
         // Navegación con teclado
         document.addEventListener('keydown', handleKeyDown);
         
