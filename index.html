@@ -11780,22 +11780,10 @@
             return extensionesVideo.some(ext => urlLower.endsWith(ext));
         }
 
-        // Convertir URLs a formato de objetos para el visor
-        const photos = urls.map((url, index) => {
-            const fileIdMatch = url.match(/\/file\/d\/([-\w]{25,})/);
-            const fileId = fileIdMatch ? fileIdMatch[1] : '';
-            const isVideo = esVideo(url);
-            return {
-                url: url,
-                downloadUrl: url,
-                thumbnailUrl: fileId ? `https://drive.google.com/thumbnail?id=${fileId}&sz=w800` : url,
-                nombre: `Archivo ${index + 1}`,
-                isVideo: isVideo
-            };
-        });
-
-        // Abrir el visor con navegación
-        openImageViewerWithNavigation(photos, currentIndex);
+        // Abrir el archivo actual en el visor
+        const currentUrl = urls[currentIndex];
+        const isVideo = esVideo(currentUrl);
+        openImageViewer(currentUrl, `Archivo ${currentIndex + 1}`, isVideo);
     }
 
     // ✅ FUNCIONES PARA CONTROLAR EL CARRUSEL DE ARCHIVOS MÚLTIPLES
