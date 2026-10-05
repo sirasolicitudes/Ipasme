@@ -12582,6 +12582,15 @@
             isVideo = extensionesVideo.some(ext => urlLower.endsWith(ext));
         }
 
+        // Si es una URL de Drive y no es video, usar el thumbnail
+        let displayUrl = imageUrl;
+        if (!isVideo && imageUrl.includes('drive.google.com')) {
+            const fileIdMatch = imageUrl.match(/\/file\/d\/([-\w]{25,})/);
+            if (fileIdMatch) {
+                displayUrl = `https://drive.google.com/thumbnail?id=${fileIdMatch[1]}&sz=w1600`;
+            }
+        }
+
         let mediaElement;
         if (isVideo) {
             const fileIdMatch = imageUrl.match(/\/file\/d\/([-\w]{25,})/);
@@ -12589,7 +12598,7 @@
             const previewUrl = fileId ? `https://drive.google.com/file/d/${fileId}/preview` : imageUrl;
             mediaElement = `<iframe src="${previewUrl}" style="max-width: 95%; max-height: 90vh; border: none; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.5);" allow="autoplay; fullscreen"></iframe>`;
         } else {
-            mediaElement = `<img src="${imageUrl}" alt="${imageName}" style="max-width: 100%; max-height: 90vh; object-fit: contain; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.5);" onerror="console.error('Error cargando imagen en visor:', '${imageUrl}'); this.style.display='none'; this.parentElement.innerHTML='<div style=\\'color: white; padding: 20px; text-align: center;\\'>❌ Error cargando imagen<br><small>URL: ${imageUrl}</small></div>';">`;
+            mediaElement = `<img src="${displayUrl}" alt="${imageName}" style="max-width: 100%; max-height: 90vh; object-fit: contain; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.5);" onerror="console.error('Error cargando imagen en visor:', '${displayUrl}'); this.style.display='none'; this.parentElement.innerHTML='<div style=\\'color: white; padding: 20px; text-align: center;\\'>❌ Error cargando imagen<br><small>URL: ${displayUrl}</small></div>';">`;
         }
 
         const viewerHTML = `
