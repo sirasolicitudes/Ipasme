@@ -1,4 +1,4 @@
-    <!DOCTYPE html>
+<!DOCTYPE html>
     <html lang="es">
     <head>
     <meta charset="UTF-8">
@@ -14,6 +14,8 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <!-- ✅ Chart.js para gráficos de estadísticas -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- ✅ heic2any: convierte fotos HEIC/HEIF (iPhone) a JPG en el navegador -->
+    <script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script>
     <!-- ✅ tsParticles para efectos de partículas -->
     <script src="https://cdn.jsdelivr.net/npm/tsparticles@2.12.0/tsparticles.bundle.min.js"></script>
     <style>
@@ -14573,9 +14575,49 @@
         }
     }
 
-    function handleCopyPhoto(input, imgId, btnId) {
-        const file = input.files[0];
+    // ✅ Detecta HEIC/HEIF por extensión o tipo MIME (en algunos navegadores el type llega vacío)
+    function esArchivoHeic(file) {
+        const nombre = (file.name || '').toLowerCase();
+        return /\.(heic|heif)$/.test(nombre) || /image\/(heic|heif)/.test(file.type || '');
+    }
+
+    // ✅ Convierte HEIC/HEIF a JPG. Si falla, devuelve el archivo original.
+    async function convertirHeicSiHaceFalta(file) {
+        if (!esArchivoHeic(file)) return file;
+        try {
+            if (typeof heic2any === 'undefined') throw new Error('heic2any no está cargado');
+            const out = await heic2any({ blob: file, toType: 'image/jpeg', quality: 0.9 });
+            const blob = Array.isArray(out) ? out[0] : out;
+            console.log(`🔄 HEIC convertido a JPG: ${file.name} (${(file.size/1024/1024).toFixed(2)}MB → ${(blob.size/1024/1024).toFixed(2)}MB)`);
+            return new File([blob], file.name.replace(/\.[^/.]+$/, '.jpg'), {
+                type: 'image/jpeg',
+                lastModified: Date.now()
+            });
+        } catch (e) {
+            console.warn('⚠️ No se pudo convertir HEIC en el navegador:', e);
+            return file;
+        }
+    }
+
+    async function handleCopyPhoto(input, imgId, btnId) {
+        let file = input.files[0];
         if (!file) return;
+
+        // ✅ Convertir HEIC a JPG al seleccionar la foto (iPhone)
+        if (esArchivoHeic(file)) {
+            showToast("🔄 Convirtiendo foto HEIC a JPG...", "info", 4000);
+            file = await convertirHeicSiHaceFalta(file);
+
+            if (esArchivoHeic(file)) { // la conversión falló
+                showToast("📷 No se pudo convertir la foto HEIC. Usa una foto JPG o PNG.", "error", 6000);
+                input.value = '';
+                return;
+            }
+            // Reemplazar el archivo del input por el JPG convertido
+            const dt = new DataTransfer();
+            dt.items.add(file);
+            input.files = dt.files;
+        }
 
         // Calcular peso total de todos los inputs de Copy RRSS
         let totalSize = 0;
@@ -20277,6 +20319,9 @@
                     const fileInput = document.getElementById('c_f'+i);
                     if(fileInput && fileInput.files && fileInput.files[0]) {
                         let file = fileInput.files[0];
+                        
+                        // ✅ Red de seguridad: convertir HEIC a JPG (para todos los roles)
+                        file = await convertirHeicSiHaceFalta(file);
                         
                         // ✅ APLICAR COMPRESIÓN SOLO PARA USUARIOS REGULARES (no admin ni diseñadores)
                         if (!isAdmin && !isDesigner) {
