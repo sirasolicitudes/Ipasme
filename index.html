@@ -21027,14 +21027,28 @@
                 cache: 'no-store'
             });
 
-            const sessionData = await sessionRes.json();
+            const sessionText = await sessionRes.text();
+            console.log('🔍 [DEBUG] Respuesta del backend (initResumableSession):', sessionText);
+
+            let sessionData;
+            try {
+                sessionData = JSON.parse(sessionText);
+            } catch (e) {
+                console.error('❌ [DEBUG] La respuesta no es JSON válido:', e);
+                throw new Error("Respuesta del backend no es JSON válido: " + sessionText.substring(0, 200));
+            }
+
+            console.log('🔍 [DEBUG] sessionData parseado:', sessionData);
+
             if (!sessionData.success) {
                 throw new Error("Error iniciando sesión resumable: " + (sessionData.error || "Unknown error"));
             }
 
             const uploadUrl = sessionData.uploadUrl;
+            console.log('🔍 [DEBUG] uploadUrl recibido:', uploadUrl);
+
             if (!uploadUrl) {
-                throw new Error("El backend no devolvió URL de subida");
+                throw new Error("El backend no devolvió URL de subida. Respuesta completa: " + JSON.stringify(sessionData));
             }
 
             console.log('✅ Sesión resumable iniciada, uploadUrl:', uploadUrl.substring(0, 50) + '...');
