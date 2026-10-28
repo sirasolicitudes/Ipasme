@@ -21447,20 +21447,6 @@
         }
 
         return uploadUrl;
-            throw new Error("Error de conexión a Google Drive: " + fetchError.message);
-        }
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error("No se pudo iniciar sesión en Drive: " + errorText);
-        }
-        
-        const location = response.headers.get('Location');
-        if (!location) {
-            throw new Error("No se recibió URL de subida (Location)");
-        }
-        
-        return location;
     }
 
     /**
