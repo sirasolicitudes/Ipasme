@@ -12261,7 +12261,89 @@
         }
     }
 
-    // ✅ FUNCIÓN CON REINTENTOS PARA SUBIDA DE CHUNKS
+    // ✅ SISTEMA UNIVERSAL DE SUBIDA BINARIA DIRECTA PROTEGIDA CONTRA CORS
+    function siraSubirBinarioXHR(file, uploadUrl, onProgress) {
+        return new Promise((resolve, reject) => {
+            const xhr = new XMLHttpRequest();
+            xhr.open('PUT', uploadUrl, true);
+
+            const timeoutMs = Math.max(90000, Math.ceil(file.size / (5 * 1024 * 1024)) * 30000);
+            xhr.timeout = timeoutMs;
+
+            xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
+
+            xhr.upload.onprogress = (e) => {
+                if (e.lengthComputable && typeof onProgress === 'function') {
+                    const percent = Math.round((e.loaded / e.total) * 100);
+                    onProgress(percent, e.loaded, e.total);
+                }
+            };
+
+            xhr.onload = () => {
+                if (xhr.status === 200 || xhr.status === 201) {
+                    try {
+                        const data = JSON.parse(xhr.responseText);
+                        resolve({ id: data.id, success: true });
+                    } catch (e) {
+                        resolve({ id: null, ambiguo: true, success: true });
+                    }
+                } else if (xhr.status === 308) {
+                    resolve({ id: null, status: 308, success: true });
+                } else {
+                    reject(new Error(`HTTP ${xhr.status}: ${xhr.statusText}`));
+                }
+            };
+
+            xhr.onerror = () => {
+                console.warn("⚠️ XHR onerror (posible bloqueo CORS tras guardado en Drive). Verificando con backend...");
+                resolve({ id: null, ambiguo: true, success: true });
+            };
+
+            xhr.ontimeout = () => {
+                reject(new Error('La subida se estancó por timeout de red.'));
+            };
+
+            xhr.onabort = () => {
+                reject(new Error('Subida cancelada.'));
+            };
+
+            xhr.send(file);
+        });
+    }
+
+    async function siraConfirmarArchivoDrive(fileName, folderType = "arte", fileSize = null, maxIntentos = 4) {
+        for (let intento = 1; intento <= maxIntentos; intento++) {
+            try {
+                const params = new URLSearchParams();
+                params.append("action", "getLatestFileId");
+                params.append("filename", fileName);
+                params.append("folderType", folderType);
+                if (fileSize) params.append("fileSize", fileSize);
+                if (window.userCredentials?.username) params.append("username", window.userCredentials.username);
+                if (window.userCredentials?.password) params.append("password", window.userCredentials.password);
+
+                const res = await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    body: params,
+                    cache: 'no-store'
+                });
+
+                const resData = await res.json();
+                const data = resData.data || resData;
+                if (data.success && data.fileId) {
+                    return data;
+                }
+            } catch (e) {
+                console.warn(`Intento ${intento}/${maxIntentos} consultando getLatestFileId:`, e.message);
+            }
+            if (intento < maxIntentos) {
+                await new Promise(r => setTimeout(r, 1500 * intento));
+            }
+        }
+        throw new Error(`No se pudo verificar el archivo '${fileName}' en Google Drive después de la subida.`);
+    }
+
+    // ✅ FUNCIÓN CON REINTENTOS PARA SUBIDA DE CHUNKS (COMPATIBILIDAD)
     async function uploadBinaryChunkWithRetry(url, chunk, offset, fileSize, maxRetries = 3) {
         for (let attempt = 1; attempt <= maxRetries; attempt++) {
             try {
@@ -12331,43 +12413,28 @@
                 
                 document.getElementById('progressStatus').innerText = `📦 Subiendo archivo ${i+1} de ${totalFiles}...`;
                 
-                // ✅ CORRECCIÓN: Usar función existente iniciarSesionResumableGeneric
+                // Iniciar sesión resumable en backend
                 const uploadUrl = await iniciarSesionResumableGeneric(file, authData, uploadName, "arte");
                 
-                const CHUNK_SIZE = 256 * 1024;
-                let offset = 0;
-                let finalResponse = null;
-                
                 try {
-                    while (offset < file.size) {
-                        const chunk = file.slice(offset, Math.min(offset + CHUNK_SIZE, file.size));
-                        const isLastChunk = (offset + chunk.size) >= file.size;
-                        
-                        // ✅ CORRECCIÓN: Usar función con reintentos
-                        const response = await uploadBinaryChunkWithRetry(uploadUrl, chunk, offset, file.size);
-                        if (isLastChunk && response.ok) finalResponse = response;
-                        
-                        offset += chunk.size;
-                        
-                        const fileProgress = offset / file.size;
-                        const overallProgress = Math.round(((i + fileProgress) / totalFiles) * 100);
+                    const uploadRes = await siraSubirBinarioXHR(file, uploadUrl, (fileProgress) => {
+                        const overallProgress = Math.round(((i + fileProgress / 100) / totalFiles) * 100);
                         document.getElementById('progressBar').style.width = overallProgress + '%';
                         document.getElementById('progressPercent').innerText = overallProgress + '%';
-                        document.getElementById('progressInfo').innerText = `Subiendo: ${file.name} | Archivo ${i+1}/${totalFiles}`;
+                        document.getElementById('progressInfo').innerText = `Subiendo: ${file.name} (${fileProgress}%) | Archivo ${i+1}/${totalFiles}`;
+                    });
+                    
+                    let fileId = uploadRes.id;
+                    let fileUrl = fileId ? `https://drive.google.com/file/d/${fileId}/view` : null;
+                    if (!fileId) {
+                        console.log(`🔍 Verificando archivo ${uploadName} en Drive vía backend...`);
+                        const confirmData = await siraConfirmarArchivoDrive(uploadName, "arte", file.size);
+                        fileId = confirmData.fileId;
+                        fileUrl = confirmData.fileUrl;
                     }
                     
-                    if (finalResponse && finalResponse.ok) {
-                        const responseData = await finalResponse.json();
-                        // ✅ CORRECCIÓN: Validar formato de ID
-                        if (!isValidDriveId(responseData.id)) {
-                            throw new Error(`ID de archivo inválido recibido: ${responseData.id}`);
-                        }
-                        urls.push(`https://drive.google.com/file/d/${responseData.id}/view`);
-                    } else {
-                        throw new Error(`Error en el archivo ${i+1}`);
-                    }
+                    urls.push(fileUrl);
                 } catch (fileError) {
-                    // ✅ CORRECCIÓN: Manejo de errores específico por archivo
                     console.error(`Error en archivo ${i+1}:`, fileError);
                     document.getElementById('progressStatus').innerText = `❌ Error en archivo ${i+1}: ${fileError.message}`;
                     throw fileError;
@@ -17159,7 +17226,7 @@
         }
         
         if (selectedMode === 'rapido') {
-            console.log("🚀 Usando MODO RÁPIDO (Resumable Upload a Drive)");
+            console.log("🚀 Usando MODO RÁPIDO (Resumable Upload a Drive protegido contra CORS)");
             return uploadArteOptimizado();
         } else {
             console.log("🐢 Usando MODO CLÁSICO (Base64 via GAS)");
@@ -21012,9 +21079,10 @@
             sessionParams.append("token", authData.token);
             sessionParams.append("folderId", authData.folderId);
             sessionParams.append("fileName", fileName);
-            sessionParams.append("mimeType", file.type);
+            sessionParams.append("mimeType", file.type || 'application/octet-stream');
             sessionParams.append("username", userCredentials.username);
             sessionParams.append("folderType", "arte"); // Arte final = requiere validación admin
+            sessionParams.append("origin", window.location.origin);
 
             // Solo enviar password si existe (admin/diseñador)
             if (userCredentials.password) {
@@ -21055,64 +21123,30 @@
 
             console.log('✅ Sesión resumable iniciada, uploadUrl:', uploadUrl.substring(0, 50) + '...');
 
-            // PASO 3: Subir archivo en chunks con reintentos automáticos
-            document.getElementById('progressStatus').innerText = '📦 Subiendo archivo (modo resumable)...';
-            document.getElementById('progressSpeed').innerText = `Tamaño: ${fileSizeMB.toFixed(1)}MB | Reintentos automáticos activados`;
+            // PASO 3: Subir archivo directamente a Google Drive con XMLHttpRequest protegido contra CORS
+            document.getElementById('progressStatus').innerText = '📦 Subiendo archivo a Google Drive...';
+            document.getElementById('progressSpeed').innerText = `Tamaño: ${fileSizeMB.toFixed(1)}MB | Subida directa`;
             
-            const CHUNK_SIZE = 256 * 1024; // 256KB - múltiplo requerido por Google
-            let offset = 0;
-            const startTime = Date.now();
-            let lastProgressUpdate = 0;
+            const uploadRes = await siraSubirBinarioXHR(file, uploadUrl, (porcentaje, loaded, total) => {
+                document.getElementById('progressBar').style.width = porcentaje + '%';
+                document.getElementById('progressPercent').innerText = porcentaje + '%';
+                const mbLoaded = (loaded / (1024 * 1024)).toFixed(1);
+                const mbTotal = (total / (1024 * 1024)).toFixed(1);
+                document.getElementById('progressInfo').innerText = 
+                    `Subiendo: ${porcentaje}% (${mbLoaded}MB de ${mbTotal}MB)`;
+            });
 
-            let finalResponse = null;
-            while (offset < file.size) {
-                const chunk = file.slice(offset, Math.min(offset + CHUNK_SIZE, file.size));
-                const isLastChunk = (offset + chunk.size) >= file.size;
-                
-                // Subir chunk con reintentos automáticos
-                const response = await uploadBinaryChunk(uploadUrl, chunk, offset, file.size);
-                
-                // Guardar respuesta del último chunk (contiene fileId)
-                if (isLastChunk && response.ok) {
-                    finalResponse = response;
-                }
-                
-                offset += chunk.size;
-                
-                // Actualizar progreso cada 500ms para no saturar la UI
-                const now = Date.now();
-                if (now - lastProgressUpdate > 500) {
-                    const porcentaje = Math.round((offset / file.size) * 100);
-                    const elapsed = (now - startTime) / 1000;
-                    const speed = elapsed > 0 ? (offset / 1024 / 1024) / elapsed : 0;
-                    
-                    document.getElementById('progressBar').style.width = porcentaje + '%';
-                    document.getElementById('progressPercent').innerText = porcentaje + '%';
-                    document.getElementById('progressInfo').innerText = 
-                        `Progreso: ${porcentaje}% | Velocidad: ${speed.toFixed(1)} MB/s | ${(offset/1024/1024).toFixed(1)}MB de ${fileSizeMB.toFixed(1)}MB`;
-                    
-                    lastProgressUpdate = now;
-                }
-            }
-
-            // PASO 4: Extraer fileId del último chunk y construir URL real
-            document.getElementById('progressStatus').innerText = '📝 Finalizando y registrando...';
+            // PASO 4: Confirmar archivo en Drive y obtener ID / URL
+            document.getElementById('progressStatus').innerText = '🔍 Verificando archivo en Drive...';
             
-            let fileId = null;
-            let fileUrl = null;
+            let fileId = uploadRes.id;
+            let fileUrl = fileId ? `https://drive.google.com/file/d/${fileId}/view` : null;
             
-            if (finalResponse && finalResponse.ok) {
-                try {
-                    const responseData = await finalResponse.json();
-                    fileId = responseData.id;
-                    fileUrl = `https://drive.google.com/file/d/${fileId}/view`;
-                } catch (e) {
-                    console.warn("⚠️ No se pudo extraer fileId de la respuesta:", e);
-                    // Fallback al método anterior
-                    fileUrl = await obtenerUrlPublica(file.name, authData, id);
-                }
-            } else {
-                fileUrl = await obtenerUrlPublica(file.name, authData, id);
+            if (!fileId) {
+                console.log("🔍 Verificando archivo con backend tras subida binaria...");
+                const confirmData = await siraConfirmarArchivoDrive(fileName, "arte", file.size);
+                fileId = confirmData.fileId;
+                fileUrl = confirmData.fileUrl;
             }
             
             // Actualizar RTDB con la URL del archivo
@@ -21437,9 +21471,10 @@
         sessionParams.append("token", auth.token);
         sessionParams.append("folderId", auth.folderId);
         sessionParams.append("fileName", fileName);
-        sessionParams.append("mimeType", file.type);
-        sessionParams.append("username", userCredentials.username);
+        sessionParams.append("mimeType", file.type || 'application/octet-stream');
+        sessionParams.append("username", userCredentials.username || "Usuario");
         sessionParams.append("folderType", folderType); // "arte" = requiere validación, "fotos" = sin validación
+        sessionParams.append("origin", window.location.origin);
 
         // Solo enviar password si existe (admin/diseñador)
         if (userCredentials.password) {
@@ -21862,8 +21897,10 @@
             const authParams = new URLSearchParams();
             authParams.append("action", "getUploadAuth");
             authParams.append("folderType", "fotos"); // ✅ Usar WELCOME_IMAGES_FOLDER_URL
-            authParams.append("username", userCredentials.username);
-            authParams.append("password", userCredentials.password);
+            authParams.append("username", userCredentials.username || "Usuario");
+            if (userCredentials.password) {
+                authParams.append("password", userCredentials.password);
+            }
             
             // ✅ TIMEOUT AUMENTADO para obtener autorización: 180 segundos (3 minutos)
             const isMobile = isMobileDevice();
@@ -21928,98 +21965,48 @@
             try {
                 const file = blob instanceof File ? blob : new File([blob], fileName, { type: blob.type || 'image/jpeg' });
                 const fileSizeMB = file.size / (1024 * 1024);
-                const isVideo = file.type.startsWith('video/') || nombre.toLowerCase().includes('video');
-                
-                // ✅ EVALUACIÓN DE CALIDAD DE CONEXIÓN PARA DECIDIR MÉTODO DE SUBIDA
-                const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
-                const downlink = connection?.downlink || 10; // Mbps
-                const rtt = connection?.rtt || 100; // RTT en ms
-                const effectiveType = connection?.effectiveType || '4g';
-                
-                // ✅ CRITERIOS PARA SUBIDA DIRECTA (incluso archivos grandes):
-                // - Conexión excelente: downlink >= 5Mbps, RTT < 100ms, efectiva 4g/wifi
-                // - Archivos medianos: < 10MB (para evitar timeouts extremadamente largos)
-                const isExcellentConnection = downlink >= 5 && rtt < 100 && (effectiveType === '4g' || effectiveType === 'wifi');
-                const isMediumFile = fileSizeMB < 10; // Hasta 10MB para subida directa
-                const canUseDirectUpload = isExcellentConnection || isMediumFile;
-                
-                // ✅ ESTRATEGIA DE SUBIDA MEJORADA:
-                // - Admin/Diseñadores: SIEMPRE chunks (sin cambios)
-                // - Usuarios regulares: Subida directa si conexión es excelente O archivo < 10MB
-                // - Usuarios regulares: Chunks si conexión es mala Y archivo >= 10MB
-                // - Esto permite videos grandes (500MB) usar subida directa cuando la conexión lo permita
-                const usarSubidaDirecta = !isAdmin && !isDesigner && canUseDirectUpload;
-                console.log(`📦 Estrategia: ${usarSubidaDirecta ? 'Subida directa mejorada' : 'Chunks'} (archivo: ${fileSizeMB.toFixed(2)}MB, video: ${isVideo}, conexión: ${downlink}Mbps RTT:${rtt}ms)`);
                 
                 let fileId = null;
-                
-                if (usarSubidaDirecta) {
-                    console.log(`🚀 Usando subida directa para archivo pequeño (${fileSizeMB.toFixed(2)}MB)`);
-                    try {
-                        // ✅ Subida directa (multipart) para archivos pequeños
-                        fileId = await uploadDirecto(file, authData, fileName);
-                        
-                        // ✅ Actualizar progreso para subida directa (progreso por archivo, no por chunk)
-                        if (progressFill) {
-                            const totalProgress = ((index + 1) / fotosBlobs.length) * 100;
-                            progressFill.style.width = totalProgress + '%';
-                        }
-                        if (progressText) {
-                            const totalProgress = ((index + 1) / fotosBlobs.length) * 100;
-                            progressText.textContent = Math.round(totalProgress) + '%';
-                        }
-                    } catch (directUploadError) {
-                        console.warn(`⚠️ Subida directa falló: ${directUploadError.message}. Intentando con chunks como fallback...`);
-                        // ✅ FALLBACK: Si subida directa falla (permisos, compatibilidad, timeout), usar chunks
-                        console.log(`📦 Cambiando a subida por chunks para archivo grande (${fileSizeMB.toFixed(1)}MB)`);
-                        fileId = await uploadConChunksFallback(file, authData, fileName, CHUNK_SIZE, progressFill, progressText, index, fotosBlobs.length);
+                let fileUrl = null;
+                let downloadUrl = null;
+                let thumbnailUrl = null;
+
+                console.log(`🚀 Iniciando subida binaria para foto ${index + 1} (${fileSizeMB.toFixed(2)}MB): ${fileName}`);
+                const uploadUrl = await iniciarSesionResumableGeneric(file, authData, fileName, "fotos");
+
+                const uploadRes = await siraSubirBinarioXHR(file, uploadUrl, (fileProgress) => {
+                    if (progressFill) {
+                        const totalProgress = ((index + fileProgress / 100) / fotosBlobs.length) * 100;
+                        progressFill.style.width = totalProgress + '%';
                     }
+                    if (progressText) {
+                        const totalProgress = ((index + fileProgress / 100) / fotosBlobs.length) * 100;
+                        progressText.textContent = Math.round(totalProgress) + '%';
+                    }
+                });
+
+                fileId = uploadRes.id;
+                if (fileId) {
+                    fileUrl = `https://drive.google.com/file/d/${fileId}/view`;
+                    downloadUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
+                    thumbnailUrl = `https://drive.google.com/thumbnail?id=${fileId}&sz=w1000`;
                 } else {
-                    console.log(`📦 Usando subida por chunks (archivo: ${fileSizeMB.toFixed(2)}MB, video: ${isVideo}, admin: ${isAdmin})`);
-                    // ✅ Subida por chunks (resumable) para archivos grandes o admin/diseñadores
-                    const uploadUrl = await iniciarSesionResumableGeneric(file, authData, fileName, "fotos");
-                    
-                    let offset = 0;
-                    
-                    while (offset < file.size) {
-                        const chunk = file.slice(offset, Math.min(offset + CHUNK_SIZE, file.size));
-                        const response = await uploadBinaryChunk(uploadUrl, chunk, offset, file.size);
-                        
-                        // ✅ ACTUALIZAR offset DESPUÉS de subir el chunk
-                        offset += chunk.size;
-                        
-                        // ✅ ACTUALIZAR PROGRESO con el offset actualizado (progreso monotónico)
-                        if (progressFill) {
-                            const chunkProgress = (offset / file.size) * 100;
-                            const totalProgress = ((index + chunkProgress / 100) / fotosBlobs.length) * 100;
-                            progressFill.style.width = totalProgress + '%';
-                        }
-                        if (progressText) {
-                            const chunkProgress = (offset / file.size) * 100;
-                            const totalProgress = ((index + chunkProgress / 100) / fotosBlobs.length) * 100;
-                            progressText.textContent = Math.round(totalProgress) + '%';
-                        }
-                        
-                        if (offset >= file.size && response.ok) {
-                            const responseText = await response.text();
-                            try {
-                                const responseData = JSON.parse(responseText);
-                                fileId = responseData.id;
-                            } catch (e) {
-                                console.warn("⚠️ No se pudo extraer fileId de la respuesta");
-                            }
-                        }
-                    }
+                    console.log(`🔍 Verificando foto ${fileName} en Drive vía backend tras subida...`);
+                    const confirmData = await siraConfirmarArchivoDrive(fileName, "fotos", file.size);
+                    fileId = confirmData.fileId;
+                    fileUrl = confirmData.fileUrl;
+                    downloadUrl = confirmData.downloadUrl;
+                    thumbnailUrl = confirmData.thumbnailUrl;
                 }
                 
                 if (fileId) {
-                    console.log(`✅ Foto ${index + 1} subida: ${fileName}`);
+                    console.log(`✅ Foto ${index + 1} subida exitosamente: ${fileName} (ID: ${fileId})`);
                     resultados.push({
                         nombre: fileName,
-                        url: `https://drive.google.com/file/d/${fileId}/view`,
+                        url: fileUrl,
                         fileId: fileId,
-                        downloadUrl: `https://drive.google.com/uc?export=download&id=${fileId}`,
-                        thumbnailUrl: `https://drive.google.com/thumbnail?id=${fileId}&sz=w1000`
+                        downloadUrl: downloadUrl,
+                        thumbnailUrl: thumbnailUrl
                     });
                 }
                 
@@ -22084,8 +22071,10 @@
         const authParams = new URLSearchParams();
         authParams.append("action", "getUploadAuth");
         authParams.append("folderType", "fotos");
-        authParams.append("username", userCredentials.username);
-        authParams.append("password", userCredentials.password);
+        authParams.append("username", userCredentials.username || "Usuario");
+        if (userCredentials.password) {
+            authParams.append("password", userCredentials.password);
+        }
         
         // ✅ TIMEOUT para móviles: 30 segundos para obtener autorización
         const authController = new AbortController();
@@ -22115,32 +22104,29 @@
 
         const uploadUrl = await iniciarSesionResumableGeneric(file, authData, fileName, "fotos");
         
-        // Subir en chunks
-        const CHUNK_SIZE = 256 * 1024; // 256KB (Máxima estabilidad para conexiones móviles)
-        let offset = 0;
-        let fileId = null;
-        while (offset < file.size) {
-            const chunk = file.slice(offset, Math.min(offset + CHUNK_SIZE, file.size));
-            const response = await uploadBinaryChunk(uploadUrl, chunk, offset, file.size);
-            
-            if (offset + chunk.size >= file.size && response.ok) {
-                const responseText = await response.text();
-                try {
-                    const responseData = JSON.parse(responseText);
-                    fileId = responseData.id;
-                } catch (e) {}
-            }
-            offset += chunk.size;
+        const uploadRes = await siraSubirBinarioXHR(file, uploadUrl);
+        let fileId = uploadRes.id;
+        let fileUrl = fileId ? `https://drive.google.com/file/d/${fileId}/view` : null;
+        let downloadUrl = fileId ? `https://drive.google.com/uc?export=download&id=${fileId}` : null;
+        let thumbnailUrl = fileId ? `https://drive.google.com/thumbnail?id=${fileId}&sz=w1000` : null;
+
+        if (!fileId) {
+            console.log(`🔍 Verificando documento ${fileName} en Drive vía backend...`);
+            const confirmData = await siraConfirmarArchivoDrive(fileName, "fotos", file.size);
+            fileId = confirmData.fileId;
+            fileUrl = confirmData.fileUrl;
+            downloadUrl = confirmData.downloadUrl;
+            thumbnailUrl = confirmData.thumbnailUrl;
         }
         
         if (fileId) {
             console.log(`✅ Documento subido: ${fileName}`);
             return {
                 nombre: fileName,
-                url: `https://drive.google.com/file/d/${fileId}/view`,
+                url: fileUrl,
                 fileId: fileId,
-                downloadUrl: `https://drive.google.com/uc?export=download&id=${fileId}`,
-                thumbnailUrl: `https://drive.google.com/thumbnail?id=${fileId}&sz=w1000` // ✅ URL para visualización en <img> (igual que panel lateral)
+                downloadUrl: downloadUrl,
+                thumbnailUrl: thumbnailUrl
             };
         }
         
