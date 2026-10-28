@@ -21044,7 +21044,9 @@
                 throw new Error("Error iniciando sesión resumable: " + (sessionData.error || "Unknown error"));
             }
 
-            const uploadUrl = sessionData.uploadUrl;
+            // ✅ El backend envuelve la respuesta en "data"
+            const nestedData = sessionData.data || sessionData;
+            const uploadUrl = nestedData.uploadUrl;
             console.log('🔍 [DEBUG] uploadUrl recibido:', uploadUrl);
 
             if (!uploadUrl) {
@@ -21455,7 +21457,9 @@
             throw new Error("Error iniciando sesión resumable: " + (sessionData.error || "Unknown error"));
         }
 
-        const uploadUrl = sessionData.uploadUrl;
+        // ✅ El backend envuelve la respuesta en "data"
+        const nestedData = sessionData.data || sessionData;
+        const uploadUrl = nestedData.uploadUrl;
         if (!uploadUrl) {
             throw new Error("El backend no devolvió URL de subida");
         }
