@@ -21531,6 +21531,72 @@
     }
 
     /**
+     * Envía el archivo completo a la sesión resumable de Drive con XHR.
+     * Aunque el navegador reporte error de CORS al leer la respuesta final, el archivo
+     * normalmente llega a Drive; por eso la confirmación se hace luego con getLatestFileId.
+     */
+    function putArchivoADrive(uploadUrl, blob, onProgress) {
+        return new Promise(resolve => {
+            const xhr = new XMLHttpRequest();
+            let llegoAl100 = false;
+            xhr.open('PUT', uploadUrl);
+            xhr.upload.onprogress = e => {
+                if (!e.lengthComputable) return;
+                if (onProgress) onProgress(e.loaded / e.total);
+                if (e.loaded >= e.total) llegoAl100 = true;
+            };
+            xhr.onload = () => resolve({ ok: xhr.status >= 200 && xhr.status < 300, llegoAl100 });
+            xhr.onerror = () => resolve({ ok: false, llegoAl100 }); // aquí cae el error de CORS
+            xhr.send(blob);
+        });
+    }
+
+    /**
+     * Sube un archivo grande (video, etc.) directo a Google Drive y confirma con el backend.
+     * El backend crea la sesión con su propio token (el navegador nunca recibe el token OAuth).
+     * @returns {Promise<{fileId, fileUrl, downloadUrl, thumbnailUrl}>}
+     */
+    async function uploadGrandeADrive(blob, fileName, onProgress) {
+        const params = new URLSearchParams({
+            action: 'initResumableSession',
+            fileName: fileName,
+            mimeType: blob.type || 'video/mp4',
+            username: (userCredentials && userCredentials.username) || 'Usuario',
+            folderType: 'fotos',
+            origin: window.location.origin
+        });
+        const sesionRes = await fetch(SCRIPT_URL, { method: 'POST', body: params, cache: 'no-store' });
+        const sesion = await sesionRes.json();
+        const uploadUrl = (sesion.data || sesion).uploadUrl;
+        if (!sesion.success || !uploadUrl) {
+            throw new Error(sesion.error || 'No se pudo iniciar la subida a Drive');
+        }
+
+        const envio = await putArchivoADrive(uploadUrl, blob, onProgress);
+        console.log('📤 PUT a Drive terminado:', envio);
+
+        // Confirmar con el backend (con reintentos: Drive tarda unos segundos en listar el archivo)
+        for (let i = 0; i < 10; i++) {
+            const p = new URLSearchParams({
+                action: 'getLatestFileId',
+                filename: fileName,
+                folderType: 'fotos',
+                fileSize: String(blob.size)
+            });
+            try {
+                const r = await (await fetch(SCRIPT_URL, { method: 'POST', body: p })).json();
+                if (r.success) return r.data || r;
+            } catch (e) {
+                console.warn('⚠️ Confirmación en Drive falló, reintentando...', e.message);
+            }
+            // Si el envío falló y nunca llegó al 100%, no tiene sentido seguir esperando
+            if (!envio.ok && !envio.llegoAl100 && i >= 2) break;
+            await new Promise(res => setTimeout(res, 3000));
+        }
+        throw new Error('No se pudo confirmar el archivo en Drive. Revisa tu conexión e intenta de nuevo.');
+    }
+
+    /**
      * Sube fotos usando Base64 para conexiones lentas
      * @param {string} idSolicitud - ID de la solicitud
      * @param {Array} fotosBlobs - Array de objetos {nombre, blob}
@@ -21560,6 +21626,26 @@
             }
             
             try {
+                // ✅ ARCHIVOS GRANDES (videos, etc.): subida directa a Drive (Base64 solo soporta ~37MB)
+                if (blob.size > 20 * 1024 * 1024) {
+                    showToast(`📤 Subiendo archivo grande (${(blob.size / 1024 / 1024).toFixed(1)}MB)... no cierres la página`, "info", 5000);
+                    const rDrive = await uploadGrandeADrive(blob, fileName, f => {
+                        const total = ((index + f) / fotosBlobs.length) * 100;
+                        const fill = document.getElementById('loadingProgressFill');
+                        const txt = document.getElementById('loadingProgressText');
+                        if (fill) fill.style.width = total + '%';
+                        if (txt) txt.textContent = Math.round(total) + '%';
+                    });
+                    resultados.push({
+                        nombre: fileName,
+                        url: rDrive.fileUrl,
+                        fileId: rDrive.fileId,
+                        downloadUrl: rDrive.downloadUrl,
+                        thumbnailUrl: rDrive.thumbnailUrl
+                    });
+                    continue;
+                }
+
                 // Convertir blob a Base64
                 console.log(`🔄 Convirtiendo blob a Base64 para ${fileName}...`);
                 const base64 = await convertFileToBase64(blob);
