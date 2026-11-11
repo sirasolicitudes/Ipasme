@@ -9656,6 +9656,8 @@
                     const idsHistoricos = new Set(listaHistoricaGAS.map(h => h.id));
                     
                     vivas = vivas.filter(viva => {
+                        // ✅ FIX: no purgar solicitudes recreadas a propósito (verificadas como activas en GAS)
+                        if (viva.recreadaEn) return true;
                         if (idsHistoricos.has(viva.id)) {
                             // 👻 FANTASMA DETECTADO: Está en RTDB pero GAS dice que ya finalizó.
                             console.log(`👻 Fantasma detectado y purgado de RTDB: ${viva.id}`);
@@ -13949,7 +13951,8 @@
                 Disenador: disenadorLimpio,
                 ArteFinal: solicitud.ArteFinal || "",
                 UsuarioID: solicitud.UsuarioID || "ANONIMO",
-                Dispositivo: solicitud.Dispositivo || "No detectado"
+                Dispositivo: solicitud.Dispositivo || "No detectado",
+                recreadaEn: Date.now() // ✅ Marca para que el Caza-fantasmas (en cualquier pestaña) no la borre
             };
 
             // 🔥 FIX: Purgar el ID del historial local para que el Caza-fantasmas no lo elimine al instante
@@ -14137,7 +14140,8 @@
                         Disenador: disenadorLimpio,
                         ArteFinal: sol.ArteFinal || "",
                         UsuarioID: sol.UsuarioID || "ANONIMO",
-                        Dispositivo: sol.Dispositivo || "No detectado"
+                        Dispositivo: sol.Dispositivo || "No detectado",
+                        recreadaEn: Date.now() // ✅ Marca para que el Caza-fantasmas (en cualquier pestaña) no la borre
                     };
                     
                     updates['solicitudes_vivas/' + sol.id] = solicitudRTDB;
