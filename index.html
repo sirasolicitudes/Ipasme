@@ -13656,7 +13656,7 @@
             input: 'text',
             inputLabel: 'Ingrese el ID de la solicitud',
             inputPlaceholder: 'Ej: REQ-1234567890',
-            icon: 'search',
+            icon: 'question',
             showCancelButton: true,
             confirmButtonText: 'Buscar Solicitud',
             cancelButtonText: 'Cancelar',
@@ -13796,7 +13796,7 @@
             input: 'text',
             inputLabel: 'Ingrese el ID de la solicitud',
             inputPlaceholder: 'Ej: REQ-1234567890',
-            icon: 'search',
+            icon: 'question',
             showCancelButton: true,
             confirmButtonText: '🔍 Buscar y Recrear',
             cancelButtonText: 'Cancelar',
@@ -14006,6 +14006,39 @@
         });
 
         try {
+            // 0. 🧹 Eliminar duplicados del Sheet (mismo REQ en varias filas) antes de comparar
+            let dedupeResumen = '';
+            try {
+                const dp = new URLSearchParams();
+                dp.append("action", "dedupeRequests");
+                dp.append("username", userCredentials.username);
+                dp.append("password", userCredentials.password);
+                const dr = await fetch(SCRIPT_URL, { method: 'POST', body: dp });
+                const dd = await dr.json();
+                if (dd.success && dd.data) {
+                    const info = dd.data;
+                    if (info.eliminadas > 0) {
+                        console.log("🧹 Duplicados eliminados del Sheet:", info.detalle);
+                        // Si la fila que se conservó está cerrada, el ID no debe quedar vivo en RTDB
+                        for (const d of (info.detalle || [])) {
+                            if (d.estatusFinal === "FINALIZADA" || d.estatusFinal === "RECHAZADA") {
+                                try { await window.remove(window.ref(window.dbRT, 'solicitudes_vivas/' + d.id)); } catch (e) {}
+                            }
+                        }
+                        dedupeResumen = `<div style="text-align:left;font-size:0.85rem;background:#e8f5e9;color:#1b5e20;padding:10px 12px;border-radius:8px;border-left:4px solid #28a745;margin-bottom:12px;">🧹 Se eliminaron <b>${info.eliminadas}</b> fila(s) duplicada(s): ${(info.detalle || []).map(d => d.id).join(', ')}</div>`;
+                        showToast(`🧹 ${info.eliminadas} duplicado(s) eliminado(s) del Sheet`, "success", 4000);
+                    }
+                    if (info.conflictos && info.conflictos.length > 0) {
+                        console.warn("⚠️ Duplicados con estatus cerrados distintos (revisar a mano):", info.conflictos);
+                        dedupeResumen += `<div style="text-align:left;font-size:0.85rem;background:#fff3cd;color:#856404;padding:10px 12px;border-radius:8px;border-left:4px solid #ffc107;margin-bottom:12px;">⚠️ ${info.conflictos.length} ID(s) duplicado(s) con FINALIZADA y RECHAZADA a la vez; revísalos a mano: ${info.conflictos.map(c => c.id).join(', ')}</div>`;
+                    }
+                } else {
+                    console.warn("⚠️ No se pudo ejecutar dedupeRequests:", dd.error);
+                }
+            } catch (e) {
+                console.warn("⚠️ Error en limpieza de duplicados:", e);
+            }
+
             // 1. Obtener todas las solicitudes activas (PENDIENTE y PROCESANDO) de GAS
             const params = new URLSearchParams();
             params.append("action", "getActiveRequests");
@@ -14044,7 +14077,7 @@
             if (huerfanas.length === 0) {
                 Swal.fire({
                     title: '¡Todo en Orden! ✅',
-                    html: 'Los contadores coinciden. La tabla visual está perfectamente sincronizada con el servidor principal.',
+                    html: dedupeResumen + 'Los contadores coinciden. La tabla visual está perfectamente sincronizada con el servidor principal.',
                     icon: 'success',
                     confirmButtonColor: '#28a745'
                 });
@@ -14054,7 +14087,7 @@
             // 5. Mostrar Modal de Acción si hay diferencias
             const confirmResult = await Swal.fire({
                 title: '⚠️ Desincronización Detectada',
-                html: `
+                html: dedupeResumen + `
                     <div style="text-align: left; font-size: 0.9rem; background: #fff3cd; color: #856404; padding: 15px; border-radius: 8px; border-left: 4px solid #ffc107; margin-bottom: 15px;">
                         <p style="margin: 5px 0;">Se encontraron <b>${huerfanas.length}</b> solicitudes activas en el servidor que no se están mostrando en tu tabla visual.</p>
                     </div>
